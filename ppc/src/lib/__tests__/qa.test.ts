@@ -328,6 +328,16 @@ describe('활동 기록 (BUG-005 · 006 · 008 · 018 · 021)', () => {
     expect(staleDataReasons(state)).toEqual([]);
   });
 
+  it('DB의 정수 열에 들어갈 값은 모두 정수다 (초기화가 중간에 실패하지 않게)', () => {
+    const demo = demoState(BASE);
+    for (const p of demo.lineParts) {
+      expect([p.partCode, Number.isInteger(p.sortOrder), Number.isInteger(p.onHand), Number.isInteger(p.qtyPerCar)]).toEqual([p.partCode, true, true, true]);
+    }
+    expect(new Set(demo.lineParts.map((p) => p.sortOrder)).size).toBe(demo.lineParts.length);
+    expect(demo.purchaseOrders.every((po) => Number.isInteger(po.qty) && Number.isInteger(po.originalQty))).toBe(true);
+    expect(demo.customerOrders.every((o) => Number.isInteger(o.qty))).toBe(true);
+  });
+
   it('납기 추가·취소가 기록에 남고, 취소한 주문 번호는 다시 쓰지 않는다 (BUG-021)', async () => {
     const api = await freshApi();
     const added = await api.addCustomerOrder({ customer: '한울모빌리티', qty: 40, dueDate: '2026-10-25', employeeNo: 'ICBM-26012' });

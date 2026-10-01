@@ -70,8 +70,8 @@ function demoLineParts(): LinePart[] {
       partCode: variantCode(body.partCode, color.code),
       qtyPerCar: body.qtyPerCar,
       onHand: byName[color.name] ?? body.defaultOnHand,
-      // 차체들은 조향(5)과 배터리(100) 사이에 색상 코드 순으로 놓는다
-      sortOrder: body.sortOrder + i / 100,
+      // 차체들은 조향(5)과 배터리(100) 사이에 색상 코드 순으로 놓는다. DB의 sort_order는 정수 열이다
+      sortOrder: body.sortOrder + i,
     }),
   );
   return [...(demoJson.lineParts as LinePart[]), ...bodies].sort((a, b) => a.sortOrder - b.sortOrder);
