@@ -1,0 +1,953 @@
+{
+  "parts": [
+    {
+      "code": "P001",
+      "name": "브레이크",
+      "category": "제동장치 부품",
+      "materialName": "주철 소재",
+      "defaultSupplier": "태성모터스",
+      "kgPerUnit": 1.8
+    },
+    {
+      "code": "P002",
+      "name": "브레이크",
+      "category": "제동장치 부품",
+      "materialName": "알루미늄 소재",
+      "defaultSupplier": "한빛오토텍",
+      "kgPerUnit": 2.2
+    },
+    {
+      "code": "P003",
+      "name": "브레이크",
+      "category": "제동장치 부품",
+      "materialName": "단조강 소재",
+      "defaultSupplier": "세진정밀",
+      "kgPerUnit": 2
+    },
+    {
+      "code": "P004",
+      "name": "서스펜션",
+      "category": "현가장치 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "태성모터스",
+      "kgPerUnit": 3
+    },
+    {
+      "code": "P005",
+      "name": "서스펜션",
+      "category": "현가장치 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "동아기공",
+      "kgPerUnit": 1.8
+    },
+    {
+      "code": "P006",
+      "name": "엔진",
+      "category": "엔진·배기 부품",
+      "materialName": "고무 소재",
+      "defaultSupplier": "유진소재",
+      "kgPerUnit": 1.2
+    },
+    {
+      "code": "P007",
+      "name": "엔진",
+      "category": "엔진·배기 부품",
+      "materialName": "알루미늄 소재",
+      "defaultSupplier": "한빛오토텍",
+      "kgPerUnit": 1.5
+    },
+    {
+      "code": "P008",
+      "name": "변속기",
+      "category": "동력전달 부품",
+      "materialName": "알루미늄 소재",
+      "defaultSupplier": "한빛오토텍",
+      "kgPerUnit": 8
+    },
+    {
+      "code": "P009",
+      "name": "엔진",
+      "category": "엔진·배기 부품",
+      "materialName": "알루미늄 소재",
+      "defaultSupplier": "대성메탈",
+      "kgPerUnit": 2.5
+    },
+    {
+      "code": "P010",
+      "name": "조향",
+      "category": "현가·조향 부품",
+      "materialName": "합금강 소재",
+      "defaultSupplier": "세진정밀",
+      "kgPerUnit": 2.2
+    },
+    {
+      "code": "P011",
+      "name": "조향",
+      "category": "현가·조향 부품",
+      "materialName": "합금강 소재",
+      "defaultSupplier": "세진정밀",
+      "kgPerUnit": 1.1
+    },
+    {
+      "code": "P012",
+      "name": "차체",
+      "category": "차체 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "동아기공",
+      "kgPerUnit": 1
+    },
+    {
+      "code": "P013",
+      "name": "배터리",
+      "category": "전동화 부품",
+      "materialName": "알루미늄 소재",
+      "defaultSupplier": "대성메탈",
+      "kgPerUnit": 4
+    },
+    {
+      "code": "P014",
+      "name": "배터리",
+      "category": "전동화 부품",
+      "materialName": "알루미늄 소재",
+      "defaultSupplier": "한빛오토텍",
+      "kgPerUnit": 3.5
+    },
+    {
+      "code": "P015",
+      "name": "차체",
+      "category": "차체 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "태성모터스",
+      "kgPerUnit": 0.8
+    },
+    {
+      "code": "P016",
+      "name": "차체",
+      "category": "차체 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "동아기공",
+      "kgPerUnit": 0.7
+    },
+    {
+      "code": "P017",
+      "name": "차체",
+      "category": "차체 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "태성모터스",
+      "kgPerUnit": 6
+    },
+    {
+      "code": "P018",
+      "name": "차체",
+      "category": "차체 부품",
+      "materialName": "스테인리스 소재",
+      "defaultSupplier": "신우스틸",
+      "kgPerUnit": 0.9
+    },
+    {
+      "code": "P019",
+      "name": "차체",
+      "category": "차체 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "동아기공",
+      "kgPerUnit": 1
+    },
+    {
+      "code": "P020",
+      "name": "엔진",
+      "category": "엔진·배기 부품",
+      "materialName": "스테인리스 소재",
+      "defaultSupplier": "신우스틸",
+      "kgPerUnit": 3
+    },
+    {
+      "code": "P021",
+      "name": "엔진",
+      "category": "엔진·배기 부품",
+      "materialName": "주철 소재",
+      "defaultSupplier": "태성모터스",
+      "kgPerUnit": 2.5
+    },
+    {
+      "code": "P022",
+      "name": "엔진",
+      "category": "엔진·배기 부품",
+      "materialName": "알루미늄 소재",
+      "defaultSupplier": "대성메탈",
+      "kgPerUnit": 1.3
+    },
+    {
+      "code": "P023",
+      "name": "엔진",
+      "category": "엔진·배기 부품",
+      "materialName": "합금강 소재",
+      "defaultSupplier": "세진정밀",
+      "kgPerUnit": 0.8
+    },
+    {
+      "code": "P024",
+      "name": "변속기",
+      "category": "동력전달 부품",
+      "materialName": "주철 소재",
+      "defaultSupplier": "태성모터스",
+      "kgPerUnit": 4
+    },
+    {
+      "code": "P025",
+      "name": "변속기",
+      "category": "동력전달 부품",
+      "materialName": "알루미늄 소재",
+      "defaultSupplier": "한빛오토텍",
+      "kgPerUnit": 5
+    },
+    {
+      "code": "P026",
+      "name": "변속기",
+      "category": "동력전달 부품",
+      "materialName": "합금강 소재",
+      "defaultSupplier": "세진정밀",
+      "kgPerUnit": 4.5
+    },
+    {
+      "code": "P027",
+      "name": "서스펜션",
+      "category": "현가장치 부품",
+      "materialName": "합금강 소재",
+      "defaultSupplier": "동아기공",
+      "kgPerUnit": 1
+    },
+    {
+      "code": "P028",
+      "name": "서스펜션",
+      "category": "현가장치 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "태성모터스",
+      "kgPerUnit": 1.4
+    },
+    {
+      "code": "P029",
+      "name": "브레이크",
+      "category": "제동장치 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "동아기공",
+      "kgPerUnit": 1.2
+    },
+    {
+      "code": "P030",
+      "name": "브레이크",
+      "category": "제동장치 부품",
+      "materialName": "철강 소재",
+      "defaultSupplier": "태성모터스",
+      "kgPerUnit": 1
+    }
+  ],
+  "suppliers": [
+    {
+      "code": "S001",
+      "name": "태성모터스",
+      "materials": [
+        "주철 소재",
+        "철강 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 2800,
+      "onTimeRate": 86
+    },
+    {
+      "code": "S002",
+      "name": "한빛오토텍",
+      "materials": [
+        "알루미늄 소재",
+        "스테인리스 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 3231,
+      "onTimeRate": 76
+    },
+    {
+      "code": "S003",
+      "name": "세진정밀",
+      "materials": [
+        "단조강 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 3662,
+      "onTimeRate": 82
+    },
+    {
+      "code": "S004",
+      "name": "동아기공",
+      "materials": [
+        "철강 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 4093,
+      "onTimeRate": 92
+    },
+    {
+      "code": "S005",
+      "name": "유진소재",
+      "materials": [
+        "고무 소재",
+        "합성고무"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 4524,
+      "onTimeRate": 90
+    },
+    {
+      "code": "S006",
+      "name": "대성메탈",
+      "materials": [
+        "알루미늄 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 4955,
+      "onTimeRate": 95
+    },
+    {
+      "code": "S007",
+      "name": "신우스틸",
+      "materials": [
+        "스테인리스 소재",
+        "철강 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 5386,
+      "onTimeRate": 88
+    },
+    {
+      "code": "S008",
+      "name": "삼우정밀",
+      "materials": [
+        "주철 소재",
+        "철강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 2817,
+      "onTimeRate": 74
+    },
+    {
+      "code": "S009",
+      "name": "동진오토",
+      "materials": [
+        "알루미늄 소재",
+        "철강 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 3248,
+      "onTimeRate": 88
+    },
+    {
+      "code": "S010",
+      "name": "미래소재",
+      "materials": [
+        "고무 소재",
+        "합성고무"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 3679,
+      "onTimeRate": 93
+    },
+    {
+      "code": "S011",
+      "name": "성우테크",
+      "materials": [
+        "합금강 소재",
+        "단조강 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 4110,
+      "onTimeRate": 90
+    },
+    {
+      "code": "S012",
+      "name": "한성기공",
+      "materials": [
+        "스테인리스 소재",
+        "철강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 4541,
+      "onTimeRate": 85
+    },
+    {
+      "code": "S013",
+      "name": "대림정공",
+      "materials": [
+        "철강 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 4972,
+      "onTimeRate": 94
+    },
+    {
+      "code": "S014",
+      "name": "우성메탈",
+      "materials": [
+        "주철 소재",
+        "단조강 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 5403,
+      "onTimeRate": 81
+    },
+    {
+      "code": "S015",
+      "name": "세광소재",
+      "materials": [
+        "알루미늄 소재",
+        "스테인리스 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 2834,
+      "onTimeRate": 97
+    },
+    {
+      "code": "S016",
+      "name": "동명정밀",
+      "materials": [
+        "철강 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 3265,
+      "onTimeRate": 87
+    },
+    {
+      "code": "S017",
+      "name": "진성오토텍",
+      "materials": [
+        "알루미늄 소재",
+        "주철 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 3696,
+      "onTimeRate": 96
+    },
+    {
+      "code": "S018",
+      "name": "하나기공",
+      "materials": [
+        "철강 소재",
+        "단조강 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 4127,
+      "onTimeRate": 91
+    },
+    {
+      "code": "S019",
+      "name": "대진모터스",
+      "materials": [
+        "고무 소재",
+        "합성고무"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 4558,
+      "onTimeRate": 69
+    },
+    {
+      "code": "S020",
+      "name": "서진메탈",
+      "materials": [
+        "스테인리스 소재",
+        "알루미늄 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 4989,
+      "onTimeRate": 84
+    },
+    {
+      "code": "S021",
+      "name": "광성정밀",
+      "materials": [
+        "합금강 소재",
+        "철강 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 5420,
+      "onTimeRate": 91
+    },
+    {
+      "code": "S022",
+      "name": "태광소재",
+      "materials": [
+        "주철 소재",
+        "알루미늄 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 2851,
+      "onTimeRate": 89
+    },
+    {
+      "code": "S023",
+      "name": "한일기공",
+      "materials": [
+        "철강 소재",
+        "스테인리스 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 3282,
+      "onTimeRate": 93
+    },
+    {
+      "code": "S024",
+      "name": "동성오토",
+      "materials": [
+        "단조강 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 3713,
+      "onTimeRate": 77
+    },
+    {
+      "code": "S025",
+      "name": "에이스메탈",
+      "materials": [
+        "알루미늄 소재",
+        "철강 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 4144,
+      "onTimeRate": 72
+    },
+    {
+      "code": "S026",
+      "name": "현대정밀소재",
+      "materials": [
+        "주철 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 4575,
+      "onTimeRate": 95
+    },
+    {
+      "code": "S027",
+      "name": "제일오토텍",
+      "materials": [
+        "알루미늄 소재",
+        "철강 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 5006,
+      "onTimeRate": 86
+    },
+    {
+      "code": "S028",
+      "name": "금강기공",
+      "materials": [
+        "단조강 소재",
+        "철강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 5437,
+      "onTimeRate": 98
+    },
+    {
+      "code": "S029",
+      "name": "동원메탈",
+      "materials": [
+        "고무 소재",
+        "합성고무"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 2868,
+      "onTimeRate": 83
+    },
+    {
+      "code": "S030",
+      "name": "서광정밀",
+      "materials": [
+        "합금강 소재",
+        "스테인리스 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 3299,
+      "onTimeRate": 92
+    },
+    {
+      "code": "S031",
+      "name": "한림소재",
+      "materials": [
+        "주철 소재",
+        "철강 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 3730,
+      "onTimeRate": 88
+    },
+    {
+      "code": "S032",
+      "name": "대경오토",
+      "materials": [
+        "알루미늄 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 4161,
+      "onTimeRate": 79
+    },
+    {
+      "code": "S033",
+      "name": "신성기공",
+      "materials": [
+        "철강 소재",
+        "단조강 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 4592,
+      "onTimeRate": 65
+    },
+    {
+      "code": "S034",
+      "name": "우림테크",
+      "materials": [
+        "스테인리스 소재",
+        "철강 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 5023,
+      "onTimeRate": 94
+    },
+    {
+      "code": "S035",
+      "name": "동우정밀",
+      "materials": [
+        "고무 소재",
+        "주철 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 5454,
+      "onTimeRate": 90
+    },
+    {
+      "code": "S036",
+      "name": "삼진메탈",
+      "materials": [
+        "알루미늄 소재",
+        "스테인리스 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 2885,
+      "onTimeRate": 87
+    },
+    {
+      "code": "S037",
+      "name": "대원소재",
+      "materials": [
+        "철강 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 3316,
+      "onTimeRate": 89
+    },
+    {
+      "code": "S038",
+      "name": "성진오토",
+      "materials": [
+        "주철 소재",
+        "단조강 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 3747,
+      "onTimeRate": 96
+    },
+    {
+      "code": "S039",
+      "name": "한성테크",
+      "materials": [
+        "알루미늄 소재",
+        "철강 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 4178,
+      "onTimeRate": 85
+    },
+    {
+      "code": "S040",
+      "name": "동양정밀",
+      "materials": [
+        "합금강 소재",
+        "스테인리스 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 4609,
+      "onTimeRate": 91
+    },
+    {
+      "code": "S041",
+      "name": "진우기공",
+      "materials": [
+        "철강 소재",
+        "고무 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 5040,
+      "onTimeRate": 97
+    },
+    {
+      "code": "S042",
+      "name": "세명소재",
+      "materials": [
+        "주철 소재",
+        "알루미늄 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 5471,
+      "onTimeRate": 92
+    },
+    {
+      "code": "S043",
+      "name": "태림오토",
+      "materials": [
+        "단조강 소재",
+        "철강 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 2902,
+      "onTimeRate": 80
+    },
+    {
+      "code": "S044",
+      "name": "대성정밀",
+      "materials": [
+        "알루미늄 소재",
+        "합금강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 3333,
+      "onTimeRate": 88
+    },
+    {
+      "code": "S045",
+      "name": "한빛기공",
+      "materials": [
+        "철강 소재",
+        "스테인리스 소재"
+      ],
+      "leadDays": 4,
+      "altLeadDays": 2,
+      "status": "정상",
+      "monthlyCapacityKg": 3764,
+      "onTimeRate": 85
+    },
+    {
+      "code": "S046",
+      "name": "동아메탈",
+      "materials": [
+        "주철 소재",
+        "철강 소재"
+      ],
+      "leadDays": 5,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 4195,
+      "onTimeRate": 93
+    },
+    {
+      "code": "S047",
+      "name": "유성테크",
+      "materials": [
+        "고무 소재",
+        "스테인리스 소재"
+      ],
+      "leadDays": 6,
+      "altLeadDays": 4,
+      "status": "정상",
+      "monthlyCapacityKg": 4626,
+      "onTimeRate": 71
+    },
+    {
+      "code": "S048",
+      "name": "광명정밀",
+      "materials": [
+        "알루미늄 소재",
+        "단조강 소재"
+      ],
+      "leadDays": 7,
+      "altLeadDays": 6,
+      "status": "정상",
+      "monthlyCapacityKg": 5057,
+      "onTimeRate": 90
+    }
+  ],
+  "materials": [
+    {
+      "code": "M001",
+      "name": "주철 소재",
+      "unit": "kg",
+      "defaultSupplier": "태성모터스",
+      "leadDays": 3,
+      "altAvgLeadDays": 3.8
+    },
+    {
+      "code": "M002",
+      "name": "알루미늄 소재",
+      "unit": "kg",
+      "defaultSupplier": "한빛오토텍",
+      "leadDays": 5,
+      "altAvgLeadDays": 4.3
+    },
+    {
+      "code": "M003",
+      "name": "단조강 소재",
+      "unit": "kg",
+      "defaultSupplier": "세진정밀",
+      "leadDays": 7,
+      "altAvgLeadDays": 4.4
+    },
+    {
+      "code": "M004",
+      "name": "철강 소재",
+      "unit": "kg",
+      "defaultSupplier": "태성모터스",
+      "leadDays": 5,
+      "altAvgLeadDays": 3.7
+    },
+    {
+      "code": "M005",
+      "name": "고무 소재",
+      "unit": "kg",
+      "defaultSupplier": "유진소재",
+      "leadDays": 6,
+      "altAvgLeadDays": 3.1
+    },
+    {
+      "code": "M006",
+      "name": "합금강 소재",
+      "unit": "kg",
+      "defaultSupplier": "세진정밀",
+      "leadDays": 7,
+      "altAvgLeadDays": 4.5
+    },
+    {
+      "code": "M007",
+      "name": "스테인리스 소재",
+      "unit": "kg",
+      "defaultSupplier": "신우스틸",
+      "leadDays": 6,
+      "altAvgLeadDays": 4.5
+    }
+  ],
+  "delayPresets": [
+    {
+      "id": "사례1",
+      "reason": "납품 지연",
+      "supplierName": "태성모터스",
+      "materialName": "철강 소재",
+      "delayDays": 7,
+      "compareCount": 22
+    },
+    {
+      "id": "사례2",
+      "reason": "납품 지연",
+      "supplierName": "한빛오토텍",
+      "materialName": "알루미늄 소재",
+      "delayDays": 5,
+      "compareCount": 14
+    },
+    {
+      "id": "사례3",
+      "reason": "납품 지연",
+      "supplierName": "세진정밀",
+      "materialName": "합금강 소재",
+      "delayDays": 6,
+      "compareCount": 12
+    }
+  ]
+}
