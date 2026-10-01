@@ -10,6 +10,8 @@
 - `src/lib/planning.ts` 생산 가능 대수·시뮬레이션·주문 예측 (§6.2~§6.7, §6.9-1)
 - `src/lib/recommend.ts` 대체 업체 추천 (§6.8) / `src/lib/messages.ts` 문구 T1~T5 (§6.10)
 - `src/lib/actions.ts` 저장할 내용을 만드는 순수 함수 (발주·차질·대체 확정). `api.ts`는 그 결과를 DB에 쓰기만 한다
+- 저장하는 작업은 모두 사원번호를 받고(`authorize`) 활동 기록(`activity_log`)을 남긴다. 확인 창은 `EmployeeConfirmModal`을 쓰고 `window.confirm`은 쓰지 않는다
+- 생산 계산은 수리용을 뺀 재고(`repairs.ts productionParts`)로 한다. DB의 재고는 그대로 둔다
 - `src/lib/store.ts` DB 접근: Supabase(공유) / 로컬(localStorage). 환경 변수가 없으면 로컬 데모 모드
 - `src/lib/dashboard.ts` 대시보드에 보여 줄 값 계산
 - `src/components/car/` 3D 차량 뷰어 (저장소 루트 `car-manager/`의 3D 스튜디오를 옮긴 것, three r128 고정)
@@ -17,5 +19,5 @@
 
 ## 명령
 - `npm run dev` 개발 서버 / `npm test` 단위 테스트 / `npm run build` 타입 검사 + 빌드
-- `npm run data` Excel(data/ppc_data.xlsx + data/ppc_extra.xlsx) → src/data/reference.json, employees.json 다시 만들기
+- `npm run data` Excel(data/ppc_data.xlsx 하나만) → src/data/reference.json, employees.json 다시 만들기
 - `npm run qr` 발표용 QR 무늬(src/data/qr.json) 다시 만들기 — 배포 주소가 바뀔 때만

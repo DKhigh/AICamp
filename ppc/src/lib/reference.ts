@@ -1,12 +1,15 @@
 // Excel에서 만든 참조 데이터 (DESIGN.md §3.3). 바뀌지 않으므로 DB에 넣지 않는다.
 import demoJson from '../data/demo_state.json';
 import referenceJson from '../data/reference.json';
-import { addDays, diffDays } from './date';
-import { baseCodeOf, colorCodeOf } from './partcode';
+import { CONTRACT_MARK } from './constants';
+import { addDays, diffDays, formatMD } from './date';
+import { num } from './format';
+import { baseCodeOf, colorCodeOf, variantCode } from './partcode';
 import type {
+  ActivityLog,
   AppState,
   CarColor,
-  CustomerOrder,
+  DisruptionExample,
   LinePart,
   Part,
   PoKind,
@@ -48,32 +51,92 @@ export function materialOf(name: string) {
 /** demo_state.json의 날짜가 기준으로 삼는 날 (설계서 §4.3의 기준일) */
 export const DEMO_BASE_DATE = (demoJson.settings as Settings).baseDate;
 
+/** 차질 발생 창의 '시연 예시' 버튼 */
+export const disruptionExamples = demoJson.disruptionExamples as DisruptionExample[];
+
+/** 지난 출차 실적을 만드는 규칙 (shipments.ts) */
+export const pastShipmentRule = demoJson.pastShipments as { days: number; perDay: number; customers: string[] };
+
+/**
+ * 시연 초기의 라인 부품. 차체는 Excel '차량색상' 시트의 색상마다 한 줄씩 만든다 (P012-C01 …):
+ * Excel에 색상을 더하거나 빼고 `npm run data`를 돌리면 차체 종류도 그대로 따라 바뀐다.
+ * 색상별 초기 재고는 시연값(demo_state.json bodyStock)이고, 거기에 없는 색은 defaultOnHand를 쓴다.
+ */
+function demoLineParts(): LinePart[] {
+  const body = demoJson.bodyStock;
+  const byName = body.onHandByColorName as Record<string, number>;
+  const bodies = reference.colors.map(
+    (color, i): LinePart => ({
+      partCode: variantCode(body.partCode, color.code),
+      qtyPerCar: body.qtyPerCar,
+      onHand: byName[color.name] ?? body.defaultOnHand,
+      // 차체들은 조향(5)과 배터리(100) 사이에 색상 코드 순으로 놓는다
+      sortOrder: body.sortOrder + i / 100,
+    }),
+  );
+  return [...(demoJson.lineParts as LinePart[]), ...bodies].sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+/** 'YYYY-MM-DD' + 'HH:mm' (기기 현지 시각) → ISO 시각 */
+function atLocal(date: string, time: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  const [hh, mm] = time.split(':').map(Number);
+  return new Date(y, m - 1, d, hh, mm).toISOString();
+}
+
 /**
  * §4.3 시연용 가상값. [데이터 초기화]가 DB를 이 상태로 되돌린다.
  * 기준일은 항상 오늘이므로, 발주일·도착 예정일·납기를 baseDate에 맞춰 같은 간격으로 옮긴다
  * (기준일이 10/5이면 설계서의 날짜 그대로다).
+ * 초기 발주와 주문은 '지난 며칠 사이에 담당자가 입력해 둔 것'으로 만든다:
+ * 발주일·입력 시각은 모두 기준일보다 앞이고, 그때의 활동 기록(logs)도 함께 만든다.
  */
 export function demoState(baseDate: string = DEMO_BASE_DATE): AppState {
-  const createdAt = new Date().toISOString();
   const offset = diffDays(baseDate, DEMO_BASE_DATE);
   const shift = (d: string) => addDays(d, offset);
+
+  const purchaseOrders = demoJson.purchaseOrders.map(
+    ({ loggedTime, ...po }): PurchaseOrder => ({
+      ...po,
+      orderDate: shift(po.orderDate),
+      plannedArrival: shift(po.plannedArrival),
+      expectedArrival: shift(po.expectedArrival),
+      status: po.status as PoStatus,
+      kind: po.kind as PoKind,
+      disruptionId: null,
+      createdAt: atLocal(shift(po.orderDate), loggedTime),
+    }),
+  );
+  const customerOrders = demoJson.customerOrders.map((o) => ({ id: o.id, customer: o.customer, qty: o.qty, dueDate: shift(o.dueDate) }));
+
+  const logs: ActivityLog[] = [
+    ...demoJson.customerOrders.map((o) => ({
+      id: `seed-${o.id}`,
+      at: atLocal(shift(o.addedDate), o.loggedTime),
+      actor: o.addedBy,
+      action: '납기 추가',
+      target: o.id,
+      detail: `${o.customer} ${num(o.qty)}대 · 납기 ${formatMD(shift(o.dueDate))}`,
+    })),
+    ...purchaseOrders.map((po, i) => ({
+      id: `seed-${po.id}`,
+      at: po.createdAt,
+      actor: (po.createdBy ?? '').replace(CONTRACT_MARK, ''),
+      action: '발주 등록',
+      target: po.id,
+      detail: `${partOf(po.partCode).name} ${num(po.qty)}개 · ${po.supplierName} · 도착 예정 ${formatMD(po.plannedArrival)}${
+        demoJson.purchaseOrders[i].createdBy.endsWith(CONTRACT_MARK) ? ' · 정기 계약' : ''
+      }`,
+    })),
+  ].sort((a, b) => (a.at < b.at ? 1 : -1));
+
   return {
     settings: { ...(demoJson.settings as Settings), baseDate },
-    lineParts: demoJson.lineParts as LinePart[],
-    purchaseOrders: demoJson.purchaseOrders.map(
-      (po): PurchaseOrder => ({
-        ...po,
-        orderDate: shift(po.orderDate),
-        plannedArrival: shift(po.plannedArrival),
-        expectedArrival: shift(po.expectedArrival),
-        status: po.status as PoStatus,
-        kind: po.kind as PoKind,
-        disruptionId: null,
-        createdBy: null,
-        createdAt,
-      }),
-    ),
+    lineParts: demoLineParts(),
+    purchaseOrders,
     disruptions: [],
-    customerOrders: (demoJson.customerOrders as CustomerOrder[]).map((o) => ({ ...o, dueDate: shift(o.dueDate) })),
+    customerOrders,
+    logs,
+    logReady: true,
   };
 }

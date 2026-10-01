@@ -104,7 +104,7 @@ function KpiRow({ kpi }: { kpi: DashboardModel['kpi'] }) {
         label="현재 재고로 생산 가능"
         value={num(kpi.buildableNow)}
         unit="대"
-        sub={kpi.bottleneckNow ? `병목: ${kpi.bottleneckNow.name}` : undefined}
+        sub={kpi.bottleneckNow ? `병목: ${kpi.bottleneckNow.name} · 수리용 재고 제외` : undefined}
       />
       <KpiCard
         label="입고 예정 포함 생산 가능"
@@ -173,6 +173,12 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
         <div className="mt-2 flex flex-wrap gap-1.5 text-[11.5px] text-slate-600">
           {[
             ['현재 재고', `${num(linePart.onHand)}개`],
+            ...(row.repairNeed > 0
+              ? [
+                  ['수리용', `${num(row.repairNeed)}개`],
+                  ['생산용', `${num(row.available)}개`],
+                ]
+              : []),
             ['1대당', `${linePart.qtyPerCar}개`],
             ['가능 대수', `${num(row.cars)}대`],
             ['재고 일수', `${row.coverage.toFixed(1)}일`],

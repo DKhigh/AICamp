@@ -1,9 +1,11 @@
 // 발주 금액과 수량에 따른 납품 지연 (Excel '업체별_자재단가', '지연시간' 시트)
-import { SUPPLIER_LIMIT_DAYS } from './constants';
+import { CAPACITY_WINDOW_DAYS, SUPPLIER_LIMIT_DAYS } from './constants';
 import { diffDays } from './date';
+import { num } from './format';
 import { baseCodeOf } from './partcode';
+import { isLimitExempt } from './planning';
 import { partOf, reference } from './reference';
-import type { ISODate, Part, PurchaseOrder } from './types';
+import type { ISODate, Part, PurchaseOrder, Supplier } from './types';
 
 // ── 금액 ──────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,52 @@ export function totalSpent(pos: PurchaseOrder[]): number {
   return pos.reduce((sum, po) => sum + poAmount(po), 0);
 }
 
+// ── 업체의 남은 공급 능력 ────────────────────────────────────────────────
+
+export interface SupplierCapacity {
+  /** Excel '월 공급가능량' (kg) */
+  monthlyKg: number;
+  /** 최근 CAPACITY_WINDOW_DAYS일 동안 이 업체에 발주한 양 (kg). 취소한 발주는 뺀다 */
+  usedKg: number;
+  remainingKg: number;
+}
+
+/**
+ * 공급 능력은 월 단위로 본다: 남은 능력 = 월 공급가능량 − 최근 한 달(30일) 동안 이 업체에 이미 발주한 양.
+ * 일반·대체 발주와 이미 입고된 발주를 모두 센다 (그 달에 업체가 만들어야 했던 양이다).
+ * 시연 초기 데이터의 정기 계약 물량은 세지 않는다: 월 공급가능량은 정기 계약 말고 추가로 댈 수 있는 양으로 본다
+ * (정기 계약 물량이 월 공급가능량보다 큰 업체도 있다).
+ */
+export function supplierCapacityOf(pos: PurchaseOrder[], supplier: Supplier, baseDate: ISODate): SupplierCapacity {
+  const usedKg = pos
+    .filter(
+      (po) =>
+        po.supplierName === supplier.name &&
+        po.status !== '취소' &&
+        !(po.kind === '일반' && isLimitExempt(po)) &&
+        po.orderDate <= baseDate &&
+        diffDays(baseDate, po.orderDate) < CAPACITY_WINDOW_DAYS,
+    )
+    .reduce((sum, po) => sum + po.qty * partOf(po.partCode).kgPerUnit, 0);
+  return { monthlyKg: supplier.monthlyCapacityKg, usedKg, remainingKg: Math.max(0, supplier.monthlyCapacityKg - usedKg) };
+}
+
+/** 남은 공급 능력으로 받을 수 있는 최대 수량 */
+export function maxQtyByCapacity(capacity: SupplierCapacity, part: Part): number {
+  // 소수 계산 오차로 1개가 모자라게 나오지 않도록 아주 작은 값을 더한다
+  return Math.floor(capacity.remainingKg / part.kgPerUnit + 1e-9);
+}
+
+/** 공급 능력을 넘으면 안내 문구, 아니면 null */
+export function capacityError(capacity: SupplierCapacity, supplierName: string, part: Part, qty: number): string | null {
+  const requiredKg = qty * part.kgPerUnit;
+  if (requiredKg <= capacity.remainingKg + 1e-9) return null;
+  const used = capacity.usedKg > 0 ? ` (월 ${num(capacity.monthlyKg)}kg 중 ${num(Math.round(capacity.usedKg))}kg은 최근 한 달 발주에 이미 씀)` : '';
+  return `${supplierName}의 남은 공급 능력 ${num(Math.round(capacity.remainingKg))}kg${used}을 넘습니다. 필요량 ${num(
+    Math.round(requiredKg),
+  )}kg · 이 업체에서 받을 수 있는 수량은 최대 ${num(maxQtyByCapacity(capacity, part))}개입니다.`;
+}
+
 // ── 수량에 따른 납품 지연 ─────────────────────────────────────────────────
 
 export interface QtyDelayResult {
@@ -69,9 +117,8 @@ export function qtyDelayOf(pos: PurchaseOrder[], part: Part, supplierName: strin
       (po) =>
         po.supplierName === supplierName &&
         baseCodeOf(po.partCode) === baseCode &&
-        po.kind === '일반' &&
+        !isLimitExempt(po) &&
         po.status !== '취소' &&
-        po.createdBy !== null &&
         po.orderDate <= baseDate &&
         diffDays(baseDate, po.orderDate) < SUPPLIER_LIMIT_DAYS,
     )

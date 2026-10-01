@@ -6,7 +6,7 @@ import { formatMD } from '../lib/date';
 import { num } from '../lib/format';
 import { nextArrivalOf } from '../lib/planning';
 import { colorOf, partOf } from '../lib/reference';
-import { repairCarsAt, repairPartNeeds } from '../lib/repairs';
+import { repairCarsAt, repairCarViews, repairPartNeeds } from '../lib/repairs';
 import type { AppState } from '../lib/types';
 import { useUi } from '../state/Ui';
 
@@ -15,10 +15,10 @@ const STATUS_TONE: Record<string, Tone> = { '수리 중': 'blue', '부품 대기
 export function RepairsPage({ state }: { state: AppState }) {
   const { openOrder } = useUi();
   const [picked, setPicked] = useState<string | null>(null);
-  const repairCars = repairCarsAt(state.settings.baseDate);
+  const repairCars = repairCarViews(repairCarsAt(state.settings.baseDate), state.lineParts);
   const selected = repairCars.find((c) => c.serial === picked) ?? null;
-  const stock = new Map(state.lineParts.map((p) => [p.partCode, p.onHand]));
   const needs = repairPartNeeds(repairCars, state.lineParts);
+  const needOf = new Map(needs.map((n) => [n.partCode, n]));
 
   return (
     <div className="space-y-4">
@@ -27,7 +27,7 @@ export function RepairsPage({ state }: { state: AppState }) {
           ← 대시보드
         </Link>
         <h1 className="text-lg font-extrabold tracking-tight text-slate-900">수리 차량</h1>
-        <p className="text-xs text-slate-500">입고되어 수리 중인 차량 {repairCars.length}대 · 차량을 누르면 고장 난 곳과 소모 부품을 봅니다</p>
+        <p className="text-xs text-slate-500">입고되어 수리 중인 차량 {repairCars.length}대 · 수리에 쓸 부품은 재고에서 따로 잡아 두고 생산에는 쓰지 않습니다</p>
         <Button variant="primary" className="ml-auto" onClick={() => openOrder()}>
           + 발주
         </Button>
@@ -107,7 +107,8 @@ export function RepairsPage({ state }: { state: AppState }) {
                 <ul className="space-y-2">
                   {selected.parts.map((use) => {
                     const part = partOf(use.partCode);
-                    const onHand = stock.get(use.partCode) ?? 0;
+                    const need = needOf.get(use.partCode);
+                    const short = selected.missing.find((m) => m.partCode === use.partCode)?.qty ?? 0;
                     const next = nextArrivalOf(use.partCode, state.purchaseOrders);
                     return (
                       <li key={use.partCode} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-slate-50 px-3 py-2.5">
@@ -117,11 +118,11 @@ export function RepairsPage({ state }: { state: AppState }) {
                             <span className="ml-2 font-semibold text-slate-700">× {num(use.qty)}개</span>
                           </p>
                           <p className="tabular mt-0.5 text-xs text-slate-600">
-                            현재 재고 {num(onHand)}개 ·{' '}
-                            {onHand >= use.qty ? (
-                              <span className="font-semibold text-emerald-700">✓ 재고 충분</span>
+                            현재 재고 {num(need?.onHand ?? 0)}개 중 수리용 {num(need?.reserved ?? 0)}개 확보 ·{' '}
+                            {short === 0 ? (
+                              <span className="font-semibold text-emerald-700">✓ 이 차량 몫 확보</span>
                             ) : (
-                              <span className="font-semibold text-red-600">✗ {num(use.qty - onHand)}개 부족</span>
+                              <span className="font-semibold text-red-600">✗ {num(short)}개 부족 · 부품 대기</span>
                             )}
                             {next && ` · 다음 입고 ${formatMD(next.expectedArrival)} +${num(next.qty)}개`}
                           </p>
@@ -147,6 +148,8 @@ export function RepairsPage({ state }: { state: AppState }) {
                 <th className="py-2 pl-5 pr-2">부품</th>
                 <th className="px-2 py-2 text-right">수리 소요</th>
                 <th className="px-2 py-2 text-right">현재 재고</th>
+                <th className="px-2 py-2 text-right">수리용 확보</th>
+                <th className="px-2 py-2 text-right">생산에 쓸 수 있는 재고</th>
                 <th className="px-2 py-2">상태</th>
                 <th className="py-2 pl-2 pr-5" aria-label="발주" />
               </tr>
@@ -161,8 +164,10 @@ export function RepairsPage({ state }: { state: AppState }) {
                     </td>
                     <td className="tabular px-2 py-2.5 text-right text-slate-900">{num(n.needed)}개</td>
                     <td className="tabular px-2 py-2.5 text-right text-slate-900">{num(n.onHand)}개</td>
+                    <td className="tabular px-2 py-2.5 text-right font-semibold text-slate-900">{num(n.reserved)}개</td>
+                    <td className="tabular px-2 py-2.5 text-right text-slate-900">{num(n.available)}개</td>
                     <td className="px-2 py-2.5">
-                      {n.enough ? <Badge tone="green">재고 충분</Badge> : <Badge tone="red">{num(n.needed - n.onHand)}개 부족</Badge>}
+                      {n.enough ? <Badge tone="green">수리용 확보</Badge> : <Badge tone="red">{num(n.needed - n.onHand)}개 부족</Badge>}
                     </td>
                     <td className="py-2.5 pl-2 pr-5 text-right">
                       <Button size="sm" onClick={() => openOrder(n.partCode)}>
@@ -176,7 +181,7 @@ export function RepairsPage({ state }: { state: AppState }) {
           </table>
         </div>
         <p className="border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500">
-          수리 차량과 소모 부품은 시연용 고정 데이터입니다. 수리 소모분은 생산 재고·생산 예측 계산에는 넣지 않고 표시만 합니다.
+          수리에 필요한 부품은 재고에서 먼저 잡아 둡니다. 대시보드의 생산 가능 대수·재고 일수·생산 예측은 이 수량을 뺀 '생산에 쓸 수 있는 재고'로 계산합니다. 재고가 모자라면 늦게 입고된 차량부터 '부품 대기'가 됩니다. (수리 차량 목록은 시연용 고정 데이터입니다.)
         </p>
       </Card>
     </div>

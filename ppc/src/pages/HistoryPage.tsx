@@ -4,11 +4,11 @@ import { Link } from 'react-router-dom';
 import { EmployeeConfirmModal } from '../components/EmployeeField';
 import { Badge, Button, Card, DISRUPTION_STATUS_TONE, PO_STATUS_TONE } from '../components/ui';
 import { formatMD } from '../lib/date';
-import { num, won } from '../lib/format';
+import { num, timeLabel, won } from '../lib/format';
 import { poAmount, poOriginalAmount, totalSpent } from '../lib/ordering';
 import { isCancellable } from '../lib/planning';
 import { partOf } from '../lib/reference';
-import type { AppState, Disruption, PurchaseOrder } from '../lib/types';
+import type { ActivityLog, AppState, Disruption, PurchaseOrder } from '../lib/types';
 import { useAppData } from '../state/AppData';
 
 function decisionText(d: Disruption): string {
@@ -20,7 +20,51 @@ function decisionText(d: Disruption): string {
   return '결정 전';
 }
 
+const ORDER_ACTIONS = ['납기 추가', '납기 취소'];
+
+function LogTable({ logs }: { logs: ActivityLog[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] text-left text-[13px]">
+        <thead className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
+          <tr>
+            <th className="py-2 pl-5 pr-2">시각</th>
+            <th className="px-2 py-2">작업</th>
+            <th className="px-2 py-2">대상</th>
+            <th className="px-2 py-2">내용</th>
+            <th className="py-2 pl-2 pr-5">사원</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {logs.map((l) => (
+            <tr key={l.id}>
+              <td className="tabular whitespace-nowrap py-2.5 pl-5 pr-2 text-slate-600">{timeLabel(l.at)}</td>
+              <td className="whitespace-nowrap px-2 py-2.5">
+                <Badge tone={l.action.includes('취소') || l.action === '데이터 초기화' ? 'red' : l.action.includes('차질') || l.action.includes('지연') ? 'orange' : 'gray'}>
+                  {l.action}
+                </Badge>
+              </td>
+              <td className="whitespace-nowrap px-2 py-2.5 font-mono font-semibold text-slate-900">
+                {l.target.startsWith('D-') ? (
+                  <Link to={`/disruptions/${l.target}`} className="text-accent hover:underline">
+                    {l.target}
+                  </Link>
+                ) : (
+                  l.target || '–'
+                )}
+              </td>
+              <td className="px-2 py-2.5 text-slate-700">{l.detail}</td>
+              <td className="whitespace-nowrap py-2.5 pl-2 pr-5 text-slate-700">{l.actor}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function HistoryPage({ state }: { state: AppState }) {
+  const orderLogs = state.logs.filter((l) => ORDER_ACTIONS.includes(l.action));
   const disruptions = [...state.disruptions].sort((a, b) => b.id.localeCompare(a.id));
   const pos = [...state.purchaseOrders].sort((a, b) => b.id.localeCompare(a.id));
   const baseDate = state.settings.baseDate;
@@ -196,6 +240,33 @@ export function HistoryPage({ state }: { state: AppState }) {
               </tbody>
             </table>
           </div>
+        )}
+      </Card>
+
+      {!state.logReady && (
+        <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
+          <strong>활동 기록 테이블(activity_log)이 DB에 없어 기록이 저장되지 않습니다.</strong> Supabase의 SQL Editor에서
+          <code className="mx-1 rounded bg-white px-1">supabase/migration_activity_log.sql</code>을 한 번 실행한 뒤 [데이터 초기화]를 누르세요. 그 전까지는
+          납기 추가·취소, 차질 해결 같은 작업이 되기는 하지만 누가 언제 했는지 남지 않습니다.
+        </p>
+      )}
+
+      <Card
+        title="납기 변경 기록 (추가 · 취소)"
+        aside={<span className="text-xs text-slate-500">{orderLogs.length}건 · 취소한 주문은 납기 현황에서 지워지고 여기에만 남습니다</span>}
+      >
+        {orderLogs.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-slate-500">납기를 추가하거나 취소한 기록이 없습니다</p>
+        ) : (
+          <LogTable logs={orderLogs} />
+        )}
+      </Card>
+
+      <Card title="활동 기록 (전체)" aside={<span className="text-xs text-slate-500">{state.logs.length}건 · 최신 순 · 누가 언제 무엇을 했는지</span>}>
+        {state.logs.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-slate-500">기록이 없습니다</p>
+        ) : (
+          <LogTable logs={state.logs} />
         )}
       </Card>
     </div>

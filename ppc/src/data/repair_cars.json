@@ -34,7 +34,7 @@
   {
     "serial": "C05-R4T8B1ZN",
     "receivedDate": "2026-10-04",
-    "status": "부품 대기",
+    "status": "수리 중",
     "faultArea": "엔진",
     "symptom": "실린더 헤드 과열로 출력이 떨어지고 경고등이 켜진다.",
     "parts": [

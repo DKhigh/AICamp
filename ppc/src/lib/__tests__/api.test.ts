@@ -5,7 +5,15 @@ import { createApi, EMPTY_DB_MESSAGE } from '../api';
 import { cautionOf } from '../cautions';
 import { todayISO } from '../clock';
 import { buildable, displayStatusOf, isCancellable, openPos, supplierLimitOf, partStatusOf, sortByArrival, stockOnHand, stockWithIncoming } from '../planning';
+import { productionParts } from '../repairs';
 import { memoryStore } from '../store';
+import type { AppState } from '../types';
+
+/** 입고 예정 포함 생산 가능 대수 (수리용 재고 제외) */
+const buildableIncoming = (state: AppState) => {
+  const parts = productionParts(state.lineParts);
+  return buildable(parts, stockWithIncoming(parts, state.purchaseOrders));
+};
 
 async function freshApi() {
   const api = createApi(memoryStore(), () => '2026-10-05');
@@ -33,7 +41,7 @@ describe('데이터 초기화 (C-1)', () => {
 
   it('초기화는 그동안 바뀐 내용을 모두 되돌린다', async () => {
     const api = await freshApi();
-    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy: 'A' });
+    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
     await api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 50, employeeNo: '0000' });
     await api.resetDemoData('0000');
     const state = (await api.fetchState())!;
@@ -64,7 +72,7 @@ describe('F1-2 발주 저장', () => {
       kind: '일반',
       createdBy: '테스트(0000)',
     });
-    expect(buildable(state.lineParts, stockWithIncoming(state.lineParts, state.purchaseOrders))).toBe(440);
+    expect(buildableIncoming(state)).toBe(440);
   });
 
   it('수량은 1 이상의 정수', async () => {
@@ -86,9 +94,11 @@ describe('F2-1 차질 저장', () => {
       supplierName: '한빛오토텍',
       reason: '납품 지연',
       delayDays: 5,
-      createdBy: '박해성',
+      employeeNo: 'ICBM-26012',
     });
-    expect(d.id).toBe('D-001');
+    expect(d.extended).toBe(false);
+    expect(d.disruption.id).toBe('D-001');
+    expect(d.disruption.createdBy).toBe('박해성(ICBM-26012)');
     const state = (await api.fetchState())!;
     expect(state.disruptions[0]).toMatchObject({ status: '발생', materialName: '알루미늄 소재', detectedDate: '2026-10-05' });
     expect(state.purchaseOrders.find((p) => p.id === 'PO-001')).toMatchObject({
@@ -104,7 +114,7 @@ describe('F2-1 차질 저장', () => {
   it('입고 예정 발주가 없는 부품(변속기)은 막히고 아무것도 저장되지 않는다', async () => {
     const api = await freshApi();
     await expect(
-      api.registerDisruption({ partCode: 'P024', supplierName: '태성모터스', reason: '납품 지연', delayDays: 3, createdBy: '테스트' }),
+      api.registerDisruption({ partCode: 'P024', supplierName: '태성모터스', reason: '납품 지연', delayDays: 3, employeeNo: '0000' }),
     ).rejects.toThrow(NO_OPEN_PO_MESSAGE);
     expect((await api.fetchState())!.disruptions).toHaveLength(0);
   });
@@ -113,7 +123,7 @@ describe('F2-1 차질 저장', () => {
     const api = await freshApi();
     for (const delayDays of [0, 61, 2.5]) {
       await expect(
-        api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays, createdBy: '테스트' }),
+        api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays, employeeNo: '0000' }),
       ).rejects.toThrow('지연일수는 1~60');
     }
   });
@@ -122,7 +132,7 @@ describe('F2-1 차질 저장', () => {
 describe('F2-4 결정 저장', () => {
   async function case2() {
     const api = await freshApi();
-    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy: 'A' });
+    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
     return api;
   }
 
@@ -177,11 +187,17 @@ describe('F2-4 결정 저장', () => {
     expect((await api.fetchState())!.purchaseOrders).toHaveLength(4);
   });
 
-  it('기다리기 → 해결 완료', async () => {
+  it('기다리기 → 해결 완료 (사원번호 필요)', async () => {
     const api = await case2();
-    await api.decideWait('D-001');
+    await expect(api.decideWait({ disruptionId: 'D-001', employeeNo: '' })).rejects.toThrow('사원번호를 입력');
+    await expect(api.decideWait({ disruptionId: 'D-001', employeeNo: '9999' })).rejects.toThrow('명단에 없는 사원번호');
+    expect((await api.fetchState())!.disruptions[0].status).toBe('발생');
+    await api.decideWait({ disruptionId: 'D-001', employeeNo: 'ICBM-26001' });
     expect((await api.fetchState())!.disruptions[0].status).toBe('기다리기');
-    await api.resolveDisruption('D-001');
+    await expect(api.resolveDisruption({ disruptionId: 'D-001', employeeNo: '9999', arrivals: { 'PO-001': '2026-10-09' } })).rejects.toThrow(
+      '명단에 없는 사원번호',
+    );
+    await api.resolveDisruption({ disruptionId: 'D-001', employeeNo: '0000', arrivals: { 'PO-001': '2026-10-09' } });
     const d = (await api.fetchState())!.disruptions[0];
     expect(d.status).toBe('해결');
     expect(d.resolvedAt).not.toBeNull();
@@ -191,20 +207,27 @@ describe('F2-4 결정 저장', () => {
 describe('P1 입고 처리 · 설정 수정', () => {
   it('입고 처리: 재고에 더하고 입고완료', async () => {
     const api = await freshApi();
-    await api.receivePurchaseOrder('PO-001');
+    await api.receivePurchaseOrder({ poId: 'PO-001', employeeNo: '0000' });
     const state = (await api.fetchState())!;
-    expect(state.lineParts.find((p) => p.partCode === 'P007')!.onHand).toBe(460);
+    expect(state.lineParts.find((p) => p.partCode === 'P007')!.onHand).toBe(461);
     expect(state.purchaseOrders.find((p) => p.id === 'PO-001')!.status).toBe('입고완료');
     // 엔진이 들어와 병목이 서스펜션(90대)으로 바뀐다
     expect(buildable(state.lineParts, stockOnHand(state.lineParts))).toBe(90);
-    await expect(api.receivePurchaseOrder('PO-001')).rejects.toThrow('이미 입고완료 상태');
+    await expect(api.receivePurchaseOrder({ poId: 'PO-001', employeeNo: '0000' })).rejects.toThrow('이미 입고완료 상태');
+    await expect(api.receivePurchaseOrder({ poId: 'PO-003', employeeNo: '' })).rejects.toThrow('사원번호를 입력');
   });
 
   it('설정 수정: 일일 투입과 리드타임', async () => {
     const api = await freshApi();
-    await api.updateSettings({ dailyCapacity: 10, leadTimeDays: 3 });
+    await api.updateSettings({ dailyCapacity: 10, leadTimeDays: 3, employeeNo: '0000' });
     expect((await api.fetchState())!.settings).toMatchObject({ dailyCapacity: 10, leadTimeDays: 3, baseDate: '2026-10-05' });
-    await expect(api.updateSettings({ dailyCapacity: 0, leadTimeDays: 2 })).rejects.toThrow('일일 투입은 1 이상');
+    await expect(api.updateSettings({ dailyCapacity: 0, leadTimeDays: 2, employeeNo: '0000' })).rejects.toThrow('일일 투입은 1 이상');
+    // 상한과 사원번호 (BUG-008)
+    await expect(api.updateSettings({ dailyCapacity: 100000, leadTimeDays: 2, employeeNo: '0000' })).rejects.toThrow('1,000 이하');
+    await expect(api.updateSettings({ dailyCapacity: 20, leadTimeDays: 100, employeeNo: '0000' })).rejects.toThrow('리드타임은 0 이상 30 이하');
+    await expect(api.updateSettings({ dailyCapacity: 20, leadTimeDays: 2, employeeNo: '' })).rejects.toThrow('사원번호를 입력');
+    await expect(api.updateSettings({ dailyCapacity: 20, leadTimeDays: 2, employeeNo: '9999' })).rejects.toThrow('명단에 없는 사원번호');
+    expect((await api.fetchState())!.settings).toMatchObject({ dailyCapacity: 10, leadTimeDays: 3 });
   });
 });
 
@@ -214,7 +237,7 @@ describe('사원번호 권한 (발주 · 발주 취소 · 데이터 초기화)',
     for (const employeeNo of ['', '   ', '9999', 'abcd']) {
       await expect(api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 50, employeeNo })).rejects.toThrow('사원번호');
     }
-    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy: 'A' });
+    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
     await expect(
       api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '유지', employeeNo: '9999' }),
     ).rejects.toThrow('명단에 없는 사원번호');
@@ -237,11 +260,14 @@ describe('사원번호 권한 (발주 · 발주 취소 · 데이터 초기화)',
     expect((await api.fetchState())!.purchaseOrders).toHaveLength(3);
   });
 
-  it('차질 등록의 입력자는 여전히 공백이면 안 된다', async () => {
+  it('차질 등록도 사원번호가 있어야 한다 (자유 입력 이름이 아니다)', async () => {
     const api = await freshApi();
-    await expect(
-      api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy: '  ' }),
-    ).rejects.toThrow('입력자 이름');
+    for (const employeeNo of ['', '  ', '박해성', '9999']) {
+      await expect(
+        api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo }),
+      ).rejects.toThrow('사원번호');
+    }
+    expect((await api.fetchState())!.disruptions).toHaveLength(0);
   });
 });
 
@@ -251,8 +277,8 @@ describe('발주대기와 발주 취소', () => {
     await api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 50, employeeNo: '0000' });
     const state = (await api.fetchState())!;
     const shown = Object.fromEntries(state.purchaseOrders.map((p) => [p.id, displayStatusOf(p, state.settings.baseDate)]));
-    // PO-001·PO-003은 10/2 발주(기준일 10/5 이전), PO-002는 기준일에 발주
-    expect(shown).toEqual({ 'PO-001': '입고대기', 'PO-002': '발주대기', 'PO-003': '입고대기', 'PO-004': '발주대기' });
+    // 시연 초기 발주 3건은 모두 기준일 이전(10/2, 10/4)에 넣은 것이고, 오늘 넣은 PO-004만 발주대기다
+    expect(shown).toEqual({ 'PO-001': '입고대기', 'PO-002': '입고대기', 'PO-003': '입고대기', 'PO-004': '발주대기' });
   });
 
   it('발주대기는 사원번호가 맞으면 취소되고, 입고 예정과 예측에서 빠진다', async () => {
@@ -265,7 +291,7 @@ describe('발주대기와 발주 취소', () => {
     await api.cancelPurchaseOrder({ poId: 'PO-004', employeeNo: 'ICBM-26018' });
     const state = (await api.fetchState())!;
     expect(state.purchaseOrders.find((p) => p.id === 'PO-004')!.status).toBe('취소');
-    expect(buildable(state.lineParts, stockWithIncoming(state.lineParts, state.purchaseOrders))).toBe(430);
+    expect(buildableIncoming(state)).toBe(430);
     await expect(api.cancelPurchaseOrder({ poId: 'PO-004', employeeNo: '0000' })).rejects.toThrow('이미 취소된 발주');
   });
 
@@ -277,8 +303,8 @@ describe('발주대기와 발주 취소', () => {
 
   it('지연된 발주와 대체 발주는 당일이어도 취소 대상이 아니다', async () => {
     const api = await freshApi();
-    // PO-002(10/5 발주)를 지연시키고 대체 발주를 낸다
-    await api.registerDisruption({ partCode: 'P004', supplierName: '태성모터스', reason: '납품 지연', delayDays: 7, createdBy: 'A' });
+    // PO-002를 지연시키고 대체 발주를 낸다
+    await api.registerDisruption({ partCode: 'P004', supplierName: '태성모터스', reason: '납품 지연', delayDays: 7, employeeNo: '0000' });
     const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진우기공', qty: 560, action: '유지', employeeNo: '0000' });
     const state = (await api.fetchState())!;
     expect(isCancellable(state.purchaseOrders.find((p) => p.id === 'PO-002')!, state.settings.baseDate)).toBe(false);
@@ -381,7 +407,7 @@ describe('업체별 발주 한도 (일주일 50개)', () => {
     const state = (await api.fetchState())!;
     // 한빛오토텍에는 초기 발주 PO-001 400개가 있지만 한도는 비어 있다
     expect(supplierLimitOf(state.purchaseOrders, '한빛오토텍', '2026-10-05').used).toBe(0);
-    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy: 'A' });
+    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
     await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '유지', employeeNo: '0000' });
     expect(supplierLimitOf((await api.fetchState())!.purchaseOrders, '진성오토텍', '2026-10-05').used).toBe(0);
   });
@@ -396,7 +422,7 @@ describe('기준일은 항상 오늘', () => {
     now = '2026-10-08';
     const state = (await api.fetchState())!;
     expect(state.settings.baseDate).toBe('2026-10-08');
-    // 3일이 지나면 당일 발주였던 PO-002는 더 이상 발주대기가 아니고, 10/7 예정이던 PO-001은 예정일이 지났다
+    // 3일이 지나면 10/7 예정이던 PO-001은 예정일이 지났다
     expect(displayStatusOf(state.purchaseOrders.find((p) => p.id === 'PO-002')!, state.settings.baseDate)).toBe('입고대기');
     expect(state.purchaseOrders.find((p) => p.id === 'PO-001')!.expectedArrival).toBe('2026-10-07');
     await expect(api.cancelPurchaseOrder({ poId: 'PO-002', employeeNo: '0000' })).rejects.toThrow('발주한 당일');
@@ -408,7 +434,7 @@ describe('기준일은 항상 오늘', () => {
     const state = (await api.fetchState())!;
     expect(state.purchaseOrders.map((p) => [p.id, p.orderDate, p.expectedArrival])).toEqual([
       ['PO-001', '2026-11-17', '2026-11-22'],
-      ['PO-002', '2026-11-20', '2026-11-24'],
+      ['PO-002', '2026-11-19', '2026-11-24'],
       ['PO-003', '2026-11-17', '2026-11-23'],
     ]);
     expect(state.customerOrders.map((o) => o.dueDate)).toEqual(['2026-11-25', '2026-11-29', '2026-12-03']);

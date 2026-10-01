@@ -18,6 +18,14 @@ export function ddayLabel(dday: number): string {
   return `예정일 ${-dday}일 지남`;
 }
 
+/** 기록 시각 표기 (기기 현지 시각): '2026-10-02T00:12:00.000Z' → '10/2 09:12' */
+export function timeLabel(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '–';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** 금액 표기: 732000 → '732,000원' */
 export function won(n: number): string {
   return `${num(Math.round(n))}원`;

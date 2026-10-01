@@ -6,73 +6,20 @@
     "horizonDays": 21
   },
   "lineParts": [
-    {
-      "partCode": "P007",
-      "qtyPerCar": 1,
-      "onHand": 60,
-      "sortOrder": 1
-    },
-    {
-      "partCode": "P024",
-      "qtyPerCar": 1,
-      "onHand": 450,
-      "sortOrder": 2
-    },
-    {
-      "partCode": "P001",
-      "qtyPerCar": 4,
-      "onHand": 1800,
-      "sortOrder": 3
-    },
-    {
-      "partCode": "P004",
-      "qtyPerCar": 4,
-      "onHand": 360,
-      "sortOrder": 4
-    },
-    {
-      "partCode": "P010",
-      "qtyPerCar": 1,
-      "onHand": 100,
-      "sortOrder": 5
-    },
-    {
-      "partCode": "P012-C01",
-      "qtyPerCar": 1,
-      "onHand": 120,
-      "sortOrder": 6
-    },
-    {
-      "partCode": "P012-C02",
-      "qtyPerCar": 1,
-      "onHand": 100,
-      "sortOrder": 7
-    },
-    {
-      "partCode": "P012-C03",
-      "qtyPerCar": 1,
-      "onHand": 60,
-      "sortOrder": 8
-    },
-    {
-      "partCode": "P012-C04",
-      "qtyPerCar": 1,
-      "onHand": 80,
-      "sortOrder": 9
-    },
-    {
-      "partCode": "P012-C05",
-      "qtyPerCar": 1,
-      "onHand": 80,
-      "sortOrder": 10
-    },
-    {
-      "partCode": "P013",
-      "qtyPerCar": 1,
-      "onHand": 430,
-      "sortOrder": 11
-    }
+    { "partCode": "P007", "qtyPerCar": 1, "onHand": 61, "sortOrder": 1 },
+    { "partCode": "P024", "qtyPerCar": 1, "onHand": 451, "sortOrder": 2 },
+    { "partCode": "P001", "qtyPerCar": 4, "onHand": 1806, "sortOrder": 3 },
+    { "partCode": "P004", "qtyPerCar": 4, "onHand": 362, "sortOrder": 4 },
+    { "partCode": "P010", "qtyPerCar": 1, "onHand": 101, "sortOrder": 5 },
+    { "partCode": "P013", "qtyPerCar": 1, "onHand": 431, "sortOrder": 100 }
   ],
+  "bodyStock": {
+    "partCode": "P012",
+    "qtyPerCar": 1,
+    "sortOrder": 6,
+    "onHandByColorName": { "화이트": 120, "블랙": 100, "레드": 60, "블루": 80, "그레이": 80 },
+    "defaultOnHand": 80
+  },
   "purchaseOrders": [
     {
       "id": "PO-001",
@@ -84,7 +31,9 @@
       "plannedArrival": "2026-10-07",
       "expectedArrival": "2026-10-07",
       "status": "입고대기",
-      "kind": "일반"
+      "kind": "일반",
+      "createdBy": "이영수(ICBM-26001) · 정기 계약",
+      "loggedTime": "09:12"
     },
     {
       "id": "PO-002",
@@ -92,11 +41,13 @@
       "supplierName": "태성모터스",
       "qty": 1400,
       "originalQty": 1400,
-      "orderDate": "2026-10-05",
+      "orderDate": "2026-10-04",
       "plannedArrival": "2026-10-09",
       "expectedArrival": "2026-10-09",
       "status": "입고대기",
-      "kind": "일반"
+      "kind": "일반",
+      "createdBy": "윤도경(ICBM-26018) · 정기 계약",
+      "loggedTime": "14:05"
     },
     {
       "id": "PO-003",
@@ -108,27 +59,24 @@
       "plannedArrival": "2026-10-08",
       "expectedArrival": "2026-10-08",
       "status": "입고대기",
-      "kind": "일반"
+      "kind": "일반",
+      "createdBy": "권태경(ICBM-26007) · 정기 계약",
+      "loggedTime": "10:40"
     }
   ],
   "customerOrders": [
-    {
-      "id": "CO-001",
-      "customer": "누리렌터카",
-      "qty": 60,
-      "dueDate": "2026-10-10"
-    },
-    {
-      "id": "CO-002",
-      "customer": "온길모빌리티",
-      "qty": 80,
-      "dueDate": "2026-10-14"
-    },
-    {
-      "id": "CO-003",
-      "customer": "다온물류",
-      "qty": 80,
-      "dueDate": "2026-10-18"
-    }
-  ]
+    { "id": "CO-001", "customer": "누리렌터카", "qty": 60, "dueDate": "2026-10-10", "addedDate": "2026-09-29", "addedBy": "박해성(ICBM-26012)", "loggedTime": "10:20" },
+    { "id": "CO-002", "customer": "온길모빌리티", "qty": 80, "dueDate": "2026-10-14", "addedDate": "2026-09-30", "addedBy": "박해성(ICBM-26012)", "loggedTime": "13:45" },
+    { "id": "CO-003", "customer": "다온물류", "qty": 80, "dueDate": "2026-10-18", "addedDate": "2026-10-01", "addedBy": "이영수(ICBM-26001)", "loggedTime": "16:30" }
+  ],
+  "disruptionExamples": [
+    { "id": "예시 1", "partCode": "P004", "supplierName": "태성모터스", "reason": "납품 지연", "delayDays": 7 },
+    { "id": "예시 2", "partCode": "P007", "supplierName": "한빛오토텍", "reason": "납품 지연", "delayDays": 5 },
+    { "id": "예시 3", "partCode": "P010", "supplierName": "세진정밀", "reason": "납품 지연", "delayDays": 6 }
+  ],
+  "pastShipments": {
+    "days": 7,
+    "perDay": 20,
+    "customers": ["새빛모빌리티", "한라렌터카", "동해물류"]
+  }
 }

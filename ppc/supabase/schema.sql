@@ -59,6 +59,19 @@ create table customer_orders (
   due_date date not null
 );
 
+-- 활동 기록: 누가 언제 무엇을 했는지 (발주·차질·해결·납기 추가/취소·설정 변경 …)
+-- 이미 만든 프로젝트에는 migration_activity_log.sql을 실행한다
+create table activity_log (
+  id text primary key,
+  at timestamptz not null default now(),
+  actor text not null,                 -- '이름(사원번호)'
+  action text not null,
+  target text not null default '',     -- 'PO-004' | 'D-001' | 'CO-002'
+  detail text not null default ''
+);
+alter table activity_log enable row level security;
+create policy demo_all on activity_log for all to anon using (true) with check (true);
+
 -- 시연용: 로그인 없이 누구나 읽기/쓰기 (§12 Q9)
 alter table settings        enable row level security;
 alter table line_parts      enable row level security;

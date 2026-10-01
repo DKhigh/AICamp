@@ -1,8 +1,8 @@
 // 출차 일정과 수리 차량
 import { describe, expect, it } from 'vitest';
 import { demoState } from '../reference';
-import { repairCars, repairPartNeeds } from '../repairs';
-import { serialOf } from '../serial';
+import { productionParts, repairCarViews, repairCars, repairPartNeeds } from '../repairs';
+import { carSerialOf, serialOf } from '../serial';
 import { shipmentSchedule } from '../shipments';
 
 const SERIAL = /^[A-Z0-9]{8}$/;
@@ -53,6 +53,60 @@ describe('일자별 출차', () => {
   });
 });
 
+describe('고유번호는 주문과 그 주문 안의 순번으로 정한다 (BUG-015)', () => {
+  it('더 급한 주문이 끼어들어도 기존 주문의 차량 번호는 바뀌지 않는다', () => {
+    const state = demoState();
+    const idsOf = (s: typeof state, orderId: string) =>
+      shipmentSchedule(s)
+        .days.flatMap((d) => d.cars)
+        .filter((c) => c.orderId === orderId)
+        .map((c) => c.serial.slice(4));
+    const before = idsOf(state, 'CO-002');
+    expect(before).toHaveLength(80);
+    // 납기가 가장 빠른 긴급 주문 40대를 넣는다 → CO-002의 차는 뒤로 밀리지만 번호는 그대로다
+    const urgent = { ...state, customerOrders: [...state.customerOrders, { id: 'CO-004', customer: '긴급', qty: 40, dueDate: '2026-10-08' }] };
+    expect(idsOf(urgent, 'CO-002')).toEqual(before);
+    expect(idsOf(urgent, 'CO-004')).toHaveLength(40);
+    expect(idsOf(urgent, 'CO-004').some((id) => before.includes(id))).toBe(false);
+  });
+
+  it('주문·순번이 다르면 번호가 겹치지 않는다', () => {
+    expect(carSerialOf('CO-001', 1)).toBe(carSerialOf('CO-001', 1));
+    expect(carSerialOf('CO-001', 1)).not.toBe(carSerialOf('CO-002', 1));
+    expect(carSerialOf('CO-001', 1)).not.toBe(carSerialOf(null, 1));
+    const all = ['CO-001', 'CO-002', null].flatMap((id) => Array.from({ length: 2000 }, (_, i) => carSerialOf(id, i + 1)));
+    expect(new Set(all).size).toBe(6000);
+  });
+});
+
+describe('출차 실적 (기준일 이전)', () => {
+  const schedule = shipmentSchedule(demoState());
+
+  it('지난 7일 동안 매일 20대, 날짜는 모두 기준일보다 앞이다', () => {
+    expect(schedule.past.map((d) => d.date)).toEqual([
+      '2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04',
+    ]);
+    expect(schedule.past.every((d) => d.past && d.count === 20 && d.cars.length === 20)).toBe(true);
+    expect(schedule.pastTotal).toBe(140);
+    expect(schedule.days.every((d) => !d.past && d.date >= '2026-10-05')).toBe(true);
+  });
+
+  it('색상은 Excel 차량색상의 색이고, 고유번호는 예정 차량과 겹치지 않는다', () => {
+    const pastCars = schedule.past.flatMap((d) => d.cars);
+    expect(pastCars.every((c) => COLORED_SERIAL.test(c.serial) && c.serial.startsWith(c.colorCode + '-'))).toBe(true);
+    expect(schedule.pastColors.map((c) => c.colorCode)).toEqual(['C01', 'C02', 'C03', 'C04', 'C05']);
+    expect(schedule.pastColors.reduce((sum, c) => sum + c.count, 0)).toBe(140);
+    const all = [...pastCars, ...schedule.days.flatMap((d) => d.cars)].map((c) => c.serial.slice(4));
+    expect(new Set(all).size).toBe(140 + 420);
+  });
+
+  it('같은 날짜의 실적은 기준일이 바뀌어도 같은 차량이다', () => {
+    const later = shipmentSchedule(demoState('2026-10-07'));
+    const day = (s: typeof schedule, date: string) => s.past.find((d) => d.date === date)!.cars.map((c) => c.serial);
+    expect(day(later, '2026-10-03')).toEqual(day(schedule, '2026-10-03'));
+  });
+});
+
 describe('수리 중인 차량', () => {
   it('고유번호 형식이 맞고 서로 겹치지 않는다', () => {
     expect(repairCars.length).toBeGreaterThan(0);
@@ -65,7 +119,26 @@ describe('수리 중인 차량', () => {
     const codes = new Set(lineParts.map((p) => p.partCode));
     expect(repairCars.every((c) => c.parts.length > 0 && c.parts.every((u) => codes.has(u.partCode) && u.qty >= 1))).toBe(true);
     const needs = repairPartNeeds(repairCars, lineParts);
-    expect(needs.find((n) => n.partCode === 'P001')).toMatchObject({ needed: 6, onHand: 1800, enough: true });
-    expect(needs.find((n) => n.partCode === 'P007')).toMatchObject({ needed: 1, onHand: 60, enough: true });
+    expect(needs.find((n) => n.partCode === 'P001')).toMatchObject({ needed: 6, onHand: 1806, reserved: 6, available: 1800, enough: true });
+    expect(needs.find((n) => n.partCode === 'P007')).toMatchObject({ needed: 1, onHand: 61, reserved: 1, available: 60, enough: true });
+  });
+
+  it('수리용 부품은 생산용 재고에서 뺀다 (BUG-016)', () => {
+    const { lineParts } = demoState();
+    const prod = Object.fromEntries(productionParts(lineParts).map((p) => [p.partCode, p.onHand]));
+    expect(prod).toMatchObject({ P007: 60, P024: 450, P001: 1800, P004: 360, P010: 100, P013: 430, 'P012-C01': 120 });
+    // 원본은 바꾸지 않는다
+    expect(lineParts.find((p) => p.partCode === 'P007')!.onHand).toBe(61);
+  });
+
+  it("'부품 대기'는 재고로 계산한다: 재고가 있으면 대기가 아니고, 없으면 대기다", () => {
+    const { lineParts } = demoState();
+    expect(repairCarViews(repairCars, lineParts).some((c) => c.status === '부품 대기')).toBe(false);
+    const noEngine = lineParts.map((p) => (p.partCode === 'P007' ? { ...p, onHand: 0 } : p));
+    const waiting = repairCarViews(repairCars, noEngine).filter((c) => c.status === '부품 대기');
+    expect(waiting.map((c) => [c.serial, c.missing])).toEqual([['C05-R4T8B1ZN', [{ partCode: 'P007', qty: 1 }]]]);
+    // 수리 소요가 재고보다 많으면 생산용은 0이다
+    expect(productionParts(noEngine).find((p) => p.partCode === 'P007')!.onHand).toBe(0);
+    expect(repairPartNeeds(repairCars, noEngine).find((n) => n.partCode === 'P007')).toMatchObject({ reserved: 0, available: 0, enough: false });
   });
 });

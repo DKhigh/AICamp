@@ -123,6 +123,12 @@ export function PartCard({
         <span className="ml-auto text-sm font-bold text-slate-900">→ {num(row.cars)}대</span>
       </p>
 
+      {row.repairNeed > 0 && (
+        <p className="tabular mt-0.5 whitespace-nowrap text-[11px] text-slate-500" title="수리 중인 차량에 쓸 부품은 생산에 쓰지 않고 남겨 둡니다">
+          수리용 <strong className="text-slate-700">{num(row.repairNeed)}개</strong> 제외 · 생산용 <strong className="text-slate-700">{num(row.available)}개</strong>
+        </p>
+      )}
+
       <p className="mt-1 flex flex-wrap items-center justify-between gap-x-2 whitespace-nowrap text-xs text-slate-500">
         <span>
           재고{' '}

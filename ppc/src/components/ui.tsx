@@ -1,6 +1,7 @@
 // 여러 화면이 함께 쓰는 작은 UI 조각. 색 규칙은 DESIGN.md §7.4를 따른다.
 import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { PartStatus } from '../lib/planning';
+import { colorOf } from '../lib/reference';
 import type { DisruptionStatus, PoStatus, RateGrade } from '../lib/types';
 
 export type Tone = 'red' | 'orange' | 'blue' | 'green' | 'gray';
@@ -189,15 +190,32 @@ export function parseIntStrict(text: string): number {
   return /^-?\d+$/.test(text.trim()) ? Number(text.trim()) : NaN;
 }
 
-/** 차량·차체 색상 견본. 색상 코드는 Excel '차량색상' 시트의 것 */
-const COLOR_HEX: Record<string, string> = { C01: '#ffffff', C02: '#111827', C03: '#dc2626', C04: '#2563eb', C05: '#9ca3af' };
+/**
+ * 차량·차체 색상 견본. 색은 Excel '차량색상' 시트의 '자동차 색상' 이름으로 정한다
+ * (Excel에는 색 이름만 있어서, 이름 → 화면 색을 여기서 맞춘다. 표에 없는 이름은 옅은 회색).
+ */
+const HEX_BY_COLOR_NAME: Record<string, string> = {
+  화이트: '#ffffff',
+  블랙: '#111827',
+  레드: '#dc2626',
+  블루: '#2563eb',
+  그레이: '#9ca3af',
+  실버: '#d1d5db',
+  네이비: '#1e3a8a',
+  그린: '#16a34a',
+  옐로우: '#facc15',
+  오렌지: '#f97316',
+  브라운: '#92400e',
+  베이지: '#e7d8b8',
+};
 
 export function ColorSwatch({ code, size = 12 }: { code: string | null | undefined; size?: number }) {
   return (
     <span
       aria-hidden
       className="inline-block shrink-0 rounded-full border border-slate-300"
-      style={{ width: size, height: size, background: (code && COLOR_HEX[code]) || '#e2e8f0' }}
+      title={colorOf(code)?.description}
+      style={{ width: size, height: size, background: HEX_BY_COLOR_NAME[colorOf(code)?.name ?? ''] ?? '#e2e8f0' }}
     />
   );
 }

@@ -8,6 +8,7 @@ import {
   carsFromPart,
   coverageDays,
   cumAt,
+  displayStatusOf,
   groupCoverageDays,
   nextArrivalOf,
   openPos,
@@ -17,15 +18,22 @@ import {
   stockOnHand,
   stockWithIncoming,
   type PartStatus,
+  type PoDisplayStatus,
 } from './planning';
 import { poAmount } from './ordering';
 import { gradeOf } from './recommend';
-import { partOf, supplierOf } from './reference';
+import { demoState, partOf, supplierOf } from './reference';
+import { productionParts, repairNeedByPart } from './repairs';
 import type { AppState, Disruption, ISODate, LinePart, Part, PurchaseOrder, RateGrade } from './types';
 
 export interface PartRow {
+  /** DB의 재고 그대로 (수리용 포함) */
   linePart: LinePart;
   part: Part;
+  /** 수리 중인 차량에 써야 하는 수량 */
+  repairNeed: number;
+  /** 생산에 쓸 수 있는 재고 = 현재 재고 − 수리용. 가능 대수·재고 일수는 이 값으로 계산한다 */
+  available: number;
   /** 이 부품으로 만들 수 있는 대수 */
   cars: number;
   coverage: number;
@@ -42,6 +50,8 @@ export interface PartRow {
 export interface PoRow {
   po: PurchaseOrder;
   part: Part;
+  /** 화면에 보여 줄 상태. 발주한 당일의 일반 발주는 어느 화면에서나 '발주대기'다 */
+  displayStatus: PoDisplayStatus;
   dday: number;
   /** expectedArrival - plannedArrival */
   delayedBy: number;
@@ -82,6 +92,7 @@ export function poRowOf(po: PurchaseOrder, baseDate: ISODate): PoRow {
   return {
     po,
     part: partOf(po.partCode),
+    displayStatus: displayStatusOf(po, baseDate),
     dday: diffDays(po.expectedArrival, baseDate),
     delayedBy: diffDays(po.expectedArrival, po.plannedArrival),
     onTimeRate: supplier?.onTimeRate ?? null,
@@ -92,7 +103,11 @@ export function poRowOf(po: PurchaseOrder, baseDate: ISODate): PoRow {
 }
 
 export function dashboardModel(state: AppState): DashboardModel {
-  const { settings, lineParts, purchaseOrders, disruptions } = state;
+  const { settings, purchaseOrders, disruptions } = state;
+  // 생산 가능 대수와 재고 일수는 수리용으로 잡아 둔 수량을 뺀 재고로 계산한다
+  const lineParts = productionParts(state.lineParts);
+  const rawByCode = new Map(state.lineParts.map((p) => [p.partCode, p]));
+  const repairNeed = repairNeedByPart();
   const onHand = stockOnHand(lineParts);
   const incoming = stockWithIncoming(lineParts, purchaseOrders);
   const bottleneckNow = bottleneckOf(lineParts, onHand);
@@ -100,18 +115,21 @@ export function dashboardModel(state: AppState): DashboardModel {
   const buildableNow = buildable(lineParts, onHand);
   const activeDisruptions = disruptions.filter((d) => d.status !== '해결');
 
-  const rowOf = (linePart: LinePart, groupCoverage?: number): PartRow => {
-    const nextPo = nextArrivalOf(linePart.partCode, purchaseOrders);
+  /** prod: 생산용 재고 기준의 부품 행 */
+  const rowOf = (prod: LinePart, groupCoverage?: number): PartRow => {
+    const nextPo = nextArrivalOf(prod.partCode, purchaseOrders);
     return {
-      linePart,
-      part: partOf(linePart.partCode),
-      cars: carsFromPart(linePart, onHand),
-      coverage: coverageDays(linePart, settings.dailyCapacity),
-      status: partStatusOf(linePart, disruptions, settings.dailyCapacity, groupCoverage),
-      isBottleneck: bottleneckNow?.partCode === linePart.partCode,
+      linePart: rawByCode.get(prod.partCode) ?? prod,
+      part: partOf(prod.partCode),
+      repairNeed: repairNeed[prod.partCode] ?? 0,
+      available: prod.onHand,
+      cars: carsFromPart(prod, onHand),
+      coverage: coverageDays(prod, settings.dailyCapacity),
+      status: partStatusOf(prod, disruptions, settings.dailyCapacity, groupCoverage),
+      isBottleneck: bottleneckNow?.partCode === prod.partCode,
       nextPo,
       nextDday: nextPo ? diffDays(nextPo.expectedArrival, settings.baseDate) : null,
-      activeDisruption: [...activeDisruptions].reverse().find((d) => d.partCode === linePart.partCode) ?? null,
+      activeDisruption: [...activeDisruptions].reverse().find((d) => d.partCode === prod.partCode) ?? null,
     };
   };
 
@@ -128,10 +146,12 @@ export function dashboardModel(state: AppState): DashboardModel {
       linePart: {
         partCode: group.code,
         qtyPerCar: 1,
-        onHand: group.parts.reduce((sum, p) => sum + p.onHand, 0),
+        onHand: variants.reduce((sum, v) => sum + v.linePart.onHand, 0),
         sortOrder: group.parts[0].sortOrder,
       },
       part: partOf(group.code),
+      repairNeed: variants.reduce((sum, v) => sum + v.repairNeed, 0),
+      available: variants.reduce((sum, v) => sum + v.available, 0),
       cars: carsFromGroup(group, onHand),
       coverage,
       status: STATUS_RANK.find((s) => variants.some((v) => v.status === s)) ?? '정상',
@@ -169,4 +189,20 @@ export function dashboardModel(state: AppState): DashboardModel {
     forecastPoints,
     activeDisruptions,
   };
+}
+
+/**
+ * DB의 데이터가 지금 앱과 맞지 않는 이유들 (없으면 빈 배열). 앱을 새로 배포한 뒤 [데이터 초기화]를 하지 않으면 생긴다.
+ * - 부품 구성이 다르다: 예전 데이터에는 색상 구분 없는 차체(P012) 한 줄만 있어 차량 색이 나오지 않는다
+ * - 기준일(오늘)보다 뒤 날짜로 입력된 기록이 있다: 예전 데이터는 10/5를 기준일로 만든 것이다
+ */
+export function staleDataReasons(state: AppState): string[] {
+  const reasons: string[] = [];
+  const expected = demoState(state.settings.baseDate).lineParts.map((p) => p.partCode).sort().join(',');
+  const actual = state.lineParts.map((p) => p.partCode).sort().join(',');
+  if (expected !== actual) reasons.push('부품 구성이 예전 형식입니다 (차체가 색상별로 나뉘어 있지 않음)');
+  const future = state.purchaseOrders.some((po) => po.orderDate > state.settings.baseDate) ||
+    state.disruptions.some((d) => d.detectedDate > state.settings.baseDate);
+  if (future) reasons.push('기준일(오늘)보다 뒤 날짜로 입력된 발주·차질 기록이 있습니다');
+  return reasons;
 }

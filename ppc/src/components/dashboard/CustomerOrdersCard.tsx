@@ -1,5 +1,7 @@
 // 주문 납기 현황 카드: 표 + [납기 추가] + 행마다 [납기 취소]. 추가·취소는 사원번호가 있어야 한다.
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { previewNewOrder } from '../../lib/actions';
+import { qtyError } from '../../lib/api';
 import { addDays, formatMD } from '../../lib/date';
 import { employeeError } from '../../lib/employees';
 import { num } from '../../lib/format';
@@ -20,9 +22,36 @@ function AddOrderModal({ state, onClose }: { state: AppState; onClose: () => voi
   const [saving, setSaving] = useState(false);
 
   const qty = parseIntStrict(qtyText);
-  const qtyProblem = qtyText === '' ? null : Number.isInteger(qty) && qty >= 1 ? null : '수량은 1 이상의 정수여야 합니다.';
+  const qtyProblem = qtyText === '' ? null : qtyError(qty);
   const dueProblem = dueDate === '' ? '납기 날짜를 선택하세요.' : dueDate < baseDate ? '납기는 기준일보다 빠를 수 없습니다.' : null;
   const canSave = customer.trim() !== '' && qtyText !== '' && !qtyProblem && !dueProblem && employeeError(employeeNo) === null;
+
+  // 저장하기 전에 이 주문이 납기를 맞출 수 있는지, 다른 주문을 밀어내는지 계산해 경고한다
+  const preview = useMemo(
+    () => (qtyText !== '' && !qtyProblem && !dueProblem ? previewNewOrder(state, { qty, dueDate }) : null),
+    [state, qty, qtyText, qtyProblem, dueProblem, dueDate],
+  );
+  const warnings: string[] = [];
+  if (preview) {
+    const { mine } = preview;
+    if (dueDate < preview.earliestDone) {
+      warnings.push(
+        `오늘 투입해도 리드타임 ${state.settings.leadTimeDays}일 뒤인 ${formatMD(preview.earliestDone)}에야 완성됩니다. 납기 ${formatMD(dueDate)}는 맞출 수 없습니다.`,
+      );
+    }
+    if (mine.lateDays === null) {
+      warnings.push(
+        `예측 기간(${formatMD(preview.periodEnd)}까지) 안에 완료되지 않습니다. 그때까지 만들 수 있는 차는 모두 ${num(preview.periodTotal)}대이고, 이 주문까지 필요한 양은 ${num(mine.cumNeed)}대입니다.`,
+      );
+    } else if (mine.lateDays > 0) {
+      warnings.push(`예상 완료일은 ${formatMD(mine.doneDate!)}입니다. 납기 ${formatMD(dueDate)}보다 ${mine.lateDays}일 늦습니다.`);
+    }
+    if (preview.newlyLate.length > 0) {
+      warnings.push(
+        `이 주문을 넣으면 ${preview.newlyLate.map((o) => `${o.id}(${o.customer})`).join(', ')}의 납기를 맞추지 못하게 됩니다 (납기가 빠른 주문부터 차를 배정합니다).`,
+      );
+    }
+  }
 
   async function submit() {
     if (!canSave) return;
@@ -70,9 +99,24 @@ function AddOrderModal({ state, onClose }: { state: AppState; onClose: () => voi
             <input className={INPUT_CLASS} type="date" min={baseDate} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </Field>
         </div>
-        <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          추가하면 납기가 빠른 주문부터 차례로 완성 차량을 배정해 예상 완료일을 다시 계산합니다.
-        </p>
+        {warnings.length > 0 ? (
+          <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+            <p className="font-bold">⚠ 납기를 맞추기 어렵습니다. 그래도 추가할 수는 있습니다.</p>
+            <ul className="mt-1 list-disc pl-5">
+              {warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        ) : preview && preview.mine.doneDate ? (
+          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[13px] font-medium text-emerald-800">
+            ✅ 예상 완료일 {formatMD(preview.mine.doneDate)} · 납기 충족 (여유 {-(preview.mine.lateDays ?? 0)}일)
+          </p>
+        ) : (
+          <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            수량과 납기를 넣으면 납기를 맞출 수 있는지 미리 계산해 보여 줍니다. 납기가 빠른 주문부터 차례로 완성 차량을 배정합니다.
+          </p>
+        )}
       </div>
     </Modal>
   );
@@ -118,8 +162,7 @@ export function CustomerOrdersCard({ state, orders, lateCount }: { state: AppSta
           onConfirm={remove}
           onClose={() => setRemoveTarget(null)}
         >
-          {removeTarget.customer} {num(removeTarget.qty)}대 · 납기 {formatMD(removeTarget.dueDate)} 주문을 목록에서 지웁니다. 지우면 되돌릴 수 없고, 남은
-          주문의 예상 완료일이 다시 계산됩니다.
+          {removeTarget.customer} {num(removeTarget.qty)}대 · 납기 {formatMD(removeTarget.dueDate)} 주문을 취소합니다. 주문은 납기 현황에서 지워지고(되돌릴 수 없음) 남은 주문의 예상 완료일이 다시 계산됩니다. 누가 언제 취소했는지는 이력의 납기 변경 기록에 남습니다.
         </EmployeeConfirmModal>
       )}
     </Card>

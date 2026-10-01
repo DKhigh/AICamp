@@ -1,5 +1,6 @@
 // 사원번호 입력칸과, 사원번호를 받고 나서 실행하는 확인 창.
-// 발주·발주 취소·데이터 초기화는 사원 명단(Excel)에 있는 번호를 입력해야 할 수 있다.
+// 저장하는 작업은 모두 사원 명단(Excel '발주권한자')에 있는 번호를 입력해야 할 수 있다.
+// 확인 창은 브라우저 기본 confirm() 대신 쓰는 앱 자체 모달이다 (기본 창은 환경에 따라 뜨지 않거나 눈에 띄지 않는다).
 import { useState, type ReactNode } from 'react';
 import { employeeError, findEmployee } from '../lib/employees';
 import { Button, Field, INPUT_CLASS, Modal } from './ui';
@@ -40,6 +41,8 @@ export function EmployeeConfirmModal({
   children,
   confirmLabel,
   danger = false,
+  canConfirm = true,
+  wide = false,
   onConfirm,
   onClose,
 }: {
@@ -47,12 +50,15 @@ export function EmployeeConfirmModal({
   children: ReactNode;
   confirmLabel: string;
   danger?: boolean;
+  /** 사원번호 말고도 채워야 할 입력이 있을 때: false면 확인 버튼을 막는다 */
+  canConfirm?: boolean;
+  wide?: boolean;
   onConfirm: (employeeNo: string) => Promise<boolean>;
   onClose: () => void;
 }) {
   const [employeeNo, setEmployeeNo] = useState('');
   const [busy, setBusy] = useState(false);
-  const allowed = employeeError(employeeNo) === null;
+  const allowed = employeeError(employeeNo) === null && canConfirm;
 
   async function submit() {
     if (!allowed) return;
@@ -66,6 +72,7 @@ export function EmployeeConfirmModal({
     <Modal
       title={title}
       tone={danger ? 'danger' : 'default'}
+      wide={wide}
       onClose={onClose}
       footer={
         <>

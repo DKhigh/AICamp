@@ -1,11 +1,11 @@
 // DB 테이블 접근 계층. Supabase(공유 DB)와 로컬(이 브라우저만) 두 구현이 같은 인터페이스를 쓴다.
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type TableName = 'settings' | 'line_parts' | 'purchase_orders' | 'disruptions' | 'customer_orders';
+export type TableName = 'settings' | 'line_parts' | 'purchase_orders' | 'disruptions' | 'customer_orders' | 'activity_log';
 export type Row = Record<string, unknown>;
 type Key = string | number;
 
-export const TABLES: TableName[] = ['settings', 'line_parts', 'purchase_orders', 'disruptions', 'customer_orders'];
+export const TABLES: TableName[] = ['settings', 'line_parts', 'purchase_orders', 'disruptions', 'customer_orders', 'activity_log'];
 
 export const KEY_COLUMN: Record<TableName, string> = {
   settings: 'id',
@@ -13,22 +13,44 @@ export const KEY_COLUMN: Record<TableName, string> = {
   purchase_orders: 'id',
   disruptions: 'id',
   customer_orders: 'id',
+  activity_log: 'id',
 };
+
+/** 같은 번호의 행이 이미 있다 (다른 사람이 같은 번호로 먼저 저장했다). api.ts가 번호를 다시 매겨 재시도한다 */
+export class DuplicateKeyError extends Error {
+  constructor(key?: unknown) {
+    super(`이미 있는 번호입니다${key === undefined ? '' : `: ${String(key)}`} (다른 사람이 먼저 저장했을 수 있습니다. 새로고침 후 다시 시도하세요)`);
+    this.name = 'DuplicateKeyError';
+  }
+}
+
+/** DB가 돌려준 오류를 사용자가 읽을 수 있는 문구로 바꾼다 (원문을 그대로 보여 주지 않는다) */
+export function friendlyDbError(error: { message: string; code?: string }): Error {
+  if (error.code === '23505') return new DuplicateKeyError();
+  if (error.code === '22003') return new Error('숫자가 너무 큽니다. 더 작은 값을 입력하세요.');
+  if (error.code === '23514') return new Error('입력값이 허용 범위를 벗어났습니다. 값을 확인하세요.');
+  if (error.code === '23502') return new Error('필수 값이 비어 있습니다.');
+  if (/failed to fetch|networkerror|load failed/i.test(error.message)) {
+    return new Error('서버에 연결하지 못했습니다. 네트워크를 확인하고 다시 시도하세요.');
+  }
+  return new Error(error.message);
+}
 
 export interface Store {
   readonly mode: 'supabase' | 'local';
   select(table: TableName): Promise<Row[]>;
+  /** 같은 번호의 행이 있으면 DuplicateKeyError */
   insert(table: TableName, rows: Row[]): Promise<void>;
   update(table: TableName, key: Key, patch: Row): Promise<void>;
-  /** 테이블의 모든 행을 지운다 */
   /** 한 행을 지운다 */
   remove(table: TableName, key: Key): Promise<void>;
+  /** 테이블의 모든 행을 지운다 */
   clear(table: TableName): Promise<void>;
 }
 
 export function supabaseStore(client: SupabaseClient): Store {
-  const check = (error: { message: string } | null) => {
-    if (error) throw new Error(error.message);
+  const check = (error: { message: string; code?: string } | null) => {
+    if (error) throw friendlyDbError(error);
   };
   return {
     mode: 'supabase',
@@ -60,7 +82,7 @@ export function supabaseStore(client: SupabaseClient): Store {
 }
 
 type Db = Record<TableName, Row[]>;
-const emptyDb = (): Db => ({ settings: [], line_parts: [], purchase_orders: [], disruptions: [], customer_orders: [] });
+const emptyDb = (): Db => ({ settings: [], line_parts: [], purchase_orders: [], disruptions: [], customer_orders: [], activity_log: [] });
 
 /** 메모리 저장소. persist를 주면 바뀔 때마다 통째로 넘긴다 */
 export function memoryStore(initial?: Db, persist?: (db: Db) => void): Store {
@@ -74,9 +96,7 @@ export function memoryStore(initial?: Db, persist?: (db: Db) => void): Store {
     async insert(table, rows) {
       const keyCol = KEY_COLUMN[table];
       for (const row of rows) {
-        if (db[table].some((r) => r[keyCol] === row[keyCol])) {
-          throw new Error(`이미 있는 번호입니다: ${String(row[keyCol])} (다른 사람이 먼저 저장했을 수 있습니다. 새로고침 후 다시 시도하세요)`);
-        }
+        if (db[table].some((r) => r[keyCol] === row[keyCol])) throw new DuplicateKeyError(row[keyCol]);
         db[table].push({ ...row });
       }
       save();

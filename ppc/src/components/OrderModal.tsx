@@ -4,16 +4,27 @@ import { qtyError } from '../lib/api';
 import { addDays, diffDays, formatMD } from '../lib/date';
 import { employeeError } from '../lib/employees';
 import { ddayLabel, num, won } from '../lib/format';
-import { pricePerKgOf, qtyDelayOf, unitPriceOf } from '../lib/ordering';
-import { supplierLimitError, supplierLimitOf } from '../lib/planning';
-import { gradeOf, suppliersFor } from '../lib/recommend';
+import { capacityError, pricePerKgOf, qtyDelayOf, supplierCapacityOf, unitPriceOf } from '../lib/ordering';
+import { duplicateOrderOf, supplierLimitError, supplierLimitOf } from '../lib/planning';
+import { disruptedSupplierNames, gradeOf, suppliersFor } from '../lib/recommend';
 import { partOf, reference } from '../lib/reference';
 import type { AppState } from '../lib/types';
 import { useAppData } from '../state/AppData';
 import { EmployeeField } from './EmployeeField';
 import { Button, Field, INPUT_CLASS, Modal, parseIntStrict } from './ui';
 
-export function OrderModal({ state, initialPartCode, onClose }: { state: AppState; initialPartCode?: string; onClose: () => void }) {
+export function OrderModal({
+  state,
+  initialPartCode,
+  initialSupplierName,
+  onClose,
+}: {
+  state: AppState;
+  initialPartCode?: string;
+  /** 발주 검색에서 업체를 골라 들어온 경우 */
+  initialSupplierName?: string;
+  onClose: () => void;
+}) {
   const { save, notify } = useAppData();
   const [employeeNo, setEmployeeNo] = useState('');
   // 색상별 차체는 색마다 따로 발주한다. 목록에 없는 코드(차체 묶음 'P012')가 오면 첫 부품으로 연다
@@ -28,9 +39,12 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
     const list = suppliersFor(p.materialName, reference.suppliers);
     return (list.find((s) => s.name === p.defaultSupplier) ?? list[0])?.name ?? '';
   };
-  const [supplierName, setSupplierName] = useState(() => defaultSupplier(partCode));
+  const [supplierName, setSupplierName] = useState(() =>
+    initialSupplierName && suppliers.some((s) => s.name === initialSupplierName) ? initialSupplierName : defaultSupplier(partCode),
+  );
   const [qtyText, setQtyText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [allowDuplicate, setAllowDuplicate] = useState(false);
 
   const supplier = suppliers.find((s) => s.name === supplierName);
   const qty = parseIntStrict(qtyText);
@@ -42,6 +56,12 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
   // 업체별 한도: 일주일 동안 한 업체에 50개까지
   const limit = supplier ? supplierLimitOf(state.purchaseOrders, supplier.name, baseDate) : null;
   const limitProblem = supplier && limit && validQty ? supplierLimitError(limit, supplier.name, qty) : null;
+  // 공급 능력: 월 공급가능량에서 최근 한 달 동안 이 업체에 이미 발주한 양을 뺀 만큼만 받을 수 있다
+  const capacityProblem =
+    supplier && validQty ? capacityError(supplierCapacityOf(state.purchaseOrders, supplier, baseDate), supplier.name, part, qty) : null;
+  // 같은 날 같은 내용의 발주가 이미 있으면 한 번 더 확인한다 (실수로 두 번 넣는 것을 막는다)
+  const duplicate = supplier && validQty ? duplicateOrderOf(state.purchaseOrders, { partCode, supplierName: supplier.name, qty }, baseDate) : null;
+  const supplierDisrupted = !!supplier && disruptedSupplierNames(state.disruptions).includes(supplier.name);
 
   // 금액: 업체의 자재 단가(원/kg) × 부품 1개당 소재 필요량(kg) × 수량
   const perKg = supplier ? pricePerKgOf(part, supplier.name) : null;
@@ -53,12 +73,13 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
   const totalDays = supplier && delay ? supplier.leadDays + delay.days : null;
   const arrival = totalDays !== null ? addDays(baseDate, totalDays) : null;
 
-  const canSave = !!supplier && validQty && !limitProblem && unitPrice !== null && employeeError(employeeNo) === null;
+  const canSave =
+    !!supplier && validQty && !limitProblem && !capacityProblem && unitPrice !== null && employeeError(employeeNo) === null && (!duplicate || allowDuplicate);
 
   async function submit() {
     if (!supplier || !canSave) return;
     setSaving(true);
-    const po = await save((api) => api.createPurchaseOrder({ partCode, supplierName: supplier.name, qty, employeeNo: employeeNo.trim() }));
+    const po = await save((api) => api.createPurchaseOrder({ partCode, supplierName: supplier.name, qty, employeeNo: employeeNo.trim(), allowDuplicate }));
     setSaving(false);
     if (po) {
       notify(
@@ -124,9 +145,15 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
           </p>
         )}
 
+        {supplierDisrupted && (
+          <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px] font-medium text-red-700">
+            이 업체에는 해결되지 않은 차질이 있습니다. 예정대로 받지 못할 수 있으니 다른 업체도 확인하세요.
+          </p>
+        )}
+
         <Field
           label="수량 (개)"
-          error={qtyProblem ?? limitProblem}
+          error={qtyProblem ?? limitProblem ?? capacityProblem}
           hint={
             limit &&
             `이 업체 발주 한도: 일주일 ${limit.limit}개 중 ${limit.used}개 사용 · 남은 ${limit.remaining}개` +
@@ -140,12 +167,27 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
             step={1}
             inputMode="numeric"
             value={qtyText}
-            onChange={(e) => setQtyText(e.target.value)}
+            onChange={(e) => {
+              setQtyText(e.target.value);
+              setAllowDuplicate(false);
+            }}
             placeholder="예: 50"
             max={limit?.remaining}
             autoFocus
           />
         </Field>
+
+        {duplicate && (
+          <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+            <p className="font-semibold">
+              같은 내용의 발주({duplicate.id} · {part.name} {num(duplicate.originalQty)}개 · {duplicate.supplierName})가 오늘 이미 있습니다.
+            </p>
+            <label className="mt-1.5 flex items-center gap-2 font-medium">
+              <input type="checkbox" checked={allowDuplicate} onChange={(e) => setAllowDuplicate(e.target.checked)} className="h-4 w-4 accent-amber-600" />
+              실수가 아닙니다. 같은 발주를 한 번 더 넣습니다
+            </label>
+          </div>
+        )}
 
         <div className="rounded-lg border border-blue-100 bg-accent-light px-4 py-3">
           <div className="flex items-baseline justify-between gap-3">

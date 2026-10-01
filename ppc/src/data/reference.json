@@ -253,7 +253,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 2800,
-      "onTimeRate": 86
+      "onTimeRate": 93
     },
     {
       "code": "S002",
@@ -266,7 +266,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 3231,
-      "onTimeRate": 76
+      "onTimeRate": 93
     },
     {
       "code": "S003",
@@ -279,7 +279,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 3662,
-      "onTimeRate": 82
+      "onTimeRate": 93
     },
     {
       "code": "S004",
@@ -292,7 +292,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 4093,
-      "onTimeRate": 92
+      "onTimeRate": 93
     },
     {
       "code": "S005",
@@ -305,7 +305,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 4524,
-      "onTimeRate": 90
+      "onTimeRate": 93
     },
     {
       "code": "S006",
@@ -317,7 +317,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 4955,
-      "onTimeRate": 95
+      "onTimeRate": 93
     },
     {
       "code": "S007",
@@ -330,7 +330,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 5386,
-      "onTimeRate": 88
+      "onTimeRate": 93
     },
     {
       "code": "S008",
@@ -343,7 +343,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 2817,
-      "onTimeRate": 74
+      "onTimeRate": 93
     },
     {
       "code": "S009",
@@ -356,7 +356,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 3248,
-      "onTimeRate": 88
+      "onTimeRate": 93
     },
     {
       "code": "S010",
@@ -382,7 +382,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 4110,
-      "onTimeRate": 90
+      "onTimeRate": 93
     },
     {
       "code": "S012",
@@ -395,7 +395,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 4541,
-      "onTimeRate": 85
+      "onTimeRate": 93
     },
     {
       "code": "S013",
@@ -408,7 +408,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 4972,
-      "onTimeRate": 94
+      "onTimeRate": 93
     },
     {
       "code": "S014",
@@ -421,7 +421,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 5403,
-      "onTimeRate": 81
+      "onTimeRate": 93
     },
     {
       "code": "S015",
@@ -434,7 +434,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 2834,
-      "onTimeRate": 97
+      "onTimeRate": 93
     },
     {
       "code": "S016",
@@ -447,7 +447,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 3265,
-      "onTimeRate": 87
+      "onTimeRate": 93
     },
     {
       "code": "S017",
@@ -460,7 +460,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 3696,
-      "onTimeRate": 96
+      "onTimeRate": 93
     },
     {
       "code": "S018",
@@ -473,7 +473,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 4127,
-      "onTimeRate": 91
+      "onTimeRate": 93
     },
     {
       "code": "S019",
@@ -486,7 +486,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 4558,
-      "onTimeRate": 69
+      "onTimeRate": 93
     },
     {
       "code": "S020",
@@ -499,7 +499,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 4989,
-      "onTimeRate": 84
+      "onTimeRate": 93
     },
     {
       "code": "S021",
@@ -512,7 +512,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 5420,
-      "onTimeRate": 91
+      "onTimeRate": 93
     },
     {
       "code": "S022",
@@ -525,7 +525,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 2851,
-      "onTimeRate": 89
+      "onTimeRate": 93
     },
     {
       "code": "S023",
@@ -551,7 +551,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 3713,
-      "onTimeRate": 77
+      "onTimeRate": 93
     },
     {
       "code": "S025",
@@ -564,7 +564,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 4144,
-      "onTimeRate": 72
+      "onTimeRate": 93
     },
     {
       "code": "S026",
@@ -577,7 +577,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 4575,
-      "onTimeRate": 95
+      "onTimeRate": 93
     },
     {
       "code": "S027",
@@ -590,7 +590,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 5006,
-      "onTimeRate": 86
+      "onTimeRate": 93
     },
     {
       "code": "S028",
@@ -603,7 +603,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 5437,
-      "onTimeRate": 98
+      "onTimeRate": 93
     },
     {
       "code": "S029",
@@ -616,7 +616,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 2868,
-      "onTimeRate": 83
+      "onTimeRate": 93
     },
     {
       "code": "S030",
@@ -629,7 +629,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 3299,
-      "onTimeRate": 92
+      "onTimeRate": 93
     },
     {
       "code": "S031",
@@ -642,7 +642,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 3730,
-      "onTimeRate": 88
+      "onTimeRate": 93
     },
     {
       "code": "S032",
@@ -655,7 +655,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 4161,
-      "onTimeRate": 79
+      "onTimeRate": 93
     },
     {
       "code": "S033",
@@ -668,7 +668,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 4592,
-      "onTimeRate": 65
+      "onTimeRate": 93
     },
     {
       "code": "S034",
@@ -681,7 +681,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 5023,
-      "onTimeRate": 94
+      "onTimeRate": 93
     },
     {
       "code": "S035",
@@ -694,7 +694,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 5454,
-      "onTimeRate": 90
+      "onTimeRate": 93
     },
     {
       "code": "S036",
@@ -707,7 +707,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 2885,
-      "onTimeRate": 87
+      "onTimeRate": 93
     },
     {
       "code": "S037",
@@ -720,7 +720,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 3316,
-      "onTimeRate": 89
+      "onTimeRate": 93
     },
     {
       "code": "S038",
@@ -733,7 +733,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 3747,
-      "onTimeRate": 96
+      "onTimeRate": 93
     },
     {
       "code": "S039",
@@ -746,7 +746,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 4178,
-      "onTimeRate": 85
+      "onTimeRate": 93
     },
     {
       "code": "S040",
@@ -759,7 +759,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 4609,
-      "onTimeRate": 91
+      "onTimeRate": 93
     },
     {
       "code": "S041",
@@ -772,7 +772,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 5040,
-      "onTimeRate": 97
+      "onTimeRate": 93
     },
     {
       "code": "S042",
@@ -785,7 +785,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 5471,
-      "onTimeRate": 92
+      "onTimeRate": 93
     },
     {
       "code": "S043",
@@ -798,7 +798,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 2902,
-      "onTimeRate": 80
+      "onTimeRate": 93
     },
     {
       "code": "S044",
@@ -811,7 +811,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 3333,
-      "onTimeRate": 88
+      "onTimeRate": 93
     },
     {
       "code": "S045",
@@ -824,7 +824,7 @@
       "altLeadDays": 2,
       "status": "정상",
       "monthlyCapacityKg": 3764,
-      "onTimeRate": 85
+      "onTimeRate": 93
     },
     {
       "code": "S046",
@@ -850,7 +850,7 @@
       "altLeadDays": 4,
       "status": "정상",
       "monthlyCapacityKg": 4626,
-      "onTimeRate": 71
+      "onTimeRate": 93
     },
     {
       "code": "S048",
@@ -863,7 +863,7 @@
       "altLeadDays": 6,
       "status": "정상",
       "monthlyCapacityKg": 5057,
-      "onTimeRate": 90
+      "onTimeRate": 93
     }
   ],
   "materials": [
@@ -922,32 +922,6 @@
       "defaultSupplier": "신우스틸",
       "leadDays": 6,
       "altAvgLeadDays": 4.5
-    }
-  ],
-  "delayPresets": [
-    {
-      "id": "사례1",
-      "reason": "납품 지연",
-      "supplierName": "태성모터스",
-      "materialName": "철강 소재",
-      "delayDays": 7,
-      "compareCount": 22
-    },
-    {
-      "id": "사례2",
-      "reason": "납품 지연",
-      "supplierName": "한빛오토텍",
-      "materialName": "알루미늄 소재",
-      "delayDays": 5,
-      "compareCount": 14
-    },
-    {
-      "id": "사례3",
-      "reason": "납품 지연",
-      "supplierName": "세진정밀",
-      "materialName": "합금강 소재",
-      "delayDays": 6,
-      "compareCount": 12
     }
   ],
   "prices": [

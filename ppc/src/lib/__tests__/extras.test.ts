@@ -1,4 +1,4 @@
-// Excel 추가 자료(ppc_extra.xlsx) 기반 기능: 주의사항 · 수량 지연 · 색상별 차체 · 발주 권한자 · 발주 금액
+// Excel(ppc_data.xlsx) 기반 기능: 주의사항 · 수량 지연 · 색상별 차체 · 발주 권한자 · 발주 금액
 import { describe, expect, it } from 'vitest';
 import { baseScenarios, buildDisruption, withDisruption } from '../actions';
 import { createApi } from '../api';
@@ -62,8 +62,9 @@ describe('2. 같은 업체에 많이 발주할수록 늦게 온다 (Excel 지연
     const api = await freshApi();
     // 대성메탈 기본 납기 5일
     expect((await order(api, 'P013', '대성메탈', 5)).expectedArrival).toBe('2026-10-11'); // +5 +1
-    // 같은 업체에 5개 더: 합쳐서 10개 → 1주일 단계
-    const second = await order(api, 'P013', '대성메탈', 5);
+    // 같은 업체에 5개 더: 합쳐서 10개 → 1주일 단계. 같은 날 같은 내용이라 '중복이 아님'을 확인해야 들어간다
+    await expect(order(api, 'P013', '대성메탈', 5)).rejects.toThrow('같은 내용의 발주(PO-004)가 오늘 이미 있습니다');
+    const second = await api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 5, employeeNo: '0000', allowDuplicate: true });
     expect(second.expectedArrival).toBe('2026-10-17'); // +5 +7
     expect(second.plannedArrival).toBe(second.expectedArrival);
     // 먼저 넣은 발주의 날짜는 바뀌지 않는다
@@ -75,7 +76,7 @@ describe('2. 같은 업체에 많이 발주할수록 늦게 온다 (Excel 지연
     const first = await order(api, 'P013', '대성메탈', 9);
     expect((await order(api, 'P013', '진성오토텍', 9)).expectedArrival).toBe('2026-10-10'); // 진성 4일 + 1일
     await api.cancelPurchaseOrder({ poId: first.id, employeeNo: '0000' });
-    expect((await order(api, 'P013', '대성메탈', 9)).expectedArrival).toBe('2026-10-11'); // 다시 1일 단계
+    expect((await order(api, 'P013', '대성메탈', 9)).expectedArrival).toBe('2026-10-11'); // 다시 1일 단계 (취소한 발주는 중복으로도 보지 않는다)
   });
 
   it('색상만 다른 차체는 같은 부품으로 합쳐서 센다', async () => {
@@ -86,7 +87,7 @@ describe('2. 같은 업체에 많이 발주할수록 늦게 온다 (Excel 지연
 
   it('대체(긴급) 발주에는 수량 지연을 더하지 않는다', async () => {
     const api = await freshApi();
-    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy: 'A' });
+    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
     const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '유지', employeeNo: '0000' });
     expect(alt.expectedArrival).toBe('2026-10-07'); // 대체 납기 2일 그대로
   });
@@ -167,7 +168,7 @@ describe('3. 차량 색상과 색상별 차체', () => {
     const api = await freshApi();
     const po = await order(api, 'P012-C03', '동아기공', 9);
     expect(po.partCode).toBe('P012-C03');
-    await api.receivePurchaseOrder(po.id);
+    await api.receivePurchaseOrder({ poId: po.id, employeeNo: '0000' });
     const state = (await api.fetchState())!;
     const stock = Object.fromEntries(state.lineParts.filter((p) => p.partCode.startsWith('P012-')).map((p) => [p.partCode, p.onHand]));
     expect(stock).toEqual({ 'P012-C01': 120, 'P012-C02': 100, 'P012-C03': 69, 'P012-C04': 80, 'P012-C05': 80 });
@@ -246,7 +247,7 @@ describe('5. 발주 금액 (Excel 업체별_자재단가)', () => {
 
   it('대체 발주는 대체 업체 단가로, 감량하면 원래 발주 금액도 줄어든다', async () => {
     const api = await freshApi();
-    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy: 'A' });
+    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
     const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '감량', employeeNo: '0000' });
     expect(poAmount(alt)).toBe(579000); // 5,790원 × 100
     const state = (await api.fetchState())!;

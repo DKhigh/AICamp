@@ -31,13 +31,13 @@ export interface Material {
   leadDays: number;
   altAvgLeadDays: number;
 }
-export interface DelayPreset {
+/** 차질 발생 창의 '시연 예시' 버튼 (시연 데이터 demo_state.json. Excel에서 오지 않는다) */
+export interface DisruptionExample {
   id: string;
-  reason: string;
+  partCode: string;
   supplierName: string;
-  materialName: string;
+  reason: string;
   delayDays: number;
-  compareCount: number;
 }
 /** 업체별 자재 공급단가 (원/kg) */
 export interface SupplierPrice {
@@ -63,7 +63,6 @@ export interface Reference {
   parts: Part[];
   suppliers: Supplier[];
   materials: Material[];
-  delayPresets: DelayPreset[];
   prices: SupplierPrice[];
   colors: CarColor[];
   cautions: PartCaution[];
@@ -127,6 +126,20 @@ export interface CustomerOrder {
   dueDate: ISODate;
 }
 
+/** 활동 기록: 누가 언제 무엇을 했는지. 저장하는 작업마다 한 줄씩 남긴다 */
+export interface ActivityLog {
+  id: string;
+  /** 기록한 시각 (ISO) */
+  at: string;
+  /** '이름(사원번호)' */
+  actor: string;
+  /** '발주 등록', '차질 해결', '납기 취소' … */
+  action: string;
+  /** 대상 번호: 'PO-004', 'D-001', 'CO-002' … 없으면 빈 문자열 */
+  target: string;
+  detail: string;
+}
+
 /** DB에서 읽은 화면 상태 전체. 계산 결과는 여기에 넣지 않는다 (§8) */
 export interface AppState {
   settings: Settings;
@@ -134,4 +147,8 @@ export interface AppState {
   purchaseOrders: PurchaseOrder[];
   disruptions: Disruption[];
   customerOrders: CustomerOrder[];
+  /** 최신 순 */
+  logs: ActivityLog[];
+  /** false면 DB에 activity_log 테이블이 없어 기록이 저장되지 않는다 (supabase/migration_activity_log.sql 실행 전) */
+  logReady: boolean;
 }

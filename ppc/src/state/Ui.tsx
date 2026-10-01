@@ -2,8 +2,8 @@
 import { createContext, useContext } from 'react';
 
 export interface UiValue {
-  /** 발주 모달을 연다. partCode를 주면 그 부품이 미리 선택된다 */
-  openOrder: (partCode?: string) => void;
+  /** 발주 모달을 연다. partCode·supplierName을 주면 그 부품·업체가 미리 선택된다 */
+  openOrder: (partCode?: string, supplierName?: string) => void;
   openDisruption: () => void;
 }
 

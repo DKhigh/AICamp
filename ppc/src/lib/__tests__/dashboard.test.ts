@@ -19,36 +19,39 @@ describe('초기 대시보드', () => {
     expect(model.kpi.activeDisruptions).toBe(0);
   });
 
-  it('엔진 카드 = 60개 · ×1 · 60대 · 3.0일 · 주의 · 병목 · D-2 +400', () => {
+  it('엔진 카드 = 재고 61개(수리용 1 · 생산용 60) · ×1 · 60대 · 3.0일 · 주의 · 병목 · D-2 +400', () => {
     const engine = card('P007');
-    expect([engine.linePart.onHand, engine.linePart.qtyPerCar, engine.cars, engine.coverage.toFixed(1)]).toEqual([60, 1, 60, '3.0']);
+    expect([engine.linePart.onHand, engine.repairNeed, engine.available]).toEqual([61, 1, 60]);
+    expect([engine.linePart.qtyPerCar, engine.cars, engine.coverage.toFixed(1)]).toEqual([1, 60, '3.0']);
     expect([engine.status, engine.isBottleneck]).toEqual(['주의', true]);
     expect([ddayLabel(engine.nextDday!), engine.nextPo?.qty]).toEqual(['D-2', 400]);
   });
 
-  it('서스펜션 카드 = 360개 · ×4 · 90대 · 4.5일 · 주의 · D-4 +1,400', () => {
+  it('서스펜션 카드 = 재고 362개(수리용 2 · 생산용 360) · ×4 · 90대 · 4.5일 · 주의 · D-4 +1,400', () => {
     const s = card('P004');
-    expect([s.linePart.onHand, s.linePart.qtyPerCar, s.cars, s.coverage.toFixed(1)]).toEqual([360, 4, 90, '4.5']);
+    expect([s.linePart.onHand, s.repairNeed, s.available, s.linePart.qtyPerCar, s.cars, s.coverage.toFixed(1)]).toEqual([362, 2, 360, 4, 90, '4.5']);
     expect([s.status, s.isBottleneck]).toEqual(['주의', false]);
     expect([ddayLabel(s.nextDday!), s.nextPo?.qty]).toEqual(['D-4', 1400]);
   });
 
-  it('조향 카드 = 100개 · 100대 · 5.0일 · 정상', () => {
+  it('조향 카드 = 생산용 100개 · 100대 · 5.0일 · 정상', () => {
     const s = card('P010');
-    expect([s.linePart.onHand, s.cars, s.coverage.toFixed(1), s.status]).toEqual([100, 100, '5.0', '정상']);
+    expect([s.linePart.onHand, s.available, s.cars, s.coverage.toFixed(1), s.status]).toEqual([101, 100, 100, '5.0', '정상']);
   });
 
   it('병목 태그는 한 부품에만', () => {
     expect(model.parts.filter((p) => p.isBottleneck).map((p) => p.part.name)).toEqual(['엔진']);
   });
 
-  it('입고 예정 표: PO-001 → PO-003 → PO-002, 지연 위험은 PO-001에만', () => {
+  it('입고 예정 표: PO-001 → PO-003 → PO-002 (새 Excel에는 위험 등급 업체가 없어 지연 위험 배지는 없다)', () => {
     expect(model.poRows.map((r) => [r.po.id, formatMD(r.po.expectedArrival), ddayLabel(r.dday), r.atRisk])).toEqual([
-      ['PO-001', '10/7', 'D-2', true],
+      ['PO-001', '10/7', 'D-2', false],
       ['PO-003', '10/8', 'D-3', false],
       ['PO-002', '10/9', 'D-4', false],
     ]);
-    expect(model.poRows[0].onTimeRate).toBe(76);
+    expect(model.poRows[0].onTimeRate).toBe(93);
+    // 시연 초기 발주는 모두 기준일 이전에 넣은 것이라 발주대기가 아니다
+    expect(model.poRows.map((r) => r.displayStatus)).toEqual(['입고대기', '입고대기', '입고대기']);
   });
 
   it('생산 예측 요약: 2일 뒤(10/7) 20대 · 7일 뒤(10/12) 120대 · 14일 뒤(10/19) 260대', () => {

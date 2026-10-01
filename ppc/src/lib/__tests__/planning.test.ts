@@ -1,4 +1,5 @@
 // DESIGN.md §9 기대값. 숫자를 바꾸려면 설계서를 먼저 고친다.
+// 설계서와 달라진 곳(README '설계서와 다른 점'): 대체 추천 수량은 재고를 뺀 부족분, 업체 납기 준수율은 새 Excel에서 모두 93%.
 import { describe, expect, it } from 'vitest';
 import {
   altScenario,
@@ -38,21 +39,19 @@ import {
   type ScenarioOutcome,
 } from '../planning';
 import { gradeOf, recommendSuppliers, suppliersFor } from '../recommend';
-import { demoState, materialOf, partOf, reference, supplierOf } from '../reference';
-import type { AppState, OriginalPoAction } from '../types';
+import { demoState, disruptionExamples, materialOf, partOf, reference, supplierOf } from '../reference';
+import { productionParts } from '../repairs';
+import type { AppState, OriginalPoAction, Supplier } from '../types';
 
 const D = (md: string) => {
   const [m, d] = md.split('/').map(Number);
   return `2026-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 };
 
-/** Excel 사례 버튼과 같은 방식으로 차질을 등록한다 (§5 F2-1) */
+/** 차질 발생 창의 '시연 예시' 버튼과 같은 방식으로 차질을 등록한다 (§5 F2-1) */
 function registerCase(presetId: string, state: AppState = demoState()) {
-  const preset = reference.delayPresets.find((p) => p.id === presetId)!;
-  const linePart = state.lineParts.find((lp) => {
-    const part = partOf(lp.partCode);
-    return part.defaultSupplier === preset.supplierName && part.materialName === preset.materialName;
-  })!;
+  const preset = disruptionExamples.find((p) => p.id === presetId)!;
+  const linePart = state.lineParts.find((lp) => lp.partCode === preset.partCode)!;
   const part = partOf(linePart.partCode);
   const built = buildDisruption({
     state,
@@ -65,11 +64,11 @@ function registerCase(presetId: string, state: AppState = demoState()) {
   return { state: withDisruption(state, built), disruption: built.disruption, part, linePart, preset };
 }
 
-function recommendFor(c: ReturnType<typeof registerCase>, qty: number) {
+function recommendFor(c: ReturnType<typeof registerCase>, qty: number, suppliers: Supplier[] = reference.suppliers) {
   return recommendSuppliers({
     part: c.part,
     excludeSupplierName: c.disruption.supplierName,
-    suppliers: reference.suppliers,
+    suppliers,
     baseDate: c.state.settings.baseDate,
     qty,
   });
@@ -120,7 +119,7 @@ describe('reference.json (§4.2)', () => {
     expect(reference.parts).toHaveLength(30);
     expect(reference.suppliers).toHaveLength(48);
     expect(reference.materials).toHaveLength(7);
-    expect(reference.delayPresets).toHaveLength(3);
+    expect(disruptionExamples).toHaveLength(3);
   });
 
   it('업체 납기는 정수', () => {
@@ -141,15 +140,16 @@ describe('reference.json (§4.2)', () => {
     expect(gradeOf(94)).toBe('보통');
     expect(gradeOf(80)).toBe('보통');
     expect(gradeOf(79)).toBe('위험');
-    expect(gradeOf(supplierOf('한빛오토텍')!.onTimeRate)).toBe('위험');
-    expect(gradeOf(supplierOf('세진정밀')!.onTimeRate)).toBe('보통');
-    expect(gradeOf(supplierOf('태성모터스')!.onTimeRate)).toBe('보통');
+    // 새 Excel의 납기 준수율은 모든 업체가 93%라 등급은 전부 '보통'이다
+    expect(reference.suppliers.every((s) => s.onTimeRate === 93 && gradeOf(s.onTimeRate) === '보통')).toBe(true);
   });
 });
 
 describe('§9.1 초기 상태 (기준일 10/5)', () => {
   const state = demoState();
-  const { settings, lineParts, purchaseOrders } = state;
+  const { settings, purchaseOrders } = state;
+  // 생산 계산은 수리용으로 잡아 둔 수량을 뺀 재고로 한다 (초기 재고는 수리용을 포함해 61/451/1806/362/101/431)
+  const lineParts = productionParts(state.lineParts);
   const onHand = stockOnHand(lineParts);
 
   it('부품별 가능 대수', () => {
@@ -207,11 +207,11 @@ describe('§9.1 초기 상태 (기준일 10/5)', () => {
     ]);
   });
 
-  it('지연 위험 배지는 PO-001에만 (§9.5)', () => {
+  it('지연 위험 배지: 위험 등급 업체가 없어 붙지 않는다 (§9.5)', () => {
     const risky = openPos(purchaseOrders)
       .filter((po) => gradeOf(supplierOf(po.supplierName)!.onTimeRate) === '위험')
       .map((po) => po.id);
-    expect(risky).toEqual(['PO-001']);
+    expect(risky).toEqual([]);
   });
 
   it('부품 카드의 다음 입고', () => {
@@ -273,7 +273,8 @@ describe('F1-2 부품 발주', () => {
     expect(po.status).toBe('입고대기');
 
     const pos = [...state.purchaseOrders, po];
-    expect(buildable(state.lineParts, stockWithIncoming(state.lineParts, pos))).toBe(440);
+    const lineParts = productionParts(state.lineParts);
+    expect(buildable(lineParts, stockWithIncoming(lineParts, pos))).toBe(440);
   });
 
   it('ID는 기존 최대 번호 + 1', () => {
@@ -289,10 +290,10 @@ describe('F1-2 부품 발주', () => {
 });
 
 describe('§9.2 차질 사례', () => {
-  it('사례 버튼 프리셋 (§5 F2-1)', () => {
-    const c1 = registerCase('사례1');
-    const c2 = registerCase('사례2');
-    const c3 = registerCase('사례3');
+  it('시연 예시 버튼 (§5 F2-1)', () => {
+    const c1 = registerCase('예시 1');
+    const c2 = registerCase('예시 2');
+    const c3 = registerCase('예시 3');
     expect([c1.part.code, c1.disruption.supplierName, c1.disruption.materialName, c1.disruption.delayDays]).toEqual([
       'P004', '태성모터스', '철강 소재', 7,
     ]);
@@ -322,7 +323,7 @@ describe('§9.2 차질 사례', () => {
   });
 
   describe('사례1: 태성모터스 · 철강 · 7일 → 서스펜션', () => {
-    const c = registerCase('사례1');
+    const c = registerCase('예시 1');
     const { wait } = baseScenarios(c.state);
 
     it('영향 발주 PO-002 10/9 → 10/16', () => {
@@ -351,30 +352,26 @@ describe('§9.2 차질 사례', () => {
       expect(lateDays(wait)).toEqual({ 'CO-001': -1, 'CO-002': 6, 'CO-003': 6 });
     });
 
-    it('추천 수량: 유지·감량 560, 취소 1,400', () => {
+    it('추천 수량: 유지·감량 520 (재고 90대분을 뺀 부족분 130대 × 4), 취소 1,400', () => {
       const delayed = delayedQtyOf(c.state.purchaseOrders, c.disruption.id);
-      const cover = coverQty(c.disruption.delayDays, c.state.settings.dailyCapacity, c.linePart.qtyPerCar, delayed);
-      expect(cover).toBe(560);
-      expect(recommendedQty('유지', cover, delayed)).toBe(560);
-      expect(recommendedQty('감량', cover, delayed)).toBe(560);
+      const cover = coverQty(c.state.settings, productionParts(c.state.lineParts), c.state.purchaseOrders, c.disruption.id);
+      // 10/5~10/15 11일 × 20대 = 220대 필요, 재고 90대분 → 130대(520개) 부족. 설계서의 단순식(7일×20×4)은 560
+      expect(cover).toBe(520);
+      expect(recommendedQty('유지', cover, delayed)).toBe(520);
+      expect(recommendedQty('감량', cover, delayed)).toBe(520);
       expect(recommendedQty('취소', cover, delayed)).toBe(1400);
     });
 
-    it('대체 후보 22곳 (위험 3), 1·2·3순위', () => {
+    it('대체 후보 22곳 (위험 0), 1·2·3순위는 대체 납기 2일 업체 중 공급량 큰 순', () => {
       const rec = recommendFor(c, 560);
       expect(rec.total).toBe(22);
-      expect(rec.total).toBe(c.preset.compareCount);
-      expect(rec.riskCount).toBe(3);
-      expect(
-        rec.ranked.filter((x) => x.grade === '위험').map((x) => [x.name, x.onTimeRate]).sort(),
-      ).toEqual([['삼우정밀', 74], ['신성기공', 65], ['에이스메탈', 72]]);
-      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.onTimeRate])).toEqual([
-        ['진우기공', 'S041', 2, 97],
-        ['대림정공', 'S013', 2, 94],
-        ['광성정밀', 'S021', 2, 91],
+      expect(rec.riskCount).toBe(0);
+      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.monthlyCapacityKg])).toEqual([
+        ['광성정밀', 'S021', 2, 5420],
+        ['진우기공', 'S041', 2, 5040],
+        ['대림정공', 'S013', 2, 4972],
       ]);
       expect(rec.ranked[0].requiredKg).toBe(1680);
-      expect(rec.ranked[0].monthlyCapacityKg).toBe(5040);
       expect(rec.ranked[0].capacityOk).toBe(true);
       expect(rec.ranked[0].arrival).toBe(D('10/7'));
     });
@@ -402,7 +399,7 @@ describe('§9.2 차질 사례', () => {
   });
 
   describe('사례2: 한빛오토텍 · 알루미늄 · 5일 → 엔진', () => {
-    const c = registerCase('사례2');
+    const c = registerCase('예시 2');
     const { wait } = baseScenarios(c.state);
 
     it('영향 발주 PO-001 10/7 → 10/12, 엔진 카드 차질', () => {
@@ -429,30 +426,29 @@ describe('§9.2 차질 사례', () => {
       expect(wait.allDoneDate).toBe(D('10/21'));
     });
 
-    it('추천 수량: 유지·감량 100, 취소 400', () => {
+    it('추천 수량: 유지·감량 80 (정지 4일분), 취소 400', () => {
       const delayed = delayedQtyOf(c.state.purchaseOrders, c.disruption.id);
-      const cover = coverQty(c.disruption.delayDays, c.state.settings.dailyCapacity, c.linePart.qtyPerCar, delayed);
-      expect(cover).toBe(100);
+      const cover = coverQty(c.state.settings, productionParts(c.state.lineParts), c.state.purchaseOrders, c.disruption.id);
+      // 10/5~10/11 7일 × 20대 = 140대 필요, 재고 60 → 80개 부족. 설계서의 단순식(5일×20)은 100
+      expect(cover).toBe(80);
       expect(recommendedQty('취소', cover, delayed)).toBe(400);
     });
 
-    it('대체 후보 14곳 (위험 2), 1순위 진성오토텍 — 에이스메탈은 후순위', () => {
+    it('대체 후보 14곳 (위험 0), 1·2·3순위', () => {
       const rec = recommendFor(c, 100);
       expect(rec.total).toBe(14);
-      expect(rec.total).toBe(c.preset.compareCount);
-      expect(rec.riskCount).toBe(2);
-      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.onTimeRate])).toEqual([
-        ['진성오토텍', 'S017', 2, 96],
-        ['동진오토', 'S009', 2, 88],
-        ['세광소재', 'S015', 4, 97],
+      expect(rec.riskCount).toBe(0);
+      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.monthlyCapacityKg])).toEqual([
+        ['에이스메탈', 'S025', 2, 4144],
+        ['진성오토텍', 'S017', 2, 3696],
+        ['동진오토', 'S009', 2, 3248],
       ]);
       expect(rec.ranked[0].requiredKg).toBe(150);
-      expect(rec.ranked[0].monthlyCapacityKg).toBe(3696);
       expect(rec.ranked[0].arrival).toBe(D('10/7'));
-      // 위험 업체는 맨 뒤 2곳
-      expect(rec.ranked.slice(-2).map((x) => [x.name, x.onTimeRate])).toEqual([
-        ['에이스메탈', 72],
-        ['대경오토', 79],
+      // 늦게 오는 업체가 맨 뒤
+      expect(rec.ranked.slice(-2).map((x) => [x.name, x.altLeadDays])).toEqual([
+        ['대성정밀', 6],
+        ['삼진메탈', 6],
       ]);
     });
 
@@ -487,10 +483,10 @@ describe('§9.2 차질 사례', () => {
       expect(impactMessage(wait)).toBe(
         '이대로 기다리면 라인 정지 4일(10/8~10/11) · 생산 손실 80대 · 납기 지연 주문 2건 (CO-002 3일, CO-003 3일)',
       );
-      expect(recommendMessage(c.part, c.disruption.supplierName, rec.ranked[0])).toBe(
-        '엔진 납품이 한빛오토텍에서 불가능하니, 진성오토텍에서 동일 사양 엔진을 2일 내(10/7) 공급받을 수 있습니다.',
+      expect(recommendMessage(c.disruption, c.part, rec.ranked.find((x) => x.name === '진성오토텍')!)).toBe(
+        '엔진 납품이 한빛오토텍에서 5일 늦어집니다. 같은 소재(알루미늄 소재)를 공급하는 진성오토텍에서 엔진을 2일 내(10/7) 받을 수 있습니다. 부품 사양은 발주 전에 확인하세요.',
       );
-      expect(resultMessage({ part: c.part, candidate: rec.ranked[0], qty: 100, action: '유지', alt })).toBe(
+      expect(resultMessage({ part: c.part, candidate: rec.ranked.find((x) => x.name === '진성오토텍')!, qty: 100, action: '유지', alt })).toBe(
         '진성오토텍에서 엔진 100개를 10/7까지 받으면, 주문 자동차 220대를 10/17까지 생산할 수 있습니다. (라인 정지 0일, 납기 지연 주문 0건, 원래 발주 유지)',
       );
       const notices = customerNotices(wait, c.part);
@@ -502,7 +498,7 @@ describe('§9.2 차질 사례', () => {
   });
 
   describe('사례3: 세진정밀 · 합금강 · 6일 → 조향', () => {
-    const c = registerCase('사례3');
+    const c = registerCase('예시 3');
     const { wait } = baseScenarios(c.state);
 
     it('영향 발주 PO-003 10/8 → 10/14', () => {
@@ -523,28 +519,24 @@ describe('§9.2 차질 사례', () => {
       expect(lateDays(wait)).toEqual({ 'CO-001': -1, 'CO-002': 3, 'CO-003': 3 });
     });
 
-    it('추천 수량: 유지·감량 120, 취소 340', () => {
+    it('추천 수량: 유지·감량 80 (정지 4일분), 취소 340', () => {
       const delayed = delayedQtyOf(c.state.purchaseOrders, c.disruption.id);
-      const cover = coverQty(c.disruption.delayDays, c.state.settings.dailyCapacity, c.linePart.qtyPerCar, delayed);
-      expect(cover).toBe(120);
+      const cover = coverQty(c.state.settings, productionParts(c.state.lineParts), c.state.purchaseOrders, c.disruption.id);
+      // 10/5~10/13 9일 × 20대 = 180대 필요, 재고 100 → 80개 부족. 설계서의 단순식(6일×20)은 120
+      expect(cover).toBe(80);
       expect(recommendedQty('취소', cover, delayed)).toBe(340);
     });
 
-    it('대체 후보 12곳 (위험 2), 1·2·3순위', () => {
+    it('대체 후보 12곳 (위험 0), 1·2·3순위', () => {
       const rec = recommendFor(c, 120);
       expect(rec.total).toBe(12);
-      expect(rec.total).toBe(c.preset.compareCount);
-      expect(rec.riskCount).toBe(2);
-      expect(
-        rec.ranked.filter((x) => x.grade === '위험').map((x) => [x.name, x.onTimeRate]).sort(),
-      ).toEqual([['대경오토', 79], ['동성오토', 77]]);
-      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.onTimeRate])).toEqual([
-        ['대림정공', 'S013', 2, 94],
-        ['광성정밀', 'S021', 2, 91],
-        ['대원소재', 'S037', 2, 89],
+      expect(rec.riskCount).toBe(0);
+      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.monthlyCapacityKg])).toEqual([
+        ['광성정밀', 'S021', 2, 5420],
+        ['대림정공', 'S013', 2, 4972],
+        ['대원소재', 'S037', 2, 3316],
       ]);
       expect(rec.ranked[0].requiredKg).toBeCloseTo(264);
-      expect(rec.ranked[0].monthlyCapacityKg).toBe(4972);
       expect(rec.ranked[0].arrival).toBe(D('10/7'));
     });
 
@@ -572,7 +564,7 @@ describe('§9.2 차질 사례', () => {
 });
 
 describe('§9.3 느린 업체를 고른 경우 (사례2 · 세광소재 · 유지 · 100)', () => {
-  const c = registerCase('사례2');
+  const c = registerCase('예시 2');
   const alt = runAlt(c, '세광소재', '유지', 100);
 
   it('10/8 정지 1일, 손실 20대', () => {
@@ -593,7 +585,7 @@ describe('§9.3 느린 업체를 고른 경우 (사례2 · 세광소재 · 유�
 });
 
 describe('§9.4 원래 발주 처리 옵션 (사례2 · 진성오토텍)', () => {
-  const c = registerCase('사례2');
+  const c = registerCase('예시 2');
   const po001 = (state: AppState) => state.purchaseOrders.find((p) => p.id === 'PO-001')!;
 
   it('유지: PO-001 그대로, 남는 엔진 140', () => {
@@ -636,7 +628,7 @@ describe('§9.4 원래 발주 처리 옵션 (사례2 · 진성오토텍)', () =>
     expect(alt.allDoneDate).toBeNull();
     expect(alt.sim.endStock.P007).toBe(0);
     const rec = recommendFor(c, 100);
-    expect(resultMessage({ part: c.part, candidate: rec.ranked[0], qty: 100, action: '취소', alt })).toBe(
+    expect(resultMessage({ part: c.part, candidate: rec.ranked.find((x) => x.name === '진성오토텍')!, qty: 100, action: '취소', alt })).toBe(
       '진성오토텍에서 엔진 100개를 10/7까지 받으면, 주문 자동차 220대 중 160대만 10/27까지 생산할 수 있습니다. (라인 정지 13일, 납기 지연 주문 1건, 원래 발주 취소)',
     );
   });
@@ -681,29 +673,35 @@ describe('§9.4 원래 발주 처리 옵션 (사례2 · 진성오토텍)', () =>
 });
 
 describe('§9.5 위험 업체 (납기 준수율)', () => {
-  it('사례2 · 에이스메탈(72% 위험) · 유지 · 100: 예정대로 오면 1순위와 같다', () => {
-    const c = registerCase('사례2');
+  it('사례2 · 에이스메탈 · 유지 · 100: 예정대로 오면 1순위와 같다', () => {
+    const c = registerCase('예시 2');
     const alt = runAlt(c, '에이스메탈', '유지', 100);
     expect([alt.lineStopDays, alt.loss, alt.allDoneDate]).toEqual([0, 0, D('10/17')]);
   });
 
   it('사례2 · 에이스메탈이 2일 늦게(10/9) 오면: 10/8 정지 1일, 손실 20대, 당일 충족', () => {
-    const c = registerCase('사례2');
+    const c = registerCase('예시 2');
     const late = runAlt(c, '에이스메탈', '유지', 100, RISK_LATE_DAYS);
     expect(late.stopDates).toEqual([D('10/8')]);
     expect(late.loss).toBe(20);
     expect(doneDates(late)).toMatchObject({ 'CO-002': D('10/14'), 'CO-003': D('10/18') });
     expect(late.lateOrders).toHaveLength(0);
     expect(late.sim.endStock.P007).toBe(160);
-    const candidate = recommendFor(c, 100).ranked.find((x) => x.name === '에이스메탈')!;
+    // 새 Excel에는 위험 등급 업체가 없다. 준수율 72%인 업체가 있다고 가정하고 문구를 확인한다
+    const risky = reference.suppliers.map((s) => (s.name === '에이스메탈' ? { ...s, onTimeRate: 72 } : s));
+    const rec = recommendFor(c, 100, risky);
+    const candidate = rec.ranked.find((x) => x.name === '에이스메탈')!;
     expect(candidate.grade).toBe('위험');
+    expect(rec.riskCount).toBe(1);
+    // 위험 업체는 빨리 와도 맨 뒤로 내린다
+    expect(rec.ranked[rec.ranked.length - 1].name).toBe('에이스메탈');
     expect(riskLateMessage(candidate, late)).toBe(
       '에이스메탈(준수율 72% 위험)가 2일 늦게 오면: 라인 정지 1일(10/8), 손실 20대, 납기 지연 주문 0건',
     );
   });
 
-  it('사례3 · 대경오토(79%, 대체 6일)가 2일 늦으면(10/13): 정지 3일, 손실 60, 2일 지연', () => {
-    const c = registerCase('사례3');
+  it('사례3 · 대경오토(대체 6일)가 2일 늦으면(10/13): 정지 3일, 손실 60, 2일 지연', () => {
+    const c = registerCase('예시 3');
     const supplier = supplierOf('대경오토')!;
     expect(supplier.altLeadDays).toBe(6);
     expect(addDays(c.state.settings.baseDate, supplier.altLeadDays + RISK_LATE_DAYS)).toBe(D('10/13'));

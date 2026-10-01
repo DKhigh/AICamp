@@ -4,16 +4,6 @@ import { getApi, type Api } from '../lib/api';
 import { AUTO_REFRESH_MS } from '../lib/constants';
 import type { AppState } from '../lib/types';
 
-const USER_NAME_KEY = 'ppc.userName';
-
-function readUserName(): string {
-  try {
-    return window.localStorage.getItem(USER_NAME_KEY) ?? '';
-  } catch {
-    return '';
-  }
-}
-
 export interface Toast {
   id: number;
   kind: 'error' | 'success';
@@ -29,12 +19,11 @@ interface AppDataValue {
   loadError: string | null;
   refreshing: boolean;
   refresh: () => Promise<void>;
-  /** 저장을 실행하고 성공하면 DB를 다시 읽는다. 실패하면 빨간 토스트를 띄우고 undefined를 돌려준다 */
+  /**
+   * 저장을 실행하고 성공하면 DB를 다시 읽는다. 실패하면 빨간 토스트를 띄우고 undefined를 돌려준다.
+   * 저장이 끝나기 전에 또 부르면(버튼을 연달아 누른 경우) 두 번째 호출은 아무것도 하지 않고 undefined를 돌려준다.
+   */
   save: <T>(action: (api: Api) => Promise<T>) => Promise<T | undefined>;
-  userName: string;
-  setUserName: (name: string) => void;
-  /** insert의 created_by에 넣을 값 */
-  createdBy: string | null;
   toasts: Toast[];
   notify: (kind: Toast['kind'], text: string) => void;
   dismissToast: (id: number) => void;
@@ -48,11 +37,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<AppDataValue['phase']>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [userName, setUserNameState] = useState(readUserName);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastSeq = useRef(0);
   const loadSeq = useRef(0);
   const seeding = useRef<Promise<void> | null>(null);
+  const saving = useRef(false);
 
   const dismissToast = useCallback((id: number) => {
     setToasts((list) => list.filter((t) => t.id !== id));
@@ -113,6 +102,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const save = useCallback(
     async <T,>(action: (a: Api) => Promise<T>): Promise<T | undefined> => {
+      // 화면의 버튼이 비활성으로 바뀌기 전에 들어온 두 번째 클릭을 여기서 막는다 (중복 저장 방지)
+      if (saving.current) return undefined;
+      saving.current = true;
       try {
         const result = await action(api);
         await refresh();
@@ -120,19 +112,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         notify('error', `저장에 실패했습니다: ${e instanceof Error ? e.message : String(e)}`);
         return undefined;
+      } finally {
+        saving.current = false;
       }
     },
     [api, notify, refresh],
   );
-
-  const setUserName = useCallback((name: string) => {
-    setUserNameState(name);
-    try {
-      window.localStorage.setItem(USER_NAME_KEY, name);
-    } catch {
-      // 저장하지 못해도 이번 세션에는 유지된다
-    }
-  }, []);
 
   const value: AppDataValue = {
     api,
@@ -142,9 +127,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     refreshing,
     refresh,
     save,
-    userName,
-    setUserName,
-    createdBy: userName.trim() || null,
     toasts,
     notify,
     dismissToast,

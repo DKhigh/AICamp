@@ -1,6 +1,6 @@
 // 생산 가능 대수 · 시뮬레이션 · 주문 예측 · 영향 분석 (DESIGN.md §6.2 ~ §6.7, §6.9-1)
 // 전부 순수 함수다. 화면은 DB에서 읽은 상태로 이 함수들을 다시 돌려서 보여 준다.
-import { LOW_COVERAGE_DAYS, SUPPLIER_LIMIT_DAYS, SUPPLIER_ORDER_LIMIT } from './constants';
+import { CONTRACT_MARK, LOW_COVERAGE_DAYS, SUPPLIER_LIMIT_DAYS, SUPPLIER_ORDER_LIMIT } from './constants';
 import { addDays, diffDays, formatMD } from './date';
 import { baseCodeOf, colorCodeOf } from './partcode';
 import type {
@@ -50,17 +50,24 @@ export interface SupplierLimit {
 }
 
 /**
+ * 주간 발주 한도와 수량 지연을 적용하지 않는 발주:
+ * 대체(긴급) 발주 — 차질 대응 수량은 한도보다 크다 — 와 시연 초기 데이터의 정기 계약 물량(입력자 끝에 '정기 계약').
+ * 입력자가 없는 발주(예전 데이터)도 정기 계약으로 본다.
+ */
+export function isLimitExempt(po: PurchaseOrder): boolean {
+  return po.kind === '대체' || po.createdBy === null || po.createdBy.endsWith(CONTRACT_MARK);
+}
+
+/**
  * 업체별 발주 한도: 한 업체에 일반 발주로 넣을 수 있는 수량은 일주일(발주일 포함 7일) 동안 50개까지다.
- * 발주일로부터 7일이 지난 발주분은 한도에서 빠진다. 취소한 발주는 세지 않는다.
- * 세지 않는 것: 시연 초기 데이터(입력자가 없는 발주)와 대체(긴급) 발주 — 차질 대응 수량은 한도보다 크다.
+ * 발주일로부터 7일이 지난 발주분은 한도에서 빠진다. 취소한 발주와 isLimitExempt인 발주는 세지 않는다.
  */
 export function supplierLimitOf(pos: PurchaseOrder[], supplierName: string, baseDate: ISODate): SupplierLimit {
   const counted = pos.filter(
     (po) =>
       po.supplierName === supplierName &&
-      po.kind === '일반' &&
+      !isLimitExempt(po) &&
       po.status !== '취소' &&
-      po.createdBy !== null &&
       po.orderDate <= baseDate &&
       diffDays(baseDate, po.orderDate) < SUPPLIER_LIMIT_DAYS,
   );
@@ -79,6 +86,28 @@ export function supplierLimitError(limit: SupplierLimit, supplierName: string, q
   if (qty <= limit.remaining) return null;
   const release = limit.releaseDate ? ` ${formatMD(limit.releaseDate)}부터 한도가 풀립니다.` : '';
   return `${supplierName} 발주 한도(일주일 ${limit.limit}개)를 넘습니다. 남은 수량은 ${limit.remaining}개입니다.${release}`;
+}
+
+/**
+ * 같은 날 같은 부품·업체·수량으로 이미 넣은 발주 (실수로 두 번 누른 것인지 확인하려고 찾는다).
+ * 취소한 발주와 대체(긴급) 발주는 보지 않는다.
+ */
+export function duplicateOrderOf(
+  pos: PurchaseOrder[],
+  draft: { partCode: string; supplierName: string; qty: number },
+  baseDate: ISODate,
+): PurchaseOrder | null {
+  return (
+    pos.find(
+      (po) =>
+        !isLimitExempt(po) &&
+        po.status !== '취소' &&
+        po.orderDate === baseDate &&
+        po.partCode === draft.partCode &&
+        po.supplierName === draft.supplierName &&
+        po.originalQty === draft.qty,
+    ) ?? null
+  );
 }
 
 export function stockOnHand(lineParts: LinePart[]): Stock {
@@ -420,9 +449,45 @@ export function delayedQtyOf(pos: PurchaseOrder[], disruptionId: string): number
   return delayedPosOf(pos, disruptionId).reduce((sum, po) => sum + po.qty, 0);
 }
 
-/** 지연되는 기간 동안 라인을 멈추지 않으려면 필요한 양 */
-export function coverQty(delayDays: number, dailyCapacity: number, qtyPerCar: number, delayedQty: number): number {
-  return Math.min(delayDays * dailyCapacity * qtyPerCar, delayedQty);
+/**
+ * 지연 때문에 추가로 모자라는 수량 = 대체 발주 추천 수량.
+ * 지연된 발주가 다 들어올 때까지 매일 일일 투입만큼 만든다고 할 때,
+ * (지연된 일정에서 모자라는 양) − (원래 일정이었어도 모자랐을 양)이다. 현재 재고와 다른 입고 예정분을 먼저 쓴다.
+ * 0이면 재고로 지연 기간을 버틸 수 있다 → 대체 발주가 필요 없다.
+ * lineParts에는 생산에 쓸 수 있는 재고(수리용 제외)를 준다. 색상별 차체는 다섯 색을 합쳐서 본다.
+ */
+export function coverQty(s: Settings, lineParts: LinePart[], pos: PurchaseOrder[], disruptionId: string): number {
+  const delayed = delayedPosOf(pos, disruptionId);
+  if (delayed.length === 0) return 0;
+  const partCode = delayed[0].partCode;
+  const group = partGroups(lineParts).find((g) => g.code === baseCodeOf(partCode));
+  const linePart = lineParts.find((p) => p.partCode === partCode);
+  if (!group || !linePart) return 0;
+
+  const lastArrival = delayed.map((po) => po.expectedArrival).sort().pop()!;
+  const days = diffDays(lastArrival, s.baseDate);
+  const perCar = new Map(group.parts.map((p) => [p.partCode, p.qtyPerCar]));
+  const incoming = openPos(pos).filter((po) => perCar.has(po.partCode));
+
+  /** 그 일정대로 들어온다면 지연 발주가 다 올 때까지 모자라는 차 대수 */
+  const shortCars = (basis: ArrivalBasis): number => {
+    let cars = group.parts.reduce((sum, p) => sum + Math.floor(p.onHand / p.qtyPerCar), 0);
+    let short = 0;
+    for (let i = 0; i < days; i++) {
+      const d = addDays(s.baseDate, i);
+      for (const po of incoming) {
+        const date = basis === 'planned' ? po.plannedArrival : po.expectedArrival;
+        if ((date < s.baseDate ? s.baseDate : date) === d) cars += Math.floor(po.qty / perCar.get(po.partCode)!);
+      }
+      const input = Math.min(cars, s.dailyCapacity);
+      short += s.dailyCapacity - input;
+      cars -= input;
+    }
+    return short;
+  };
+
+  const extraCars = Math.max(0, shortCars('expected') - shortCars('planned'));
+  return Math.min(extraCars * linePart.qtyPerCar, delayedQtyOf(pos, disruptionId));
 }
 
 export function recommendedQty(action: OriginalPoAction, cover: number, delayedQty: number): number {
