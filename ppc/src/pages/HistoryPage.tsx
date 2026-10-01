@@ -1,10 +1,14 @@
 // (P1) 이력 `/history` (DESIGN.md §5 C-2): 차질 목록과 전체 상태의 발주 목록
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Card, DISRUPTION_STATUS_TONE, PO_STATUS_TONE } from '../components/ui';
+import { EmployeeConfirmModal } from '../components/EmployeeField';
+import { Badge, Button, Card, DISRUPTION_STATUS_TONE, PO_STATUS_TONE } from '../components/ui';
 import { formatMD } from '../lib/date';
 import { num } from '../lib/format';
+import { isCancellable } from '../lib/planning';
 import { partOf } from '../lib/reference';
-import type { AppState, Disruption } from '../lib/types';
+import type { AppState, Disruption, PurchaseOrder } from '../lib/types';
+import { useAppData } from '../state/AppData';
 
 function decisionText(d: Disruption): string {
   if (d.altPoId) {
@@ -18,9 +22,36 @@ function decisionText(d: Disruption): string {
 export function HistoryPage({ state }: { state: AppState }) {
   const disruptions = [...state.disruptions].sort((a, b) => b.id.localeCompare(a.id));
   const pos = [...state.purchaseOrders].sort((a, b) => b.id.localeCompare(a.id));
+  const baseDate = state.settings.baseDate;
+  const { save, notify } = useAppData();
+  const [cancelTarget, setCancelTarget] = useState<PurchaseOrder | null>(null);
+
+  async function cancel(employeeNo: string): Promise<boolean> {
+    if (!cancelTarget) return true;
+    const poId = cancelTarget.id;
+    const ok = await save(async (api) => {
+      await api.cancelPurchaseOrder({ poId, employeeNo });
+      return true;
+    });
+    if (ok) notify('success', `${poId} 발주를 취소했습니다.`);
+    return !!ok;
+  }
 
   return (
     <div className="space-y-4">
+      {cancelTarget && (
+        <EmployeeConfirmModal
+          title={`발주 취소: ${cancelTarget.id}`}
+          confirmLabel="발주 취소"
+          danger
+          onConfirm={cancel}
+          onClose={() => setCancelTarget(null)}
+        >
+          {partOf(cancelTarget.partCode).name} {num(cancelTarget.qty)}개 · {cancelTarget.supplierName} · {formatMD(cancelTarget.expectedArrival)} 도착
+          예정 발주를 취소합니다. 취소하면 입고 예정과 생산 예측에서 빠집니다. 발주 취소는 발주한 당일({formatMD(cancelTarget.orderDate)})까지만 할 수
+          있습니다.
+        </EmployeeConfirmModal>
+      )}
       <div className="flex items-center gap-3">
         <Link to="/" className="text-sm font-semibold text-accent hover:underline">
           ← 대시보드
@@ -117,7 +148,18 @@ export function HistoryPage({ state }: { state: AppState }) {
                         {formatMD(po.expectedArrival)}
                       </td>
                       <td className="px-2 py-2.5">
-                        <Badge tone={PO_STATUS_TONE[po.status]}>{po.status}</Badge>
+                        {isCancellable(po, baseDate) ? (
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <Badge tone="orange" title="발주한 당일까지 취소할 수 있습니다">
+                              발주대기
+                            </Badge>
+                            <Button size="sm" onClick={() => setCancelTarget(po)}>
+                              발주 취소
+                            </Button>
+                          </span>
+                        ) : (
+                          <Badge tone={PO_STATUS_TONE[po.status]}>{po.status}</Badge>
+                        )}
                       </td>
                       <td className="px-2 py-2.5">
                         <Badge tone={po.kind === '대체' ? 'blue' : 'gray'}>{po.kind}</Badge>

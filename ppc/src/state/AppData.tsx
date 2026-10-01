@@ -72,7 +72,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     let next = await api.fetchState();
     // 로컬 데모 모드는 처음 열 때 시연 데이터를 자동으로 넣는다
     if (!next && api.mode === 'local') {
-      seeding.current ??= api.resetDemoData();
+      seeding.current ??= api.seedLocalDemo();
       await seeding.current;
       next = await api.fetchState();
     }

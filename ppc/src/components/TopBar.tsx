@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { formatWithWeekday } from '../lib/date';
 import { useAppData } from '../state/AppData';
 import { useUi } from '../state/Ui';
+import { EmployeeConfirmModal } from './EmployeeField';
 import { Spinner } from './ui';
 
 const HEADER_BUTTON =
@@ -13,20 +14,19 @@ export function TopBar() {
   const { api, state, refresh, refreshing, save, notify } = useAppData();
   const { openOrder, openDisruption } = useUi();
   const navigate = useNavigate();
-  const [resetting, setResetting] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
 
-  async function reset() {
-    if (!window.confirm('모든 데이터를 시연 초기 상태로 되돌립니다. 지금까지 입력한 발주와 차질이 모두 지워집니다. 계속할까요?')) return;
-    setResetting(true);
+  /** 사원번호를 확인한 뒤 초기화한다 */
+  async function reset(employeeNo: string): Promise<boolean> {
     const ok = await save(async (a) => {
-      await a.resetDemoData();
+      await a.resetDemoData(employeeNo);
       return true;
     });
-    setResetting(false);
     if (ok) {
       notify('success', '시연 초기 데이터로 되돌렸습니다.');
       navigate('/');
     }
+    return !!ok;
   }
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -35,7 +35,13 @@ export function TopBar() {
     }`;
 
   return (
-    // 좁은 화면에서는 상단 바가 여러 줄이 되므로 고정하지 않는다
+    <>
+    {resetOpen && (
+      <EmployeeConfirmModal title="데이터 초기화" confirmLabel="초기화" danger onConfirm={reset} onClose={() => setResetOpen(false)}>
+        모든 데이터를 시연 초기 상태로 되돌립니다. 지금까지 입력한 발주와 차질이 <strong>모든 사용자 화면에서</strong> 지워집니다.
+      </EmployeeConfirmModal>
+    )}
+    {/* 좁은 화면에서는 상단 바가 여러 줄이 되므로 고정하지 않는다 */}
     <header className="top-0 z-40 border-b border-header-border bg-header text-white shadow-md lg:sticky">
       <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
         <div className="flex select-none items-center gap-3">
@@ -99,11 +105,12 @@ export function TopBar() {
           <button type="button" className={HEADER_BUTTON} onClick={() => void refresh()} disabled={refreshing} title="DB를 다시 읽습니다 (10초마다 자동)">
             {refreshing ? <Spinner /> : '⟳'} 새로고침
           </button>
-          <button type="button" className={HEADER_BUTTON} onClick={() => void reset()} disabled={resetting}>
-            {resetting && <Spinner />} 데이터 초기화
+          <button type="button" className={HEADER_BUTTON} onClick={() => setResetOpen(true)}>
+            데이터 초기화
           </button>
         </div>
       </div>
     </header>
+    </>
   );
 }

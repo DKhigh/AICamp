@@ -7,11 +7,13 @@ import { gradeOf, suppliersFor } from '../lib/recommend';
 import { partOf, reference } from '../lib/reference';
 import type { AppState } from '../lib/types';
 import { useAppData } from '../state/AppData';
-import { CreatorField } from './CreatorField';
+import { employeeError } from '../lib/employees';
+import { EmployeeField } from './EmployeeField';
 import { Button, Field, INPUT_CLASS, Modal, parseIntStrict } from './ui';
 
 export function OrderModal({ state, initialPartCode, onClose }: { state: AppState; initialPartCode?: string; onClose: () => void }) {
-  const { save, createdBy, notify } = useAppData();
+  const { save, notify } = useAppData();
+  const [employeeNo, setEmployeeNo] = useState('');
   const [partCode, setPartCode] = useState(initialPartCode ?? state.lineParts[0]?.partCode ?? '');
   const part = partOf(partCode);
 
@@ -32,12 +34,12 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
   const baseDate = state.settings.baseDate;
   const arrival = supplier ? addDays(baseDate, supplier.leadDays) : null;
   const grade = supplier ? gradeOf(supplier.onTimeRate) : null;
-  const canSave = !!supplier && qtyText !== '' && !qtyProblem && !!createdBy;
+  const canSave = !!supplier && qtyText !== '' && !qtyProblem && employeeError(employeeNo) === null;
 
   async function submit() {
     if (!supplier || !canSave) return;
     setSaving(true);
-    const po = await save((api) => api.createPurchaseOrder({ partCode, supplierName: supplier.name, qty, createdBy }));
+    const po = await save((api) => api.createPurchaseOrder({ partCode, supplierName: supplier.name, qty, employeeNo: employeeNo.trim() }));
     setSaving(false);
     if (po) {
       notify('success', `${po.id} 발주를 등록했습니다. (${part.name} ${num(qty)}개 · ${formatMD(po.expectedArrival)} 도착 예정)`);
@@ -59,7 +61,7 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
       }
     >
       <div className="space-y-4">
-        <CreatorField />
+        <EmployeeField value={employeeNo} onChange={setEmployeeNo} />
         <Field label="부품">
           <select
             className={INPUT_CLASS}

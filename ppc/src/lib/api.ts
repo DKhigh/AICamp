@@ -1,7 +1,9 @@
 // DB 읽기/쓰기, 초기화 (DESIGN.md §5, §8)
 // 저장할 내용은 actions.ts의 순수 함수가 만들고, 여기서는 그 결과를 DB에 쓰기만 한다.
-import { buildAlternative, buildDisruption, buildPurchaseOrder } from './actions';
+import { buildAlternative, buildDisruption, buildPurchaseOrder, nextId } from './actions';
 import { MAX_DELAY_DAYS, MIN_DELAY_DAYS } from './constants';
+import { authorize } from './employees';
+import { isCancellable } from './planning';
 import { demoState, partOf, supplierOf } from './reference';
 import { localStore, supabaseStore, type Row, type Store } from './store';
 import { supabase } from './supabase';
@@ -171,8 +173,20 @@ export function createApi(store: Store) {
     return state;
   }
 
-  /** 5개 테이블을 전부 지우고 demo_state.json을 다시 넣는다 (§5 C-1) */
-  async function resetDemoData(): Promise<void> {
+  /** [데이터 초기화]: 명단에 있는 사원번호가 있어야 한다 (§5 C-1) */
+  async function resetDemoData(employeeNo: string): Promise<void> {
+    authorize(employeeNo);
+    await writeDemoData();
+  }
+
+  /** 로컬 데모 모드에서 처음 열 때 자동으로 시연 데이터를 넣는다. 공유 DB에서는 쓰지 않는다 */
+  async function seedLocalDemo(): Promise<void> {
+    if (store.mode !== 'local') throw new Error('공유 DB는 [데이터 초기화]로만 채울 수 있습니다.');
+    await writeDemoData();
+  }
+
+  /** 5개 테이블을 전부 지우고 demo_state.json을 다시 넣는다 */
+  async function writeDemoData(): Promise<void> {
     for (const table of ['disruptions', 'purchase_orders', 'customer_orders', 'line_parts', 'settings'] as const) {
       await store.clear(table);
     }
@@ -188,10 +202,11 @@ export function createApi(store: Store) {
     partCode: string;
     supplierName: string;
     qty: number;
-    createdBy: string | null;
+    /** 발주 권한 확인용 사원번호. 이력에는 '이름(사원번호)'로 남는다 */
+    employeeNo: string;
   }): Promise<PurchaseOrder> {
     assertValid(qtyError(input.qty));
-    assertValid(creatorError(input.createdBy));
+    const createdBy = authorize(input.employeeNo);
     const supplier = supplierOf(input.supplierName);
     if (!supplier) throw new Error(`공급업체를 찾을 수 없습니다: ${input.supplierName}`);
     const state = await freshState();
@@ -202,10 +217,26 @@ export function createApi(store: Store) {
       qty: input.qty,
       baseDate: state.settings.baseDate,
       kind: '일반',
-      createdBy: input.createdBy,
+      createdBy,
     });
     await store.insert('purchase_orders', [fromPurchaseOrder(po)]);
     return po;
+  }
+
+  /** 발주 취소: '발주대기'(발주한 당일의 일반 발주)만, 명단에 있는 사원번호로만 할 수 있다 */
+  async function cancelPurchaseOrder(input: { poId: string; employeeNo: string }): Promise<void> {
+    authorize(input.employeeNo);
+    const state = await freshState();
+    const po = state.purchaseOrders.find((p) => p.id === input.poId);
+    if (!po) throw new Error(`발주를 찾을 수 없습니다: ${input.poId}`);
+    if (!isCancellable(po, state.settings.baseDate)) {
+      throw new Error(
+        po.status === '취소'
+          ? '이미 취소된 발주입니다. 새로고침해서 확인하세요.'
+          : '발주 취소는 발주한 당일의 발주대기 상태에서만 할 수 있습니다.',
+      );
+    }
+    await store.update('purchase_orders', po.id, { status: '취소' });
   }
 
   /** F2-1 차질 발생: 차질을 넣고, 같은 부품·업체의 미입고 발주를 전부 지연시킨다 */
@@ -244,10 +275,10 @@ export function createApi(store: Store) {
     supplierName: string;
     qty: number;
     action: OriginalPoAction;
-    createdBy: string | null;
+    employeeNo: string;
   }): Promise<PurchaseOrder> {
     assertValid(qtyError(input.qty));
-    assertValid(creatorError(input.createdBy));
+    const createdBy = authorize(input.employeeNo);
     const supplier = supplierOf(input.supplierName);
     if (!supplier) throw new Error(`공급업체를 찾을 수 없습니다: ${input.supplierName}`);
     const state = await freshState();
@@ -262,7 +293,7 @@ export function createApi(store: Store) {
       supplier,
       qty: input.qty,
       action: input.action,
-      createdBy: input.createdBy,
+      createdBy,
     });
     // 1) 대체 발주 → 2) 원래 지연 발주 처리 → 3) 차질 상태
     await store.insert('purchase_orders', [fromPurchaseOrder(built.altPo)]);
@@ -303,6 +334,38 @@ export function createApi(store: Store) {
     await store.update('purchase_orders', po.id, { status: '입고완료' });
   }
 
+  /** 납기 추가: 자동차 주문을 하나 더 넣는다. 명단에 있는 사원번호가 있어야 한다 */
+  async function addCustomerOrder(input: { customer: string; qty: number; dueDate: string; employeeNo: string }): Promise<CustomerOrder> {
+    const customer = input.customer.trim();
+    if (customer === '') throw new Error('고객 이름을 입력하세요.');
+    if (!Number.isInteger(input.qty) || input.qty < 1) throw new Error('수량은 1 이상의 정수여야 합니다.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) throw new Error('납기 날짜를 선택하세요.');
+    authorize(input.employeeNo);
+    const state = await freshState();
+    if (input.dueDate < state.settings.baseDate) throw new Error('납기는 기준일보다 빠를 수 없습니다.');
+    const order: CustomerOrder = {
+      id: nextId(
+        'CO-',
+        state.customerOrders.map((o) => o.id),
+      ),
+      customer,
+      qty: input.qty,
+      dueDate: input.dueDate,
+    };
+    await store.insert('customer_orders', [fromCustomerOrder(order)]);
+    return order;
+  }
+
+  /** 납기 취소: 자동차 주문을 지운다. 명단에 있는 사원번호가 있어야 한다 */
+  async function removeCustomerOrder(input: { orderId: string; employeeNo: string }): Promise<void> {
+    authorize(input.employeeNo);
+    const state = await freshState();
+    if (!state.customerOrders.some((o) => o.id === input.orderId)) {
+      throw new Error(`이미 지워진 주문입니다: ${input.orderId}. 새로고침해서 확인하세요.`);
+    }
+    await store.remove('customer_orders', input.orderId);
+  }
+
   /** (P1) 설정 수정: 일일 투입과 리드타임 */
   async function updateSettings(input: { dailyCapacity: number; leadTimeDays: number }): Promise<void> {
     if (!Number.isInteger(input.dailyCapacity) || input.dailyCapacity < 1) {
@@ -321,12 +384,16 @@ export function createApi(store: Store) {
     mode: store.mode,
     fetchState,
     resetDemoData,
+    seedLocalDemo,
     createPurchaseOrder,
+    cancelPurchaseOrder,
     registerDisruption,
     confirmAlternative,
     decideWait,
     resolveDisruption,
     receivePurchaseOrder,
+    addCustomerOrder,
+    removeCustomerOrder,
     updateSettings,
   };
 }

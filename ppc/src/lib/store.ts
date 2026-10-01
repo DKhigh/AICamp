@@ -21,6 +21,8 @@ export interface Store {
   insert(table: TableName, rows: Row[]): Promise<void>;
   update(table: TableName, key: Key, patch: Row): Promise<void>;
   /** 테이블의 모든 행을 지운다 */
+  /** 한 행을 지운다 */
+  remove(table: TableName, key: Key): Promise<void>;
   clear(table: TableName): Promise<void>;
 }
 
@@ -42,6 +44,10 @@ export function supabaseStore(client: SupabaseClient): Store {
     },
     async update(table, key, patch) {
       const { error } = await client.from(table).update(patch).eq(KEY_COLUMN[table], key);
+      check(error);
+    },
+    async remove(table, key) {
+      const { error } = await client.from(table).delete().eq(KEY_COLUMN[table], key);
       check(error);
     },
     async clear(table) {
@@ -78,6 +84,10 @@ export function memoryStore(initial?: Db, persist?: (db: Db) => void): Store {
     async update(table, key, patch) {
       const row = db[table].find((r) => r[KEY_COLUMN[table]] === key);
       if (row) Object.assign(row, patch);
+      save();
+    },
+    async remove(table, key) {
+      db[table] = db[table].filter((r) => r[KEY_COLUMN[table]] !== key);
       save();
     },
     async clear(table) {

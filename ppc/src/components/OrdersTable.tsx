@@ -2,6 +2,7 @@
 import { formatMD } from '../lib/date';
 import { num } from '../lib/format';
 import type { OrderForecast } from '../lib/planning';
+import { Button } from './ui';
 
 export function OrderStatus({ order }: { order: OrderForecast }) {
   if (order.lateDays === null) {
@@ -13,7 +14,7 @@ export function OrderStatus({ order }: { order: OrderForecast }) {
   return <span className="font-semibold text-emerald-700">✅ 충족 (여유 {-order.lateDays}일)</span>;
 }
 
-export function OrdersTable({ orders }: { orders: OrderForecast[] }) {
+export function OrdersTable({ orders, onRemove }: { orders: OrderForecast[]; onRemove?: (order: OrderForecast) => void }) {
   if (orders.length === 0) {
     return <p className="px-5 py-8 text-center text-sm text-slate-500">자동차 주문이 없습니다</p>;
   }
@@ -27,7 +28,8 @@ export function OrdersTable({ orders }: { orders: OrderForecast[] }) {
             <th className="px-2 py-2 text-right">수량</th>
             <th className="px-2 py-2">납기</th>
             <th className="px-2 py-2">예상 완료일</th>
-            <th className="py-2 pl-2 pr-5">상태</th>
+            <th className="px-2 py-2">상태</th>
+            {onRemove && <th className="py-2 pl-2 pr-5" aria-label="납기 취소" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -38,9 +40,16 @@ export function OrdersTable({ orders }: { orders: OrderForecast[] }) {
               <td className="tabular px-2 py-2.5 text-right text-slate-900">{num(o.qty)}대</td>
               <td className="tabular px-2 py-2.5 text-slate-700">{formatMD(o.dueDate)}</td>
               <td className="tabular px-2 py-2.5 font-semibold text-slate-900">{o.doneDate ? formatMD(o.doneDate) : '–'}</td>
-              <td className="py-2.5 pl-2 pr-5">
+              <td className="whitespace-nowrap px-2 py-2.5">
                 <OrderStatus order={o} />
               </td>
+              {onRemove && (
+                <td className="py-2.5 pl-2 pr-5 text-right">
+                  <Button size="sm" onClick={() => onRemove(o)}>
+                    납기 취소
+                  </Button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

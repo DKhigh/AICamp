@@ -6,9 +6,10 @@ import { CAR_PART_BY_CODE } from '../components/car/carParts';
 import type { CarViewerItem } from '../components/car/CarViewer';
 import { ForecastPanel } from '../components/dashboard/ForecastPanel';
 import { PartCard } from '../components/dashboard/PartCard';
-import { OrdersTable } from '../components/OrdersTable';
+import { CustomerOrdersCard } from '../components/dashboard/CustomerOrdersCard';
 import { PoTable } from '../components/PoTable';
 import { Badge, Button, Card, GradeBadge, PART_STATUS_TONE } from '../components/ui';
+import { cautionOf } from '../lib/cautions';
 import { dashboardModel, type DashboardModel, type PartRow } from '../lib/dashboard';
 import { ddayLabel, num } from '../lib/format';
 import { gradeOf } from '../lib/recommend';
@@ -136,6 +137,8 @@ function KpiRow({ kpi }: { kpi: DashboardModel['kpi'] }) {
 function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
   const { part, linePart, nextPo, activeDisruption } = row;
   const supplier = supplierOf(part.defaultSupplier);
+  const caution = cautionOf(part.name);
+  const [showCaution, setShowCaution] = useState(false);
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
       <div className="min-w-0 flex-1">
@@ -143,9 +146,26 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
           <h3 className="text-base font-bold tracking-tight text-slate-900">
             {part.name} <span className="font-mono text-xs font-medium text-slate-400">{part.code}</span>
           </h3>
+          {caution && (
+            <button
+              type="button"
+              onClick={() => setShowCaution((v) => !v)}
+              aria-expanded={showCaution}
+              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors ${
+                showCaution ? 'border-amber-500 bg-amber-500 text-white' : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+              }`}
+            >
+              ⚠ 주의사항
+            </button>
+          )}
           <Badge tone={PART_STATUS_TONE[row.status]}>{row.status}</Badge>
           {row.isBottleneck && <span className="rounded bg-slate-900 px-1.5 py-0.5 text-[11px] font-bold text-white">병목</span>}
         </div>
+        {caution && showCaution && (
+          <p role="note" className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] leading-relaxed text-amber-900">
+            <strong>{part.name} 주의사항</strong> — {caution}
+          </p>
+        )}
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
           <span>{part.category}</span>·<span>{part.materialName}</span>·<span>기본 업체 {part.defaultSupplier}</span>
           {supplier && <GradeBadge rate={supplier.onTimeRate} grade={gradeOf(supplier.onTimeRate)} />}
@@ -214,7 +234,7 @@ export function Dashboard({ state }: { state: AppState }) {
                 items={viewerItems}
                 focus={focusKey}
                 onFocus={(key) => setFocusCode(codeOfKey(key))}
-                detail={focusRow && <PartDetail row={focusRow} onOrder={() => openOrder(focusRow.part.code)} />}
+                detail={focusRow && <PartDetail key={focusRow.part.code} row={focusRow} onOrder={() => openOrder(focusRow.part.code)} />}
               />
             </Suspense>
           </div>
@@ -239,16 +259,7 @@ export function Dashboard({ state }: { state: AppState }) {
         <ForecastPanel state={state} model={model} />
       </div>
 
-      <Card
-        title="주문 납기 현황"
-        aside={
-          <span className="text-xs text-slate-500">
-            자동차 주문 {num(state.customerOrders.reduce((sum, o) => sum + o.qty, 0))}대 · 납기 지연 {model.scenarios.wait.lateOrders.length}건
-          </span>
-        }
-      >
-        <OrdersTable orders={model.scenarios.wait.orders} />
-      </Card>
+      <CustomerOrdersCard state={state} orders={model.scenarios.wait.orders} lateCount={model.scenarios.wait.lateOrders.length} />
     </div>
   );
 }

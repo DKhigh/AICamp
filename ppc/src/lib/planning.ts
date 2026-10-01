@@ -24,6 +24,21 @@ export function openPos(pos: PurchaseOrder[]): PurchaseOrder[] {
   return pos.filter((po) => po.status === '입고대기' || po.status === '지연');
 }
 
+/**
+ * 발주대기 = 취소할 수 있는 발주: 발주한 당일(발주일 = 기준일)의 일반 발주이고 아직 입고대기인 것.
+ * DB에는 '입고대기'로 저장하고 화면에서만 '발주대기'로 보여 준다 (DB 스키마를 바꾸지 않는다).
+ * 대체 발주는 차질 결정과 묶여 있어 취소 대상에서 뺀다.
+ */
+export function isCancellable(po: PurchaseOrder, baseDate: ISODate): boolean {
+  return po.status === '입고대기' && po.kind === '일반' && po.orderDate === baseDate;
+}
+
+export type PoDisplayStatus = PurchaseOrder['status'] | '발주대기';
+
+export function displayStatusOf(po: PurchaseOrder, baseDate: ISODate): PoDisplayStatus {
+  return isCancellable(po, baseDate) ? '발주대기' : po.status;
+}
+
 export function stockOnHand(lineParts: LinePart[]): Stock {
   return Object.fromEntries(lineParts.map((p) => [p.partCode, p.onHand]));
 }

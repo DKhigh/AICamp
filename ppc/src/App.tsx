@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { DisruptionModal } from './components/DisruptionModal';
+import { EmployeeConfirmModal } from './components/EmployeeField';
 import { OrderModal } from './components/OrderModal';
 import { TopBar } from './components/TopBar';
 import { Button, Card, Spinner } from './components/ui';
@@ -37,20 +38,24 @@ function Toasts() {
 /** 아직 화면에 보여 줄 데이터가 없을 때 (첫 읽기 중 / 실패 / 빈 DB) */
 function NoData() {
   const { phase, loadError, refresh, save, notify, api } = useAppData();
-  const [busy, setBusy] = useState(false);
+  const [seedOpen, setSeedOpen] = useState(false);
 
-  async function seed() {
-    setBusy(true);
+  async function seed(employeeNo: string): Promise<boolean> {
     const ok = await save(async (a) => {
-      await a.resetDemoData();
+      await a.resetDemoData(employeeNo);
       return true;
     });
-    setBusy(false);
     if (ok) notify('success', '시연 데이터를 넣었습니다.');
+    return !!ok;
   }
 
   return (
     <Card>
+      {seedOpen && (
+        <EmployeeConfirmModal title="시연 데이터 넣기" confirmLabel="시연 데이터 넣기" onConfirm={seed} onClose={() => setSeedOpen(false)}>
+          비어 있는 DB에 시연 초기 데이터를 넣습니다.
+        </EmployeeConfirmModal>
+      )}
       <div className="flex flex-col items-center gap-3 px-5 py-16 text-center">
         {phase === 'loading' && (
           <p className="flex items-center gap-2 text-sm text-slate-600">
@@ -71,7 +76,7 @@ function NoData() {
         {phase === 'empty' && (
           <>
             <p className="text-sm text-slate-700">{EMPTY_DB_MESSAGE}</p>
-            <Button variant="primary" onClick={() => void seed()} busy={busy}>
+            <Button variant="primary" onClick={() => setSeedOpen(true)}>
               시연 데이터 넣기
             </Button>
           </>

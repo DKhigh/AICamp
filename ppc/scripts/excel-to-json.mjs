@@ -99,3 +99,14 @@ writeFileSync(out, JSON.stringify({ parts, suppliers, materials, delayPresets },
 console.log(
   `reference.json 생성: parts ${actual.parts} · suppliers ${actual.suppliers} · materials ${actual.materials} · delayPresets ${actual.delayPresets}`,
 );
+
+// 사원 명단(data/employees.xlsx) → src/data/employees.json. 발주·데이터 초기화 권한 확인에 쓴다.
+// 사원번호는 Excel에서 숫자로 바뀌어도(0000 → 0) 4자리 문자열로 되돌린다.
+const employeeBook = XLSX.read(readFileSync(resolve(root, 'data/employees.xlsx')));
+const employees = XLSX.utils
+  .sheet_to_json(employeeBook.Sheets[employeeBook.SheetNames[0]], { defval: null })
+  .map((r) => ({ no: text(r['사원번호']).padStart(4, '0'), name: text(r['이름']), dept: text(r['부서']) }))
+  .filter((e) => e.name !== '');
+if (new Set(employees.map((e) => e.no)).size !== employees.length) throw new Error('사원번호가 겹칩니다');
+writeFileSync(resolve(root, 'src/data/employees.json'), JSON.stringify(employees, null, 2) + '\n');
+console.log(`employees.json 생성: ${employees.length}명`);
