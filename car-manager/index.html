@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICBM 3D Automotive Studio - 차량 3D 모델링 및 부품 검측 시스템</title>
+  <!-- Google Fonts: Pretendard & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  
+  <!-- Three.js & OrbitControls with robust CDN fallback -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"><\/script>');
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/controls/OrbitControls.min.js"><\/script>');
+    }
+  </script>
+  <!-- TWEEN for smooth cinematic camera transitions -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app" class="app-container full-studio">
+    <!-- Top Modern Studio Header -->
+    <header class="global-header studio-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <div class="logo-icon-wrap">
+            <svg class="car-logo-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4.66l.12-.34h13.77l.11.34V17z"/>
+              <circle cx="7.5" cy="14.5" r="1.5"/>
+              <circle cx="16.5" cy="14.5" r="1.5"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1 class="brand-title">ICBM 3D STUDIO</h1>
+            <p class="brand-sub">Interactive 3D Sedan Inspector</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Part Focus Navigation Bar -->
+      <div class="header-center">
+        <div class="part-selector-toolbar">
+          <button class="part-btn active" data-part="all" id="btnPartAll">
+            <span class="icon">🚗</span>
+            <span>전체 외형</span>
+          </button>
+          <button class="part-btn" data-part="engine" id="btnPartEngine">
+            <span class="icon">⚙️</span>
+            <span>엔진룸</span>
+            <span class="sub-badge warn">부족 1건</span>
+          </button>
+          <button class="part-btn" data-part="brake" id="btnPartBrake">
+            <span class="icon">🛑</span>
+            <span>브레이크</span>
+            <span class="sub-badge danger">지연 7일</span>
+          </button>
+          <button class="part-btn" data-part="wheel" id="btnPartWheel">
+            <span class="icon">🛞</span>
+            <span>바퀴 & 휠</span>
+            <span class="sub-badge warn">지연 2일</span>
+          </button>
+          <button class="part-btn" data-part="electronics" id="btnPartElectronics">
+            <span class="icon">🔲</span>
+            <span>전장 & 배터리</span>
+            <span class="sub-badge danger">부족 5일</span>
+          </button>
+          <button class="part-btn" data-part="body" id="btnPartBody">
+            <span class="icon">🚘</span>
+            <span>차체 구조</span>
+            <span class="sub-badge success">정상</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Header Right Controls -->
+      <div class="header-right">
+        <!-- Exterior vs Cutaway (X-Ray) Mode Toggle -->
+        <div class="mode-toggle-group">
+          <button class="mode-btn active" id="btnModeExterior" title="외형 모드: 매끈한 3D 도장 바디">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/>
+            </svg>
+            <span>외형 모드</span>
+          </button>
+          <button class="mode-btn" id="btnModeCutaway" title="X-Ray 투시 모드: 내부 기계 및 섀시 투시">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="3"/>
+              <line x1="12" y1="3" x2="12" y2="6"/>
+              <line x1="12" y1="18" x2="12" y2="21"/>
+              <line x1="3" y1="12" x2="6" y2="12"/>
+              <line x1="18" y1="12" x2="21" y2="12"/>
+            </svg>
+            <span>X-Ray 투시</span>
+          </button>
+        </div>
+
+        <!-- 360 Auto-Rotate Button -->
+        <button class="icon-text-btn" id="btnAutoRotate" title="360도 자동 회전 토글">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>360° 회전</span>
+        </button>
+
+        <!-- Color Palette -->
+        <div class="color-picker-wrap">
+          <span class="color-dot active" data-color="#f8fafc" title="스노우 화이트 펄" style="background: #ffffff; border: 1px solid #cbd5e1;"></span>
+          <span class="color-dot" data-color="#94a3b8" title="티타늄 실버" style="background: #94a3b8;"></span>
+          <span class="color-dot" data-color="#1e3a8a" title="미드나잇 블루" style="background: #1e3a8a;"></span>
+          <span class="color-dot" data-color="#991b1b" title="크림슨 레드" style="background: #991b1b;"></span>
+          <span class="color-dot" data-color="#0f172a" title="스텔스 블랙" style="background: #0f172a;"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main 3D Studio Stage (Full Canvas) -->
+    <main class="studio-viewport-container" id="studioViewport">
+      <!-- 3D WebGL Canvas Layer -->
+      <canvas id="webglCanvas" class="webgl-canvas"></canvas>
+
+      <!-- Viewport Overlays -->
+      <!-- 1. Mouse Interaction Guidance HUD -->
+      <div class="hud-guide-pill">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="7"></rect>
+          <line x1="12" y1="6" x2="12" y2="10"></line>
+        </svg>
+        <span>마우스 좌클릭 드래그: <strong>360° 자유 회전</strong> | 휠: <strong>확대/축소</strong> | 우클릭: <strong>이동</strong></span>
+      </div>
+
+      <!-- 2. Blueprint Reference Watermark Indicator -->
+      <div class="blueprint-tag">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>
+        <span>세단 사이드 프로포션 블루프린트 1:1 기반 정밀 3D 모델</span>
+      </div>
+
+      <!-- 3. Floating Reset Camera Button (appears when zoomed) -->
+      <button class="floating-reset-btn" id="floatingResetBtn" style="display: none;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+          <path d="M3 3v5h5"></path>
+        </svg>
+        <span>⟲ 전체 외형 시점으로 복귀</span>
+      </button>
+
+      <!-- 4. Floating 3D Hotspot Badges (Positioned via 3D Projection) -->
+      <div class="hotspots-layer" id="hotspotsLayer">
+        <!-- 1. Engine Badge -->
+        <div class="hotspot-badge-3d" id="badgeEngine3D" data-part="engine">
+          <div class="badge-icon-box">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+              <path d="M7 4V2h10v2h2v4h3v3h-3v2h3v3h-3v4h-2v2H7v-2H5v-4H2v-3h3v-2H2V8h3V4h2zm2 2v12h6V6H9zm2 3h2v2h-2V9zm0 4h2v2h-2v-2z"/>
+            </svg>
+          </div>
+          <span class="badge-label">엔진</span>
+          <div class="badge-plus-btn">+</div>
+          <span class="badge-indicator-dot warn" title="부족 1건 (연료펌프)"></span>
+        </div>
+
+        <!-- 2. Front Brake Badge -->
+        <div class="hotspot-badge-3d" id="badgeBrake3D" data-part="brake">
+          <div class="badge-icon-box">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="12" r="4"/>
+              <line x1="12" y1="3" x2="12" y2="6" stroke="currentColor" stroke-width="2"/>
+              <line x1="12" y1="18" x2="12" y2="21" stroke="currentColor" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="badge-label">브레이크</span>
+          <div class="badge-plus-btn">+</div>
+          <span class="badge-indicator-dot danger pulse-red" title="납품 지연 7일 (브레이크 패드)"></span>
+        </div>
+
+        <!-- 3. Rear Wheel Badge -->
+        <div class="hotspot-badge-3d" id="badgeWheel3D" data-part="wheel">
+          <div class="badge-icon-box">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </div>
+          <span class="badge-label">바퀴</span>
+          <div class="badge-plus-btn">+</div>
+          <span class="badge-indicator-dot warn" title="지연 2일 (타이어)"></span>
+        </div>
+
+        <!-- 4. Electronics Badge -->
+        <div class="hotspot-badge-3d" id="badgeElectronics3D" data-part="electronics">
+          <div class="badge-icon-box">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+              <path d="M9 2v3H6v3H3v8h3v3h3v3h6v-3h3v-3h3V8h-3V5h-3V2H9zm2 5h2v2h-2V7zm-3 3h2v2H8v-2zm8 0h2v2h-2v-2zm-6 4h4v2h-4v-2z"/>
+            </svg>
+          </div>
+          <span class="badge-label">전장</span>
+          <div class="badge-plus-btn">+</div>
+          <span class="badge-indicator-dot danger" title="재고 부족 5일 (배터리)"></span>
+        </div>
+
+        <!-- 5. Body Chassis Badge -->
+        <div class="hotspot-badge-3d" id="badgeBody3D" data-part="body">
+          <div class="badge-icon-box">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/>
+            </svg>
+          </div>
+          <span class="badge-label">차체</span>
+          <div class="badge-plus-btn">+</div>
+          <span class="badge-indicator-dot success" title="정상"></span>
+        </div>
+
+        <!-- Sub-component Callout Pins (Zoomed-in View) -->
+        <div class="sub-pin-callout-3d" id="pinFuelPump3D" style="display: none;">
+          <div class="sub-pin-card danger">
+            <span class="pin-tag">부족 3일</span>
+            <span class="pin-text">연료펌프 (Fuel Pump)</span>
+          </div>
+        </div>
+        <div class="sub-pin-callout-3d" id="pinTurbo3D" style="display: none;">
+          <div class="sub-pin-card success">
+            <span class="pin-tag">정상</span>
+            <span class="pin-text">트윈스크롤 터보차저</span>
+          </div>
+        </div>
+        <div class="sub-pin-callout-3d" id="pinBrakePad3D" style="display: none;">
+          <div class="sub-pin-card danger pulse-glow">
+            <span class="pin-tag">지연 7일 ⚠️</span>
+            <span class="pin-text">브레이크 패드 (태성모터스)</span>
+          </div>
+        </div>
+        <div class="sub-pin-callout-3d" id="pinTire3D" style="display: none;">
+          <div class="sub-pin-card warn">
+            <span class="pin-tag">지연 2일</span>
+            <span class="pin-text">245/40R19 미쉐린 타이어</span>
+          </div>
+        </div>
+        <div class="sub-pin-callout-3d" id="pinBattery3D" style="display: none;">
+          <div class="sub-pin-card danger">
+            <span class="pin-tag">부족 5일 ⚠️</span>
+            <span class="pin-text">48V 리튬이온 배터리 팩</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Floating Bottom Detail Card -->
+      <div class="floating-bottom-card" id="floatingBottomCard">
+        <div class="card-thumb-box">
+          <img id="detailThumbImg" src="./assets/engine_thumb.jpg" alt="부품 썸네일" onerror="this.src='./assets/sedan_blueprint.png'"/>
+        </div>
+
+        <div class="card-text-box">
+          <div class="card-title-row">
+            <h3 class="card-title" id="detailTitle">엔진 어셈블리 상세 정보</h3>
+            <span class="badge-status-tag" id="detailStatusTag">부품 부족 1건 (연료펌프)</span>
+          </div>
+          <p class="card-desc" id="detailDesc">
+            엔진을 선택하면 3D 모델의 후드가 열리고 구성 부품의 상세 위치와 연결 정보를 확인할 수 있습니다.
+          </p>
+          <div class="card-metrics-row" id="detailMetricsRow">
+            <span class="metric-chip">부품 번호: <strong>ENG-33T-9920</strong></span>
+            <span class="metric-chip">체결 토크: <strong class="text-success">98.4 Nm (PASS)</strong></span>
+            <span class="metric-chip">공정 진척도: <strong class="text-primary">92% 완료</strong></span>
+          </div>
+        </div>
+
+        <div class="card-actions-box">
+          <button class="primary-btn" id="btnOpenDetailModal">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>상세 BOM 보기</span>
+          </button>
+          <button class="secondary-btn" id="btnFindSupplierFromCard">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>대체 공급사 조회</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============================================== -->
+    <!-- MODAL 1: BOM & DETAIL SPEC MODAL               -->
+    <!-- ============================================== -->
+    <div class="modal-backdrop" id="detailModalBackdrop">
+      <div class="modal-dialog detail-modal">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-badge-blue" id="modalCategoryBadge">파워트레인 / 엔진 어셈블리</span>
+            <h3 class="modal-title" id="modalPartTitle">부품 세부 규격 및 하위 BOM 리스트</h3>
+          </div>
+          <button class="modal-close-btn" id="btnCloseDetailModal">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-spec-grid">
+            <div class="spec-cell">
+              <span class="cell-label">부품 식별 번호 (P/N)</span>
+              <span class="cell-val" id="specModalPartNo">ENG-33T-9920</span>
+            </div>
+            <div class="spec-cell">
+              <span class="cell-label">표준 조립 공수</span>
+              <span class="cell-val">4.2 시간 / 단위</span>
+            </div>
+            <div class="spec-cell">
+              <span class="cell-label">체결 토크 합격률</span>
+              <span class="cell-val text-success">100% (98.4 Nm)</span>
+            </div>
+            <div class="spec-cell">
+              <span class="cell-label">실시간 라인 가동 상태</span>
+              <span class="cell-val text-success">정상 조립 진행 중 (92%)</span>
+            </div>
+          </div>
+
+          <h4 class="sub-header-title">하위 조립 구성품 목록 (BOM)</h4>
+          <div class="bom-table-wrap">
+            <table class="bom-table">
+              <thead>
+                <tr>
+                  <th>하위 부품명</th>
+                  <th>소요 수량</th>
+                  <th>주요 납품사</th>
+                  <th>공급 상태</th>
+                </tr>
+              </thead>
+              <tbody id="bomModalTableBody">
+                <!-- Dynamically injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-cancel" id="btnCloseDetailModalBottom">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL 2: ALTERNATIVE SUPPLIERS (대체 공급사)    -->
+    <!-- ============================================== -->
+    <div class="modal-backdrop" id="supplierModalBackdrop">
+      <div class="modal-dialog supplier-modal">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-badge-red">긴급 대체 조달망</span>
+            <h3 class="modal-title">협력업체 공급망 매칭 & 발주 전환</h3>
+          </div>
+          <button class="modal-close-btn" id="btnCloseSupplierModal">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="shortage-summary-box">
+            <div class="shortage-col">
+              <span class="lbl">지연 부품</span>
+              <span class="val text-danger">브레이크 패드 (7일 지연)</span>
+            </div>
+            <div class="shortage-col">
+              <span class="lbl">기존 납품사</span>
+              <span class="val">(주)태성모터스</span>
+            </div>
+            <div class="shortage-col">
+              <span class="lbl">긴급 수량</span>
+              <span class="val highlight-val">500 EA</span>
+            </div>
+            <div class="shortage-col">
+              <span class="lbl">공정 마감기한</span>
+              <span class="val text-warning">D-2일 이내 입고</span>
+            </div>
+          </div>
+
+          <h4 class="sub-header-title">품질 인증 완료 대체 공급사 추천 (3개사)</h4>
+          <div class="supplier-list">
+            <div class="supplier-card recommended">
+              <div class="supplier-rec-badge">추천 1순위 (즉시 출고)</div>
+              <div class="supplier-main">
+                <div class="supplier-info">
+                  <div class="supplier-company-name">(주)한양정밀</div>
+                  <div class="supplier-rating">
+                    <span class="star">★ 4.9</span>
+                    <span class="cert-tag">현대/기아 SQ인증 A+</span>
+                    <span class="dist-tag">평택공장 (45km)</span>
+                  </div>
+                </div>
+                <div class="supplier-specs">
+                  <div class="spec-col">
+                    <span class="s-label">예상 납기</span>
+                    <span class="s-val text-success"><strong>2일 이내</strong></span>
+                  </div>
+                  <div class="spec-col">
+                    <span class="s-label">보유 재고</span>
+                    <span class="s-val">1,200 EA</span>
+                  </div>
+                  <div class="spec-col">
+                    <span class="s-label">납품 단가</span>
+                    <span class="s-val">38,500원</span>
+                  </div>
+                </div>
+                <button class="supplier-action-btn primary" data-supplier="한양정밀" data-qty="500">
+                  대체 발주 전환
+                </button>
+              </div>
+            </div>
+
+            <div class="supplier-card">
+              <div class="supplier-main">
+                <div class="supplier-info">
+                  <div class="supplier-company-name">(주)삼우오토모티브</div>
+                  <div class="supplier-rating">
+                    <span class="star">★ 4.7</span>
+                    <span class="cert-tag">ISO/TS 16949</span>
+                  </div>
+                </div>
+                <div class="supplier-specs">
+                  <div class="spec-col">
+                    <span class="s-label">예상 납기</span>
+                    <span class="s-val">3일 이내</span>
+                  </div>
+                  <div class="spec-col">
+                    <span class="s-label">보유 재고</span>
+                    <span class="s-val">800 EA</span>
+                  </div>
+                  <div class="spec-col">
+                    <span class="s-label">납품 단가</span>
+                    <span class="s-val">39,200원</span>
+                  </div>
+                </div>
+                <button class="supplier-action-btn secondary" data-supplier="삼우오토모티브" data-qty="500">
+                  견적 요청
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-cancel" id="btnCancelSupplierModal">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Popup -->
+    <div class="toast-notification" id="toastNotification">
+      <div class="toast-icon">✓</div>
+      <div class="toast-text" id="toastText">3D 시점이 업데이트되었습니다.</div>
+    </div>
+  </div>
+
+  <!-- 3D Car Engine & Application Logic -->
+  <script src="./car-3d-visualizer.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
