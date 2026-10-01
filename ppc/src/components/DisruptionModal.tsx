@@ -8,6 +8,7 @@ import { openPos } from '../lib/planning';
 import { partOf, reference } from '../lib/reference';
 import type { AppState, DelayPreset } from '../lib/types';
 import { useAppData } from '../state/AppData';
+import { CreatorField } from './CreatorField';
 import { Button, Field, INPUT_CLASS, Modal, parseIntStrict } from './ui';
 
 export function DisruptionModal({ state, onClose }: { state: AppState; onClose: () => void }) {
@@ -35,7 +36,7 @@ export function DisruptionModal({ state, onClose }: { state: AppState; onClose: 
   const targets = supplierName ? affectedPos(state.purchaseOrders, partCode, supplierName) : [];
   const delayDays = parseIntStrict(delayText);
   const delayProblem = delayText === '' ? null : delayDaysError(delayDays);
-  const canSave = targets.length > 0 && delayText !== '' && !delayProblem;
+  const canSave = targets.length > 0 && delayText !== '' && !delayProblem && !!createdBy;
 
   function applyPreset(preset: DelayPreset) {
     // 영향 부품 = 라인 부품 중 기본 공급업체와 주요자재가 사례와 같은 부품
@@ -100,6 +101,8 @@ export function DisruptionModal({ state, onClose }: { state: AppState; onClose: 
         </div>
 
         <hr className="border-slate-200" />
+
+        <CreatorField />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="부품">

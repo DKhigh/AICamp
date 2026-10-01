@@ -7,6 +7,7 @@ import { gradeOf, suppliersFor } from '../lib/recommend';
 import { partOf, reference } from '../lib/reference';
 import type { AppState } from '../lib/types';
 import { useAppData } from '../state/AppData';
+import { CreatorField } from './CreatorField';
 import { Button, Field, INPUT_CLASS, Modal, parseIntStrict } from './ui';
 
 export function OrderModal({ state, initialPartCode, onClose }: { state: AppState; initialPartCode?: string; onClose: () => void }) {
@@ -31,7 +32,7 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
   const baseDate = state.settings.baseDate;
   const arrival = supplier ? addDays(baseDate, supplier.leadDays) : null;
   const grade = supplier ? gradeOf(supplier.onTimeRate) : null;
-  const canSave = !!supplier && qtyText !== '' && !qtyProblem;
+  const canSave = !!supplier && qtyText !== '' && !qtyProblem && !!createdBy;
 
   async function submit() {
     if (!supplier || !canSave) return;
@@ -58,6 +59,7 @@ export function OrderModal({ state, initialPartCode, onClose }: { state: AppStat
       }
     >
       <div className="space-y-4">
+        <CreatorField />
         <Field label="부품">
           <select
             className={INPUT_CLASS}

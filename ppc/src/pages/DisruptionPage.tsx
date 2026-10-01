@@ -1,6 +1,7 @@
 // 차질 상세 `/disruptions/:id` (DESIGN.md §5 F2-2 ~ F2-4, §7.3)
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { CreatorField } from '../components/CreatorField';
 import { OrderStatus } from '../components/OrdersTable';
 import { CHART_COLORS, ScenarioChart, type ChartRow, type ChartSeries } from '../components/ScenarioChart';
 import { Badge, Button, Card, DISRUPTION_STATUS_TONE, GradeBadge, parseIntStrict } from '../components/ui';
@@ -509,11 +510,15 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
             </div>
           </details>
 
-          <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
+          <div className="flex flex-wrap items-end justify-end gap-2 border-t border-slate-100 pt-4">
+            {/* 대체 발주도 발주이므로 입력자가 필요하다 */}
+            <div className="mr-auto w-56">
+              <CreatorField />
+            </div>
             <Button onClick={() => void chooseWait()} busy={saving === 'wait'} disabled={saving !== null || disruption.status === '기다리기'}>
               {disruption.status === '기다리기' ? '기다리기로 결정됨' : '기다리기로 결정'}
             </Button>
-            <Button variant="primary" onClick={() => void confirmAlt()} busy={saving === 'alt'} disabled={saving !== null || !alt}>
+            <Button variant="primary" onClick={() => void confirmAlt()} busy={saving === 'alt'} disabled={saving !== null || !alt || !createdBy}>
               대체 발주 확정
             </Button>
           </div>

@@ -10,7 +10,7 @@ const HEADER_BUTTON =
   'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-slate-200 transition-colors hover:bg-white/20 hover:text-white disabled:opacity-50';
 
 export function TopBar() {
-  const { api, state, refresh, refreshing, save, notify, userName, setUserName } = useAppData();
+  const { api, state, refresh, refreshing, save, notify } = useAppData();
   const { openOrder, openDisruption } = useUi();
   const navigate = useNavigate();
   const [resetting, setResetting] = useState(false);
@@ -56,6 +56,12 @@ export function TopBar() {
           <NavLink to="/" end className={navClass}>
             대시보드
           </NavLink>
+          <NavLink to="/shipments" className={navClass}>
+            출차 일정
+          </NavLink>
+          <NavLink to="/repairs" className={navClass}>
+            수리 차량
+          </NavLink>
           <NavLink to="/history" className={navClass}>
             이력
           </NavLink>
@@ -79,16 +85,6 @@ export function TopBar() {
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-1.5 text-[13px] text-slate-400">
-            입력자
-            <input
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="이름"
-              maxLength={20}
-              className="w-24 rounded-md border border-white/15 bg-slate-900/60 px-2 py-1.5 text-[13px] text-white outline-none placeholder:text-slate-500 focus:border-sky-400"
-            />
-          </label>
           <button type="button" className={HEADER_BUTTON} onClick={() => openOrder()} disabled={!state}>
             + 발주
           </button>

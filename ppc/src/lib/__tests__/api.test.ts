@@ -15,7 +15,7 @@ describe('데이터 초기화 (C-1)', () => {
   it('빈 DB는 null, 초기화하면 §4.3 값이 들어간다', async () => {
     const api = createApi(memoryStore());
     expect(await api.fetchState()).toBeNull();
-    await expect(api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 1, createdBy: null })).rejects.toThrow(
+    await expect(api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 1, createdBy: '테스트' })).rejects.toThrow(
       EMPTY_DB_MESSAGE,
     );
     await api.resetDemoData();
@@ -66,7 +66,7 @@ describe('F1-2 발주 저장', () => {
   it('수량은 1 이상의 정수', async () => {
     const api = await freshApi();
     for (const qty of [0, -5, 1.5, NaN]) {
-      await expect(api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty, createdBy: null })).rejects.toThrow(
+      await expect(api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty, createdBy: '테스트' })).rejects.toThrow(
         '수량은 1 이상의 정수',
       );
     }
@@ -100,7 +100,7 @@ describe('F2-1 차질 저장', () => {
   it('입고 예정 발주가 없는 부품(변속기)은 막히고 아무것도 저장되지 않는다', async () => {
     const api = await freshApi();
     await expect(
-      api.registerDisruption({ partCode: 'P024', supplierName: '태성모터스', reason: '납품 지연', delayDays: 3, createdBy: null }),
+      api.registerDisruption({ partCode: 'P024', supplierName: '태성모터스', reason: '납품 지연', delayDays: 3, createdBy: '테스트' }),
     ).rejects.toThrow(NO_OPEN_PO_MESSAGE);
     expect((await api.fetchState())!.disruptions).toHaveLength(0);
   });
@@ -109,7 +109,7 @@ describe('F2-1 차질 저장', () => {
     const api = await freshApi();
     for (const delayDays of [0, 61, 2.5]) {
       await expect(
-        api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays, createdBy: null }),
+        api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays, createdBy: '테스트' }),
       ).rejects.toThrow('지연일수는 1~60');
     }
   });
@@ -201,5 +201,24 @@ describe('P1 입고 처리 · 설정 수정', () => {
     await api.updateSettings({ dailyCapacity: 10, leadTimeDays: 3 });
     expect((await api.fetchState())!.settings).toMatchObject({ dailyCapacity: 10, leadTimeDays: 3, baseDate: '2026-10-05' });
     await expect(api.updateSettings({ dailyCapacity: 0, leadTimeDays: 2 })).rejects.toThrow('일일 투입은 1 이상');
+  });
+});
+
+describe('입력자는 공백이면 안 된다', () => {
+  it('발주·차질·대체 발주 모두 이름이 없으면 저장하지 않는다', async () => {
+    const api = await freshApi();
+    for (const createdBy of [null, '', '   ']) {
+      await expect(api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 100, createdBy })).rejects.toThrow('입력자 이름');
+      await expect(
+        api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy }),
+      ).rejects.toThrow('입력자 이름');
+    }
+    await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, createdBy: 'A' });
+    await expect(
+      api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '유지', createdBy: ' ' }),
+    ).rejects.toThrow('입력자 이름');
+    const state = (await api.fetchState())!;
+    expect(state.purchaseOrders).toHaveLength(3);
+    expect(state.disruptions).toHaveLength(1);
   });
 });

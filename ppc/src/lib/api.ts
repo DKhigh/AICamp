@@ -137,6 +137,11 @@ function assertValid(error: string | null) {
   if (error) throw new Error(error);
 }
 
+export const CREATOR_REQUIRED_MESSAGE = '입력자 이름을 적어야 저장할 수 있습니다.';
+export function creatorError(name: string | null): string | null {
+  return name && name.trim() !== '' ? null : CREATOR_REQUIRED_MESSAGE;
+}
+
 export const EMPTY_DB_MESSAGE = 'DB에 데이터가 없습니다. [데이터 초기화]를 눌러 시연 데이터를 넣으세요.';
 
 export function createApi(store: Store) {
@@ -186,6 +191,7 @@ export function createApi(store: Store) {
     createdBy: string | null;
   }): Promise<PurchaseOrder> {
     assertValid(qtyError(input.qty));
+    assertValid(creatorError(input.createdBy));
     const supplier = supplierOf(input.supplierName);
     if (!supplier) throw new Error(`공급업체를 찾을 수 없습니다: ${input.supplierName}`);
     const state = await freshState();
@@ -211,6 +217,7 @@ export function createApi(store: Store) {
     createdBy: string | null;
   }): Promise<Disruption> {
     assertValid(delayDaysError(input.delayDays));
+    assertValid(creatorError(input.createdBy));
     const state = await freshState();
     const built = buildDisruption({
       state,
@@ -240,6 +247,7 @@ export function createApi(store: Store) {
     createdBy: string | null;
   }): Promise<PurchaseOrder> {
     assertValid(qtyError(input.qty));
+    assertValid(creatorError(input.createdBy));
     const supplier = supplierOf(input.supplierName);
     if (!supplier) throw new Error(`공급업체를 찾을 수 없습니다: ${input.supplierName}`);
     const state = await freshState();

@@ -13,6 +13,7 @@ import { dashboardModel, type DashboardModel, type PartRow } from '../lib/dashbo
 import { ddayLabel, num } from '../lib/format';
 import { gradeOf } from '../lib/recommend';
 import { partOf, supplierOf } from '../lib/reference';
+import { repairCars } from '../lib/repairs';
 import type { AppState, Disruption } from '../lib/types';
 import { useUi } from '../state/Ui';
 
@@ -54,16 +55,44 @@ function DisruptionBanner({ disruption }: { disruption: Disruption }) {
   );
 }
 
-function KpiCard({ label, value, unit, sub, tone = 'default' }: { label: string; value: string; unit: string; sub?: string; tone?: 'default' | 'danger' }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-card">
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
+function KpiCard({
+  label,
+  value,
+  unit,
+  sub,
+  tone = 'default',
+  to,
+  linkLabel,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  sub?: string;
+  tone?: 'default' | 'danger';
+  /** 주면 카드 전체가 그 페이지로 가는 버튼이 된다 */
+  to?: string;
+  linkLabel?: string;
+}) {
+  const body = (
+    <>
+      <p className="flex items-center justify-between gap-2 text-xs font-semibold text-slate-500">
+        {label}
+        {to && <span className="whitespace-nowrap text-accent">{linkLabel} →</span>}
+      </p>
       <p className="mt-1 flex items-baseline gap-1">
         <span className={`text-3xl font-extrabold tracking-tight ${tone === 'danger' ? 'text-red-600' : 'text-slate-900'}`}>{value}</span>
         <span className="text-sm font-semibold text-slate-500">{unit}</span>
       </p>
       <p className="mt-0.5 h-4 text-xs text-slate-500">{sub}</p>
-    </div>
+    </>
+  );
+  const box = 'block rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-card';
+  return to ? (
+    <Link to={to} className={`${box} transition-shadow hover:border-accent hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={box}>{body}</div>
   );
 }
 
@@ -81,8 +110,17 @@ function KpiRow({ kpi }: { kpi: DashboardModel['kpi'] }) {
         value={num(kpi.buildableIncoming)}
         unit="대"
         sub={kpi.bottleneckIncoming ? `병목: ${kpi.bottleneckIncoming.name}` : undefined}
+        to="/shipments"
+        linkLabel="출차 일정"
       />
-      <KpiCard label="오늘 투입 가능" value={num(kpi.todayInput)} unit={`/ ${num(kpi.dailyCapacity)}대`} sub="일일 투입 능력 기준" />
+      <KpiCard
+        label="입고된 차량 (수리 중)"
+        value={num(repairCars.length)}
+        unit="대"
+        sub={`오늘 투입 가능 ${num(kpi.todayInput)} / ${num(kpi.dailyCapacity)}대`}
+        to="/repairs"
+        linkLabel="수리 차량"
+      />
       <KpiCard
         label="진행 중 차질"
         value={num(kpi.activeDisruptions)}

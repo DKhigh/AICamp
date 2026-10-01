@@ -8,6 +8,8 @@ import { EMPTY_DB_MESSAGE } from './lib/api';
 import { Dashboard } from './pages/Dashboard';
 import { DisruptionPage } from './pages/DisruptionPage';
 import { HistoryPage } from './pages/HistoryPage';
+import { RepairsPage } from './pages/RepairsPage';
+import { ShipmentsPage } from './pages/ShipmentsPage';
 import { AppDataProvider, useAppData } from './state/AppData';
 import { UiContext, type UiValue } from './state/Ui';
 
@@ -103,6 +105,8 @@ function Shell() {
             <Route path="/" element={<Dashboard state={state} />} />
             <Route path="/disruptions/:id" element={<DisruptionPage state={state} />} />
             <Route path="/history" element={<HistoryPage state={state} />} />
+            <Route path="/shipments" element={<ShipmentsPage state={state} />} />
+            <Route path="/repairs" element={<RepairsPage state={state} />} />
             <Route path="*" element={<Dashboard state={state} />} />
           </Routes>
         ) : (
