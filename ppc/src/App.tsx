@@ -9,6 +9,7 @@ import { EMPTY_DB_MESSAGE } from './lib/api';
 import { Dashboard } from './pages/Dashboard';
 import { DisruptionPage } from './pages/DisruptionPage';
 import { HistoryPage } from './pages/HistoryPage';
+import { QrPage } from './pages/QrPage';
 import { RepairsPage } from './pages/RepairsPage';
 import { ShipmentsPage } from './pages/ShipmentsPage';
 import { AppDataProvider, useAppData } from './state/AppData';
@@ -105,18 +106,27 @@ function Shell() {
             최신 데이터를 읽지 못해 마지막으로 읽은 내용을 보여 주고 있습니다: {loadError}
           </p>
         )}
-        {state ? (
-          <Routes>
-            <Route path="/" element={<Dashboard state={state} />} />
-            <Route path="/disruptions/:id" element={<DisruptionPage state={state} />} />
-            <Route path="/history" element={<HistoryPage state={state} />} />
-            <Route path="/shipments" element={<ShipmentsPage state={state} />} />
-            <Route path="/repairs" element={<RepairsPage state={state} />} />
-            <Route path="*" element={<Dashboard state={state} />} />
-          </Routes>
-        ) : (
-          <NoData />
-        )}
+        <Routes>
+          {/* QR 페이지는 DB 데이터가 필요 없으므로, 데이터를 못 읽었을 때도 띄울 수 있게 따로 둔다 */}
+          <Route path="/qr" element={<QrPage />} />
+          <Route
+            path="*"
+            element={
+              state ? (
+                <Routes>
+                  <Route path="/" element={<Dashboard state={state} />} />
+                  <Route path="/disruptions/:id" element={<DisruptionPage state={state} />} />
+                  <Route path="/history" element={<HistoryPage state={state} />} />
+                  <Route path="/shipments" element={<ShipmentsPage state={state} />} />
+                  <Route path="/repairs" element={<RepairsPage state={state} />} />
+                  <Route path="*" element={<Dashboard state={state} />} />
+                </Routes>
+              ) : (
+                <NoData />
+              )
+            }
+          />
+        </Routes>
       </main>
       {state && orderModal && <OrderModal state={state} initialPartCode={orderModal.partCode} onClose={() => setOrderModal(null)} />}
       {state && disruptionModal && <DisruptionModal state={state} onClose={() => setDisruptionModal(false)} />}

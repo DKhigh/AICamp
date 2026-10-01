@@ -15,3 +15,8 @@ export const MAX_DELAY_DAYS = 60;
 
 /** (P1) 자동 새로고침 간격 */
 export const AUTO_REFRESH_MS = 10_000;
+
+/** 업체 한 곳에 일반 발주로 넣을 수 있는 수량 한도 */
+export const SUPPLIER_ORDER_LIMIT = 50;
+/** 한도에 넣는 기간: 발주일로부터 이 일수가 지나면 그 발주분의 한도가 풀린다 */
+export const SUPPLIER_LIMIT_DAYS = 7;

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { PoRow } from '../lib/dashboard';
 import { formatMD } from '../lib/date';
-import { ddayLabel, num } from '../lib/format';
+import { ddayLabel, num, won } from '../lib/format';
 import { useAppData } from '../state/AppData';
 import { Badge, Button, PO_STATUS_TONE } from './ui';
 
@@ -35,6 +35,7 @@ export function PoTable({ rows }: { rows: PoRow[] }) {
             <th className="px-2 py-2">부품</th>
             <th className="px-2 py-2">업체</th>
             <th className="px-2 py-2 text-right">수량</th>
+            <th className="px-2 py-2 text-right">금액</th>
             <th className="px-2 py-2">도착 예정일</th>
             <th className="px-2 py-2">D-day</th>
             <th className="px-2 py-2">상태</th>
@@ -55,6 +56,7 @@ export function PoTable({ rows }: { rows: PoRow[] }) {
                   {num(po.qty)}
                   {reduced && <span className="text-[11px] text-slate-500"> (원래 {num(po.originalQty)})</span>}
                 </td>
+                <td className="tabular whitespace-nowrap px-2 py-2.5 text-right text-slate-700">{won(row.amount)}</td>
                 <td className="tabular whitespace-nowrap px-2 py-2.5 text-slate-900">
                   {po.status === '지연' && row.delayedBy !== 0 && (
                     <s className="mr-1 text-slate-400">{formatMD(po.plannedArrival)}</s>

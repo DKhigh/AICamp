@@ -30,7 +30,7 @@ export function TopBar() {
   }
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
+    `whitespace-nowrap rounded-full px-2 py-1.5 text-[13px] font-semibold transition-colors sm:px-3.5 ${
       isActive ? 'bg-accent text-white shadow' : 'text-slate-300 hover:bg-white/10 hover:text-white'
     }`;
 
@@ -70,6 +70,9 @@ export function TopBar() {
           </NavLink>
           <NavLink to="/history" className={navClass}>
             이력
+          </NavLink>
+          <NavLink to="/qr" className={navClass}>
+            QR 접속
           </NavLink>
         </nav>
 

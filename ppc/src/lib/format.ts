@@ -17,3 +17,8 @@ export function ddayLabel(dday: number): string {
   if (dday === 0) return 'D-Day';
   return `예정일 ${-dday}일 지남`;
 }
+
+/** 금액 표기: 732000 → '732,000원' */
+export function won(n: number): string {
+  return `${num(Math.round(n))}원`;
+}

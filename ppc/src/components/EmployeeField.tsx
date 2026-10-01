@@ -12,16 +12,21 @@ export function EmployeeField({ value, onChange, autoFocus = false }: { value: s
     <Field
       label="사원번호 (필수)"
       error={error}
-      hint={employee ? `✓ ${employee.name} · ${employee.dept}` : '사원 명단에 있는 사원번호만 진행할 수 있습니다.'}
+      hint={
+        employee
+          ? `✓ ${employee.name} · ${employee.dept}${employee.rank ? ` ${employee.rank}` : ''}`
+          : '발주 권한자 명단에 있는 사원번호만 진행할 수 있습니다. (형식: ICBM-00000)'
+      }
     >
+      {/* 발표·공용 화면에서 번호가 보이지 않게 가린다. one-time-code: 브라우저가 비밀번호로 저장하자고 묻지 않게 한다 */}
       <input
+        type="password"
         className={INPUT_CLASS}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="사원번호"
-        inputMode="numeric"
-        autoComplete="off"
-        maxLength={12}
+        autoComplete="one-time-code"
+        maxLength={20}
         autoFocus={autoFocus}
         aria-required="true"
       />

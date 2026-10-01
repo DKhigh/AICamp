@@ -5,15 +5,15 @@ import type { CarPartKey } from '../components/car/Car3DVisualizer';
 import { CAR_PART_BY_CODE } from '../components/car/carParts';
 import type { CarViewerItem } from '../components/car/CarViewer';
 import { ForecastPanel } from '../components/dashboard/ForecastPanel';
-import { PartCard } from '../components/dashboard/PartCard';
+import { BodyCard, PartCard } from '../components/dashboard/PartCard';
 import { CustomerOrdersCard } from '../components/dashboard/CustomerOrdersCard';
 import { PoTable } from '../components/PoTable';
-import { Badge, Button, Card, GradeBadge, PART_STATUS_TONE } from '../components/ui';
+import { Badge, Button, Card, ColorSwatch, GradeBadge, PART_STATUS_TONE } from '../components/ui';
 import { cautionOf } from '../lib/cautions';
 import { dashboardModel, type DashboardModel, type PartRow } from '../lib/dashboard';
-import { ddayLabel, num } from '../lib/format';
+import { ddayLabel, num, won } from '../lib/format';
 import { gradeOf } from '../lib/recommend';
-import { partOf, supplierOf } from '../lib/reference';
+import { colorOf, partOf, supplierOf } from '../lib/reference';
 import { repairCars } from '../lib/repairs';
 import type { AppState, Disruption } from '../lib/types';
 import { useUi } from '../state/Ui';
@@ -183,6 +183,16 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
             </span>
           ))}
         </div>
+        {row.variants && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11.5px] text-slate-600">
+            {row.variants.map((v) => (
+              <span key={v.part.code} className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5">
+                <ColorSwatch code={v.part.colorCode} size={10} />
+                {colorOf(v.part.colorCode)?.name} <strong className="text-slate-900">{num(v.linePart.onHand)}개</strong>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex shrink-0 gap-2">
         <Button variant="primary" onClick={onOrder}>
@@ -234,26 +244,43 @@ export function Dashboard({ state }: { state: AppState }) {
                 items={viewerItems}
                 focus={focusKey}
                 onFocus={(key) => setFocusCode(codeOfKey(key))}
-                detail={focusRow && <PartDetail key={focusRow.part.code} row={focusRow} onOrder={() => openOrder(focusRow.part.code)} />}
+                detail={
+                  focusRow && (
+                    <PartDetail
+                      key={focusRow.part.code}
+                      row={focusRow}
+                      onOrder={() => openOrder(focusRow.variants?.[0]?.part.code ?? focusRow.part.code)}
+                    />
+                  )
+                }
               />
             </Suspense>
           </div>
           <div className="grid grid-cols-2 content-start gap-3">
-            {model.parts.map((row) => (
-              <PartCard
-                key={row.part.code}
-                row={row}
-                selected={focusCode === row.part.code}
-                onSelect={() => setFocusCode((code) => (code === row.part.code ? null : row.part.code))}
-                onOrder={() => openOrder(row.part.code)}
-              />
-            ))}
+            {model.parts.map((row) => {
+              const common = {
+                row,
+                selected: focusCode === row.part.code,
+                onSelect: () => setFocusCode((code) => (code === row.part.code ? null : row.part.code)),
+              };
+              // 색상별 차체는 한 카드 안에서 색마다 따로 발주한다
+              return row.variants ? (
+                <BodyCard key={row.part.code} {...common} onOrder={openOrder} />
+              ) : (
+                <PartCard key={row.part.code} {...common} onOrder={() => openOrder(row.part.code)} />
+              );
+            })}
           </div>
         </div>
       </Card>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <Card title="입고 예정 발주" aside={<span className="text-xs text-slate-500">도착 예정일 순 · {model.poRows.length}건</span>}>
+        <Card title="입고 예정 발주" aside={
+            <span className="text-xs text-slate-500">
+              도착 예정일 순 · {model.poRows.length}건 · 발주 금액{' '}
+              <strong className="tabular text-slate-800">{won(model.poRows.reduce((sum, r) => sum + r.amount, 0))}</strong>
+            </span>
+          }>
           <PoTable rows={model.poRows} />
         </Card>
         <ForecastPanel state={state} model={model} />

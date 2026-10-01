@@ -1,12 +1,12 @@
 // 수리 차량 `/repairs`: 입고되어 수리 중인 차량, 고장 난 곳, 소모 부품. 여기서도 발주할 수 있다.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Card, type Tone } from '../components/ui';
+import { Badge, Button, Card, ColorSwatch, type Tone } from '../components/ui';
 import { formatMD } from '../lib/date';
 import { num } from '../lib/format';
 import { nextArrivalOf } from '../lib/planning';
-import { partOf } from '../lib/reference';
-import { repairCars, repairPartNeeds } from '../lib/repairs';
+import { colorOf, partOf } from '../lib/reference';
+import { repairCarsAt, repairPartNeeds } from '../lib/repairs';
 import type { AppState } from '../lib/types';
 import { useUi } from '../state/Ui';
 
@@ -15,6 +15,7 @@ const STATUS_TONE: Record<string, Tone> = { '수리 중': 'blue', '부품 대기
 export function RepairsPage({ state }: { state: AppState }) {
   const { openOrder } = useUi();
   const [picked, setPicked] = useState<string | null>(null);
+  const repairCars = repairCarsAt(state.settings.baseDate);
   const selected = repairCars.find((c) => c.serial === picked) ?? null;
   const stock = new Map(state.lineParts.map((p) => [p.partCode, p.onHand]));
   const needs = repairPartNeeds(repairCars, state.lineParts);
@@ -39,6 +40,7 @@ export function RepairsPage({ state }: { state: AppState }) {
               <thead className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
                 <tr>
                   <th className="py-2 pl-5 pr-2">고유번호</th>
+                  <th className="px-2 py-2">색상</th>
                   <th className="px-2 py-2">입고일</th>
                   <th className="px-2 py-2">고장 난 곳</th>
                   <th className="px-2 py-2">상태</th>
@@ -62,6 +64,12 @@ export function RepairsPage({ state }: { state: AppState }) {
                         >
                           {car.serial}
                         </button>
+                      </td>
+                      <td className="px-2 py-2.5">
+                        <span className="inline-flex items-center gap-1.5 text-slate-700">
+                          <ColorSwatch code={car.colorCode} />
+                          {colorOf(car.colorCode)?.name}
+                        </span>
                       </td>
                       <td className="tabular px-2 py-2.5 text-slate-700">{formatMD(car.receivedDate)}</td>
                       <td className="px-2 py-2.5 font-semibold text-slate-900">{car.faultArea}</td>

@@ -10,7 +10,8 @@ import { altScenario, baseScenarios } from '../lib/actions';
 import { qtyError } from '../lib/api';
 import { RISK_LATE_DAYS } from '../lib/constants';
 import { formatMD } from '../lib/date';
-import { num, withParticle } from '../lib/format';
+import { num, withParticle, won } from '../lib/format';
+import { unitPriceOf } from '../lib/ordering';
 import { customerNotices, disruptionMessage, impactMessage, recommendMessage, resultMessage, riskLateMessage } from '../lib/messages';
 import {
   applyOriginalPoAction,
@@ -227,6 +228,8 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
   // 선택한 후보가 상위 3곳 밖이면 접힌 상태에서도 보이게 한다
   const shown = candidate && !visible.includes(candidate) ? [...visible, candidate] : visible;
   const riskCandidates = rec.ranked.filter((c) => c.grade === '위험');
+  const altUnitPrice = candidate ? unitPriceOf(part, candidate.name) : null;
+  const originalUnitPrice = unitPriceOf(part, disruption.supplierName);
 
   const alt = useMemo(
     () =>
@@ -418,6 +421,16 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                 : `추천: 지연 ${disruption.delayDays}일 × 하루 ${settings.dailyCapacity}대 × 1대당 ${linePart.qtyPerCar}개 = ${num(cover)}개`}
             </p>
             {qtyProblem && <p className="w-full text-xs font-medium text-red-600">{qtyProblem}</p>}
+            {candidate && !qtyProblem && altUnitPrice !== null && (
+              <p className="tabular w-full text-[13px] text-slate-700">
+                대체 발주 금액 <strong className="text-slate-900">{won(altUnitPrice * qty)}</strong>
+                <span className="text-xs text-slate-500">
+                  {' '}
+                  ({candidate.name} 개당 {won(altUnitPrice)} × {num(qty)}개
+                  {originalUnitPrice !== null && ` · 원래 업체 ${disruption.supplierName}는 개당 ${won(originalUnitPrice)}`})
+                </span>
+              </p>
+            )}
           </div>
 
           {shortBy > 0 && (

@@ -4,17 +4,21 @@ import { addDays, diffDays } from './date';
 import {
   bottleneckOf,
   buildable,
+  carsFromGroup,
   carsFromPart,
   coverageDays,
   cumAt,
+  groupCoverageDays,
   nextArrivalOf,
   openPos,
+  partGroups,
   partStatusOf,
   sortByArrival,
   stockOnHand,
   stockWithIncoming,
   type PartStatus,
 } from './planning';
+import { poAmount } from './ordering';
 import { gradeOf } from './recommend';
 import { partOf, supplierOf } from './reference';
 import type { AppState, Disruption, ISODate, LinePart, Part, PurchaseOrder, RateGrade } from './types';
@@ -31,6 +35,8 @@ export interface PartRow {
   nextDday: number | null;
   /** 이 부품의 해결되지 않은 차질 (가장 최근 것) */
   activeDisruption: Disruption | null;
+  /** 색상별 차체처럼 묶음일 때: 색상별 행. 이 행 자체는 묶음 합계다 */
+  variants?: PartRow[];
 }
 
 export interface PoRow {
@@ -43,6 +49,8 @@ export interface PoRow {
   grade: RateGrade | null;
   /** 아직 지연되지 않았지만 업체 등급이 '위험' */
   atRisk: boolean;
+  /** 이 발주에 쓴 돈(원) */
+  amount: number;
 }
 
 export interface ForecastPoint {
@@ -79,6 +87,7 @@ export function poRowOf(po: PurchaseOrder, baseDate: ISODate): PoRow {
     onTimeRate: supplier?.onTimeRate ?? null,
     grade,
     atRisk: po.status === '입고대기' && grade === '위험',
+    amount: poAmount(po),
   };
 }
 
@@ -91,18 +100,46 @@ export function dashboardModel(state: AppState): DashboardModel {
   const buildableNow = buildable(lineParts, onHand);
   const activeDisruptions = disruptions.filter((d) => d.status !== '해결');
 
-  const parts = lineParts.map((linePart): PartRow => {
+  const rowOf = (linePart: LinePart, groupCoverage?: number): PartRow => {
     const nextPo = nextArrivalOf(linePart.partCode, purchaseOrders);
     return {
       linePart,
       part: partOf(linePart.partCode),
       cars: carsFromPart(linePart, onHand),
       coverage: coverageDays(linePart, settings.dailyCapacity),
-      status: partStatusOf(linePart, disruptions, settings.dailyCapacity),
+      status: partStatusOf(linePart, disruptions, settings.dailyCapacity, groupCoverage),
       isBottleneck: bottleneckNow?.partCode === linePart.partCode,
       nextPo,
       nextDday: nextPo ? diffDays(nextPo.expectedArrival, settings.baseDate) : null,
       activeDisruption: [...activeDisruptions].reverse().find((d) => d.partCode === linePart.partCode) ?? null,
+    };
+  };
+
+  // 카드는 요구 단위마다 하나. 색상별 차체는 합계 행 하나에 색상별 행을 달아 준다
+  const STATUS_RANK: PartStatus[] = ['차질', '대응 중', '주의', '정상'];
+  const parts = partGroups(lineParts).map((group): PartRow => {
+    if (group.parts.length === 1 && group.parts[0].partCode === group.code) return rowOf(group.parts[0]);
+    const coverage = groupCoverageDays(group, settings.dailyCapacity);
+    const variants = group.parts.map((p) => rowOf(p, coverage));
+    const next = variants
+      .filter((v) => v.nextPo)
+      .sort((a, b) => (a.nextPo!.expectedArrival < b.nextPo!.expectedArrival ? -1 : 1))[0];
+    return {
+      linePart: {
+        partCode: group.code,
+        qtyPerCar: 1,
+        onHand: group.parts.reduce((sum, p) => sum + p.onHand, 0),
+        sortOrder: group.parts[0].sortOrder,
+      },
+      part: partOf(group.code),
+      cars: carsFromGroup(group, onHand),
+      coverage,
+      status: STATUS_RANK.find((s) => variants.some((v) => v.status === s)) ?? '정상',
+      isBottleneck: bottleneckNow?.partCode === group.code,
+      nextPo: next?.nextPo ?? null,
+      nextDday: next?.nextDday ?? null,
+      activeDisruption: [...activeDisruptions].reverse().find((d) => group.parts.some((p) => p.partCode === d.partCode)) ?? null,
+      variants,
     };
   });
 

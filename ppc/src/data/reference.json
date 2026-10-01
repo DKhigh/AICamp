@@ -949,5 +949,681 @@
       "delayDays": 6,
       "compareCount": 12
     }
+  ],
+  "prices": [
+    {
+      "supplierName": "태성모터스",
+      "materialName": "주철 소재",
+      "pricePerKg": 1240
+    },
+    {
+      "supplierName": "태성모터스",
+      "materialName": "철강 소재",
+      "pricePerKg": 1430
+    },
+    {
+      "supplierName": "한빛오토텍",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3890
+    },
+    {
+      "supplierName": "한빛오토텍",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 4250
+    },
+    {
+      "supplierName": "세진정밀",
+      "materialName": "단조강 소재",
+      "pricePerKg": 3110
+    },
+    {
+      "supplierName": "세진정밀",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2780
+    },
+    {
+      "supplierName": "동아기공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1380
+    },
+    {
+      "supplierName": "동아기공",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2520
+    },
+    {
+      "supplierName": "유진소재",
+      "materialName": "고무 소재",
+      "pricePerKg": 4380
+    },
+    {
+      "supplierName": "유진소재",
+      "materialName": "합성고무",
+      "pricePerKg": 4190
+    },
+    {
+      "supplierName": "대성메탈",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3660
+    },
+    {
+      "supplierName": "신우스틸",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 4360
+    },
+    {
+      "supplierName": "신우스틸",
+      "materialName": "철강 소재",
+      "pricePerKg": 1450
+    },
+    {
+      "supplierName": "삼우정밀",
+      "materialName": "주철 소재",
+      "pricePerKg": 1230
+    },
+    {
+      "supplierName": "삼우정밀",
+      "materialName": "철강 소재",
+      "pricePerKg": 1390
+    },
+    {
+      "supplierName": "동진오토",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 4090
+    },
+    {
+      "supplierName": "동진오토",
+      "materialName": "철강 소재",
+      "pricePerKg": 1400
+    },
+    {
+      "supplierName": "미래소재",
+      "materialName": "고무 소재",
+      "pricePerKg": 4150
+    },
+    {
+      "supplierName": "미래소재",
+      "materialName": "합성고무",
+      "pricePerKg": 4750
+    },
+    {
+      "supplierName": "성우테크",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2550
+    },
+    {
+      "supplierName": "성우테크",
+      "materialName": "단조강 소재",
+      "pricePerKg": 2940
+    },
+    {
+      "supplierName": "한성기공",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 3960
+    },
+    {
+      "supplierName": "한성기공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1470
+    },
+    {
+      "supplierName": "대림정공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1510
+    },
+    {
+      "supplierName": "대림정공",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2660
+    },
+    {
+      "supplierName": "우성메탈",
+      "materialName": "주철 소재",
+      "pricePerKg": 1230
+    },
+    {
+      "supplierName": "우성메탈",
+      "materialName": "단조강 소재",
+      "pricePerKg": 3110
+    },
+    {
+      "supplierName": "세광소재",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3980
+    },
+    {
+      "supplierName": "세광소재",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 4260
+    },
+    {
+      "supplierName": "동명정밀",
+      "materialName": "철강 소재",
+      "pricePerKg": 1450
+    },
+    {
+      "supplierName": "동명정밀",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2700
+    },
+    {
+      "supplierName": "진성오토텍",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3860
+    },
+    {
+      "supplierName": "진성오토텍",
+      "materialName": "주철 소재",
+      "pricePerKg": 1210
+    },
+    {
+      "supplierName": "하나기공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1500
+    },
+    {
+      "supplierName": "하나기공",
+      "materialName": "단조강 소재",
+      "pricePerKg": 3160
+    },
+    {
+      "supplierName": "대진모터스",
+      "materialName": "고무 소재",
+      "pricePerKg": 4540
+    },
+    {
+      "supplierName": "대진모터스",
+      "materialName": "합성고무",
+      "pricePerKg": 4420
+    },
+    {
+      "supplierName": "서진메탈",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 3920
+    },
+    {
+      "supplierName": "서진메탈",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 4000
+    },
+    {
+      "supplierName": "광성정밀",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2580
+    },
+    {
+      "supplierName": "광성정밀",
+      "materialName": "철강 소재",
+      "pricePerKg": 1450
+    },
+    {
+      "supplierName": "태광소재",
+      "materialName": "주철 소재",
+      "pricePerKg": 1190
+    },
+    {
+      "supplierName": "태광소재",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 4100
+    },
+    {
+      "supplierName": "한일기공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1470
+    },
+    {
+      "supplierName": "한일기공",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 4080
+    },
+    {
+      "supplierName": "동성오토",
+      "materialName": "단조강 소재",
+      "pricePerKg": 3250
+    },
+    {
+      "supplierName": "동성오토",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2810
+    },
+    {
+      "supplierName": "에이스메탈",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3840
+    },
+    {
+      "supplierName": "에이스메탈",
+      "materialName": "철강 소재",
+      "pricePerKg": 1450
+    },
+    {
+      "supplierName": "현대정밀소재",
+      "materialName": "주철 소재",
+      "pricePerKg": 1380
+    },
+    {
+      "supplierName": "현대정밀소재",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2700
+    },
+    {
+      "supplierName": "제일오토텍",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3720
+    },
+    {
+      "supplierName": "제일오토텍",
+      "materialName": "철강 소재",
+      "pricePerKg": 1390
+    },
+    {
+      "supplierName": "금강기공",
+      "materialName": "단조강 소재",
+      "pricePerKg": 3030
+    },
+    {
+      "supplierName": "금강기공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1470
+    },
+    {
+      "supplierName": "동원메탈",
+      "materialName": "고무 소재",
+      "pricePerKg": 4380
+    },
+    {
+      "supplierName": "동원메탈",
+      "materialName": "합성고무",
+      "pricePerKg": 4430
+    },
+    {
+      "supplierName": "서광정밀",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2510
+    },
+    {
+      "supplierName": "서광정밀",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 4010
+    },
+    {
+      "supplierName": "한림소재",
+      "materialName": "주철 소재",
+      "pricePerKg": 1340
+    },
+    {
+      "supplierName": "한림소재",
+      "materialName": "철강 소재",
+      "pricePerKg": 1370
+    },
+    {
+      "supplierName": "대경오토",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 4120
+    },
+    {
+      "supplierName": "대경오토",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2790
+    },
+    {
+      "supplierName": "신성기공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1450
+    },
+    {
+      "supplierName": "신성기공",
+      "materialName": "단조강 소재",
+      "pricePerKg": 3160
+    },
+    {
+      "supplierName": "우림테크",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 4040
+    },
+    {
+      "supplierName": "우림테크",
+      "materialName": "철강 소재",
+      "pricePerKg": 1410
+    },
+    {
+      "supplierName": "동우정밀",
+      "materialName": "고무 소재",
+      "pricePerKg": 4320
+    },
+    {
+      "supplierName": "동우정밀",
+      "materialName": "주철 소재",
+      "pricePerKg": 1220
+    },
+    {
+      "supplierName": "삼진메탈",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3970
+    },
+    {
+      "supplierName": "삼진메탈",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 4360
+    },
+    {
+      "supplierName": "대원소재",
+      "materialName": "철강 소재",
+      "pricePerKg": 1450
+    },
+    {
+      "supplierName": "대원소재",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2480
+    },
+    {
+      "supplierName": "성진오토",
+      "materialName": "주철 소재",
+      "pricePerKg": 1340
+    },
+    {
+      "supplierName": "성진오토",
+      "materialName": "단조강 소재",
+      "pricePerKg": 3040
+    },
+    {
+      "supplierName": "한성테크",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3610
+    },
+    {
+      "supplierName": "한성테크",
+      "materialName": "철강 소재",
+      "pricePerKg": 1510
+    },
+    {
+      "supplierName": "동양정밀",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2610
+    },
+    {
+      "supplierName": "동양정밀",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 3890
+    },
+    {
+      "supplierName": "진우기공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1400
+    },
+    {
+      "supplierName": "진우기공",
+      "materialName": "고무 소재",
+      "pricePerKg": 4020
+    },
+    {
+      "supplierName": "세명소재",
+      "materialName": "주철 소재",
+      "pricePerKg": 1340
+    },
+    {
+      "supplierName": "세명소재",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3980
+    },
+    {
+      "supplierName": "태림오토",
+      "materialName": "단조강 소재",
+      "pricePerKg": 3270
+    },
+    {
+      "supplierName": "태림오토",
+      "materialName": "철강 소재",
+      "pricePerKg": 1400
+    },
+    {
+      "supplierName": "대성정밀",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3690
+    },
+    {
+      "supplierName": "대성정밀",
+      "materialName": "합금강 소재",
+      "pricePerKg": 2600
+    },
+    {
+      "supplierName": "한빛기공",
+      "materialName": "철강 소재",
+      "pricePerKg": 1550
+    },
+    {
+      "supplierName": "한빛기공",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 4040
+    },
+    {
+      "supplierName": "동아메탈",
+      "materialName": "주철 소재",
+      "pricePerKg": 1310
+    },
+    {
+      "supplierName": "동아메탈",
+      "materialName": "철강 소재",
+      "pricePerKg": 1530
+    },
+    {
+      "supplierName": "유성테크",
+      "materialName": "고무 소재",
+      "pricePerKg": 4040
+    },
+    {
+      "supplierName": "유성테크",
+      "materialName": "스테인리스 소재",
+      "pricePerKg": 3910
+    },
+    {
+      "supplierName": "광명정밀",
+      "materialName": "알루미늄 소재",
+      "pricePerKg": 3740
+    },
+    {
+      "supplierName": "광명정밀",
+      "materialName": "단조강 소재",
+      "pricePerKg": 2980
+    }
+  ],
+  "colors": [
+    {
+      "code": "C01",
+      "name": "화이트",
+      "description": "밝은 흰색"
+    },
+    {
+      "code": "C02",
+      "name": "블랙",
+      "description": "고급스러운 검정색"
+    },
+    {
+      "code": "C03",
+      "name": "레드",
+      "description": "선명한 빨간색"
+    },
+    {
+      "code": "C04",
+      "name": "블루",
+      "description": "차분한 파란색"
+    },
+    {
+      "code": "C05",
+      "name": "그레이",
+      "description": "중립적인 회색"
+    }
+  ],
+  "cautions": [
+    {
+      "partName": "브레이크",
+      "text": "제동 성능에 직접 영향을 주는 안전 부품입니다. 패드·디스크 등 주요 부품의 마모 및 손상 여부와 조립 상태를 확인하고, 납품 전 제품의 이상 유무를 점검하십시오."
+    },
+    {
+      "partName": "서스펜션",
+      "text": "차량의 하중을 지지하고 주행 안정성을 확보하는 부품입니다. 부품의 변형·균열·부식 및 체결부의 이상 여부를 확인하고, 운송 중 충격이 발생하지 않도록 주의하십시오."
+    },
+    {
+      "partName": "엔진",
+      "text": "차량의 동력을 발생시키는 핵심 부품입니다. 외관 손상, 주요 연결부 및 조립 상태를 확인하고, 보관·운송 시 충격과 오염에 주의하십시오."
+    },
+    {
+      "partName": "조향",
+      "text": "차량의 방향 제어와 직결되는 안전 부품입니다. 주요 조향 부품의 치수 및 조립 상태, 연결부의 체결 상태를 확인하고 변형이나 충격이 발생하지 않도록 취급하십시오."
+    },
+    {
+      "partName": "변속기",
+      "text": "엔진의 동력을 구동계로 전달하는 핵심 부품입니다. 기어 및 케이스의 손상·변형 여부와 조립 상태를 확인하고, 운송 및 보관 중 강한 충격을 피하십시오."
+    },
+    {
+      "partName": "배터리",
+      "text": "차량의 전력 공급을 담당하는 주요 부품입니다. 케이스 및 단자의 손상, 변형 여부를 확인하고, 고온·습기 및 충격에 노출되지 않도록 안전하게 보관·운송하십시오."
+    },
+    {
+      "partName": "차체",
+      "text": "차량의 기본 구조와 안전성을 유지하는 주요 부품입니다. 치수 및 형상, 용접·체결 부위의 상태와 변형 여부를 확인하고, 운송 과정에서 제품이 변형되지 않도록 주의하십시오."
+    }
+  ],
+  "qtyDelays": [
+    {
+      "partName": "엔진",
+      "tiers": [
+        {
+          "minQty": 1,
+          "days": 3,
+          "label": "3일"
+        },
+        {
+          "minQty": 10,
+          "days": 14,
+          "label": "2주"
+        },
+        {
+          "minQty": 50,
+          "days": 60,
+          "label": "2개월"
+        }
+      ]
+    },
+    {
+      "partName": "브레이크",
+      "tiers": [
+        {
+          "minQty": 1,
+          "days": 1,
+          "label": "1일"
+        },
+        {
+          "minQty": 10,
+          "days": 7,
+          "label": "1주일"
+        },
+        {
+          "minQty": 50,
+          "days": 30,
+          "label": "1개월"
+        }
+      ]
+    },
+    {
+      "partName": "배터리",
+      "tiers": [
+        {
+          "minQty": 1,
+          "days": 1,
+          "label": "1일"
+        },
+        {
+          "minQty": 10,
+          "days": 7,
+          "label": "1주일"
+        },
+        {
+          "minQty": 50,
+          "days": 30,
+          "label": "1개월"
+        }
+      ]
+    },
+    {
+      "partName": "변속기",
+      "tiers": [
+        {
+          "minQty": 1,
+          "days": 1,
+          "label": "1일"
+        },
+        {
+          "minQty": 10,
+          "days": 7,
+          "label": "1주일"
+        },
+        {
+          "minQty": 50,
+          "days": 30,
+          "label": "1개월"
+        }
+      ]
+    },
+    {
+      "partName": "서스펜션",
+      "tiers": [
+        {
+          "minQty": 1,
+          "days": 1,
+          "label": "1일"
+        },
+        {
+          "minQty": 10,
+          "days": 7,
+          "label": "1주일"
+        },
+        {
+          "minQty": 50,
+          "days": 30,
+          "label": "1개월"
+        }
+      ]
+    },
+    {
+      "partName": "조향",
+      "tiers": [
+        {
+          "minQty": 1,
+          "days": 1,
+          "label": "1일"
+        },
+        {
+          "minQty": 10,
+          "days": 7,
+          "label": "1주일"
+        },
+        {
+          "minQty": 50,
+          "days": 30,
+          "label": "1개월"
+        }
+      ]
+    },
+    {
+      "partName": "차체",
+      "tiers": [
+        {
+          "minQty": 1,
+          "days": 4,
+          "label": "4일"
+        },
+        {
+          "minQty": 10,
+          "days": 14,
+          "label": "2주일"
+        },
+        {
+          "minQty": 50,
+          "days": 90,
+          "label": "3개월"
+        }
+      ]
+    }
   ]
 }

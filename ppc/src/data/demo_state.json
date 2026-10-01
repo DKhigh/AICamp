@@ -6,13 +6,72 @@
     "horizonDays": 21
   },
   "lineParts": [
-    { "partCode": "P007", "qtyPerCar": 1, "onHand": 60, "sortOrder": 1 },
-    { "partCode": "P024", "qtyPerCar": 1, "onHand": 450, "sortOrder": 2 },
-    { "partCode": "P001", "qtyPerCar": 4, "onHand": 1800, "sortOrder": 3 },
-    { "partCode": "P004", "qtyPerCar": 4, "onHand": 360, "sortOrder": 4 },
-    { "partCode": "P010", "qtyPerCar": 1, "onHand": 100, "sortOrder": 5 },
-    { "partCode": "P012", "qtyPerCar": 1, "onHand": 440, "sortOrder": 6 },
-    { "partCode": "P013", "qtyPerCar": 1, "onHand": 430, "sortOrder": 7 }
+    {
+      "partCode": "P007",
+      "qtyPerCar": 1,
+      "onHand": 60,
+      "sortOrder": 1
+    },
+    {
+      "partCode": "P024",
+      "qtyPerCar": 1,
+      "onHand": 450,
+      "sortOrder": 2
+    },
+    {
+      "partCode": "P001",
+      "qtyPerCar": 4,
+      "onHand": 1800,
+      "sortOrder": 3
+    },
+    {
+      "partCode": "P004",
+      "qtyPerCar": 4,
+      "onHand": 360,
+      "sortOrder": 4
+    },
+    {
+      "partCode": "P010",
+      "qtyPerCar": 1,
+      "onHand": 100,
+      "sortOrder": 5
+    },
+    {
+      "partCode": "P012-C01",
+      "qtyPerCar": 1,
+      "onHand": 120,
+      "sortOrder": 6
+    },
+    {
+      "partCode": "P012-C02",
+      "qtyPerCar": 1,
+      "onHand": 100,
+      "sortOrder": 7
+    },
+    {
+      "partCode": "P012-C03",
+      "qtyPerCar": 1,
+      "onHand": 60,
+      "sortOrder": 8
+    },
+    {
+      "partCode": "P012-C04",
+      "qtyPerCar": 1,
+      "onHand": 80,
+      "sortOrder": 9
+    },
+    {
+      "partCode": "P012-C05",
+      "qtyPerCar": 1,
+      "onHand": 80,
+      "sortOrder": 10
+    },
+    {
+      "partCode": "P013",
+      "qtyPerCar": 1,
+      "onHand": 430,
+      "sortOrder": 11
+    }
   ],
   "purchaseOrders": [
     {
@@ -53,8 +112,23 @@
     }
   ],
   "customerOrders": [
-    { "id": "CO-001", "customer": "누리렌터카", "qty": 60, "dueDate": "2026-10-10" },
-    { "id": "CO-002", "customer": "온길모빌리티", "qty": 80, "dueDate": "2026-10-14" },
-    { "id": "CO-003", "customer": "다온물류", "qty": 80, "dueDate": "2026-10-18" }
+    {
+      "id": "CO-001",
+      "customer": "누리렌터카",
+      "qty": 60,
+      "dueDate": "2026-10-10"
+    },
+    {
+      "id": "CO-002",
+      "customer": "온길모빌리티",
+      "qty": 80,
+      "dueDate": "2026-10-14"
+    },
+    {
+      "id": "CO-003",
+      "customer": "다온물류",
+      "qty": 80,
+      "dueDate": "2026-10-18"
+    }
   ]
 }

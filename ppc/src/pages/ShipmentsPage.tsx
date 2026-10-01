@@ -1,10 +1,11 @@
 // 출차 일정 `/shipments`: 일자별로 출차(완성)되는 차량과 대수
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Card } from '../components/ui';
+import { Badge, Card, ColorSwatch } from '../components/ui';
 import { dashboardModel } from '../lib/dashboard';
 import { formatMD, formatWithWeekday } from '../lib/date';
 import { num } from '../lib/format';
+import { colorOf } from '../lib/reference';
 import { shipmentSchedule } from '../lib/shipments';
 import type { AppState } from '../lib/types';
 
@@ -44,6 +45,20 @@ export function ShipmentsPage({ state }: { state: AppState }) {
           </div>
         ))}
       </div>
+
+      {schedule.colors.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[13px] shadow-card">
+          <span className="text-xs font-semibold text-slate-500">색상별 출차 (기간 합계)</span>
+          {schedule.colors.map((c) => (
+            <span key={c.colorCode} className="inline-flex items-center gap-1.5 text-slate-700">
+              <ColorSwatch code={c.colorCode} />
+              {colorOf(c.colorCode)?.name} <span className="font-mono text-[11px] text-slate-400">{c.colorCode}</span>
+              <strong className="tabular text-slate-900">{num(c.count)}대</strong>
+            </span>
+          ))}
+          <span className="text-xs text-slate-500">· 차량 색은 투입할 때 쓴 차체의 색입니다. 그 색 차체가 없으면 그 색 차는 나오지 않습니다.</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
         <Card title="일자별 출차 대수" aside={<span className="text-xs text-slate-500">날짜를 누르면 차량 목록을 봅니다</span>}>
@@ -94,7 +109,19 @@ export function ShipmentsPage({ state }: { state: AppState }) {
 
         <Card
           title={selected ? `${formatWithWeekday(selected.date)} 출차 차량` : '출차 차량'}
-          aside={selected && <span className="text-xs font-semibold text-slate-600">{num(selected.count)}대</span>}
+          aside={
+            selected && (
+              <span className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-slate-600">
+                {selected.colors.map((c) => (
+                  <span key={c.colorCode} className="inline-flex items-center gap-1">
+                    <ColorSwatch code={c.colorCode} size={10} />
+                    {colorOf(c.colorCode)?.name} {num(c.count)}
+                  </span>
+                ))}
+                <strong className="text-slate-900">{num(selected.count)}대</strong>
+              </span>
+            )
+          }
         >
           {!selected || selected.count === 0 ? (
             <p className="px-5 py-12 text-center text-sm text-slate-500">
@@ -107,6 +134,7 @@ export function ShipmentsPage({ state }: { state: AppState }) {
                 <thead className="sticky top-0 bg-white text-[11px] font-semibold text-slate-500 shadow-[0_1px_0_#f1f5f9]">
                   <tr>
                     <th className="py-2 pl-5 pr-2">순번</th>
+                    <th className="px-2 py-2">색상</th>
                     <th className="px-2 py-2">고유번호</th>
                     <th className="py-2 pl-2 pr-5">배정 주문</th>
                   </tr>
@@ -115,7 +143,13 @@ export function ShipmentsPage({ state }: { state: AppState }) {
                   {selected.cars.map((car) => (
                     <tr key={car.serial}>
                       <td className="tabular py-2 pl-5 pr-2 text-slate-500">{num(car.seq)}</td>
-                      <td className="px-2 py-2 font-mono text-sm font-semibold tracking-wider text-slate-900">{car.serial}</td>
+                      <td className="px-2 py-2">
+                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-700">
+                          <ColorSwatch code={car.colorCode} />
+                          {colorOf(car.colorCode)?.name ?? '–'}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-2 font-mono text-sm font-semibold tracking-wider text-slate-900">{car.serial}</td>
                       <td className="py-2 pl-2 pr-5">
                         {car.orderId ? (
                           <span className="text-slate-700">

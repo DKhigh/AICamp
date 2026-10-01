@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { EmployeeConfirmModal } from '../components/EmployeeField';
 import { Badge, Button, Card, DISRUPTION_STATUS_TONE, PO_STATUS_TONE } from '../components/ui';
 import { formatMD } from '../lib/date';
-import { num } from '../lib/format';
+import { num, won } from '../lib/format';
+import { poAmount, poOriginalAmount, totalSpent } from '../lib/ordering';
 import { isCancellable } from '../lib/planning';
 import { partOf } from '../lib/reference';
 import type { AppState, Disruption, PurchaseOrder } from '../lib/types';
@@ -109,18 +110,24 @@ export function HistoryPage({ state }: { state: AppState }) {
         )}
       </Card>
 
-      <Card title="발주 목록 (전체 상태)" aside={<span className="text-xs text-slate-500">{pos.length}건</span>}>
+      <Card title="발주 목록 (전체 상태)" aside={
+          <span className="text-xs text-slate-500">
+            {pos.length}건 · 발주에 쓴 금액 합계 <strong className="tabular text-sm text-slate-900">{won(totalSpent(pos))}</strong> (취소 제외)
+          </span>
+        }
+      >
         {pos.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-slate-500">등록된 발주가 없습니다</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-[13px]">
+            <table className="w-full min-w-[960px] text-left text-[13px]">
               <thead className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
                 <tr>
                   <th className="py-2 pl-5 pr-2">발주번호</th>
                   <th className="px-2 py-2">부품</th>
                   <th className="px-2 py-2">업체</th>
                   <th className="px-2 py-2 text-right">수량</th>
+                  <th className="px-2 py-2 text-right">금액</th>
                   <th className="px-2 py-2">발주일</th>
                   <th className="px-2 py-2">도착 예정일</th>
                   <th className="px-2 py-2">상태</th>
@@ -141,6 +148,15 @@ export function HistoryPage({ state }: { state: AppState }) {
                       <td className="tabular whitespace-nowrap px-2 py-2.5 text-right text-slate-900">
                         {num(po.qty)}
                         {po.qty !== po.originalQty && <span className="text-[11px] text-slate-500"> (원래 {num(po.originalQty)})</span>}
+                      </td>
+                      <td className="tabular whitespace-nowrap px-2 py-2.5 text-right text-slate-900">
+                        {po.status === '취소' ? (
+                          <span className="text-slate-400" title="취소한 발주는 쓴 돈에 넣지 않습니다">
+                            <s>{won(poOriginalAmount(po))}</s> 0원
+                          </span>
+                        ) : (
+                          won(poAmount(po))
+                        )}
                       </td>
                       <td className="tabular px-2 py-2.5 text-slate-700">{formatMD(po.orderDate)}</td>
                       <td className="tabular whitespace-nowrap px-2 py-2.5 text-slate-900">

@@ -188,3 +188,16 @@ export const INPUT_CLASS =
 export function parseIntStrict(text: string): number {
   return /^-?\d+$/.test(text.trim()) ? Number(text.trim()) : NaN;
 }
+
+/** 차량·차체 색상 견본. 색상 코드는 Excel '차량색상' 시트의 것 */
+const COLOR_HEX: Record<string, string> = { C01: '#ffffff', C02: '#111827', C03: '#dc2626', C04: '#2563eb', C05: '#9ca3af' };
+
+export function ColorSwatch({ code, size = 12 }: { code: string | null | undefined; size?: number }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-block shrink-0 rounded-full border border-slate-300"
+      style={{ width: size, height: size, background: (code && COLOR_HEX[code]) || '#e2e8f0' }}
+    />
+  );
+}

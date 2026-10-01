@@ -1,7 +1,8 @@
 // 생산 가능 대수 · 시뮬레이션 · 주문 예측 · 영향 분석 (DESIGN.md §6.2 ~ §6.7, §6.9-1)
 // 전부 순수 함수다. 화면은 DB에서 읽은 상태로 이 함수들을 다시 돌려서 보여 준다.
-import { LOW_COVERAGE_DAYS } from './constants';
+import { LOW_COVERAGE_DAYS, SUPPLIER_LIMIT_DAYS, SUPPLIER_ORDER_LIMIT } from './constants';
 import { addDays, diffDays, formatMD } from './date';
+import { baseCodeOf, colorCodeOf } from './partcode';
 import type {
   CustomerOrder,
   Disruption,
@@ -39,6 +40,47 @@ export function displayStatusOf(po: PurchaseOrder, baseDate: ISODate): PoDisplay
   return isCancellable(po, baseDate) ? '발주대기' : po.status;
 }
 
+export interface SupplierLimit {
+  limit: number;
+  /** 최근 SUPPLIER_LIMIT_DAYS일 안에 이 업체에 넣은 일반 발주 수량 */
+  used: number;
+  remaining: number;
+  /** 한도가 일부라도 풀리는 가장 빠른 날 (쓴 것이 없으면 null) */
+  releaseDate: ISODate | null;
+}
+
+/**
+ * 업체별 발주 한도: 한 업체에 일반 발주로 넣을 수 있는 수량은 일주일(발주일 포함 7일) 동안 50개까지다.
+ * 발주일로부터 7일이 지난 발주분은 한도에서 빠진다. 취소한 발주는 세지 않는다.
+ * 세지 않는 것: 시연 초기 데이터(입력자가 없는 발주)와 대체(긴급) 발주 — 차질 대응 수량은 한도보다 크다.
+ */
+export function supplierLimitOf(pos: PurchaseOrder[], supplierName: string, baseDate: ISODate): SupplierLimit {
+  const counted = pos.filter(
+    (po) =>
+      po.supplierName === supplierName &&
+      po.kind === '일반' &&
+      po.status !== '취소' &&
+      po.createdBy !== null &&
+      po.orderDate <= baseDate &&
+      diffDays(baseDate, po.orderDate) < SUPPLIER_LIMIT_DAYS,
+  );
+  const used = counted.reduce((sum, po) => sum + po.originalQty, 0);
+  const earliest = counted.map((po) => po.orderDate).sort()[0];
+  return {
+    limit: SUPPLIER_ORDER_LIMIT,
+    used,
+    remaining: Math.max(0, SUPPLIER_ORDER_LIMIT - used),
+    releaseDate: earliest ? addDays(earliest, SUPPLIER_LIMIT_DAYS) : null,
+  };
+}
+
+/** 한도를 넘으면 안내 문구, 아니면 null */
+export function supplierLimitError(limit: SupplierLimit, supplierName: string, qty: number): string | null {
+  if (qty <= limit.remaining) return null;
+  const release = limit.releaseDate ? ` ${formatMD(limit.releaseDate)}부터 한도가 풀립니다.` : '';
+  return `${supplierName} 발주 한도(일주일 ${limit.limit}개)를 넘습니다. 남은 수량은 ${limit.remaining}개입니다.${release}`;
+}
+
 export function stockOnHand(lineParts: LinePart[]): Stock {
   return Object.fromEntries(lineParts.map((p) => [p.partCode, p.onHand]));
 }
@@ -56,23 +98,48 @@ export function carsFromPart(p: LinePart, stock: Stock): number {
   return Math.floor((stock[p.partCode] ?? 0) / p.qtyPerCar);
 }
 
-export function buildable(lineParts: LinePart[], stock: Stock): number {
-  if (lineParts.length === 0) return 0;
-  return Math.min(...lineParts.map((p) => carsFromPart(p, stock)));
+/**
+ * 차 한 대에 필요한 '요구 단위'. 보통은 부품 하나지만, 색상별 차체처럼 같은 기본코드의 변형들은
+ * 한 묶음이다: 차 한 대에 그중 하나만 들어가므로 가능 대수는 변형들의 합이다.
+ */
+export interface PartGroup {
+  /** 기본 부품 코드 ('P012') */
+  code: string;
+  parts: LinePart[];
 }
 
-/** 가능 대수가 가장 작은 부품. 동점이면 sortOrder가 빠른 것 */
-export function bottleneckOf(lineParts: LinePart[], stock: Stock): LinePart | null {
-  let best: LinePart | null = null;
-  let bestCars = Infinity;
+export function partGroups(lineParts: LinePart[]): PartGroup[] {
+  const groups: PartGroup[] = [];
   for (const p of [...lineParts].sort(bySortOrder)) {
-    const cars = carsFromPart(p, stock);
+    const code = baseCodeOf(p.partCode);
+    const group = groups.find((g) => g.code === code);
+    if (group) group.parts.push(p);
+    else groups.push({ code, parts: [p] });
+  }
+  return groups;
+}
+
+export function carsFromGroup(group: PartGroup, stock: Stock): number {
+  return group.parts.reduce((sum, p) => sum + carsFromPart(p, stock), 0);
+}
+
+export function buildable(lineParts: LinePart[], stock: Stock): number {
+  if (lineParts.length === 0) return 0;
+  return Math.min(...partGroups(lineParts).map((g) => carsFromGroup(g, stock)));
+}
+
+/** 가능 대수가 가장 작은 부품(묶음이면 기본 코드). 동점이면 sortOrder가 빠른 것 */
+export function bottleneckOf(lineParts: LinePart[], stock: Stock): { partCode: string } | null {
+  let best: string | null = null;
+  let bestCars = Infinity;
+  for (const g of partGroups(lineParts)) {
+    const cars = carsFromGroup(g, stock);
     if (cars < bestCars) {
-      best = p;
+      best = g.code;
       bestCars = cars;
     }
   }
-  return best;
+  return best === null ? null : { partCode: best };
 }
 
 export function coverageDays(p: LinePart, dailyCapacity: number): number {
@@ -83,12 +150,18 @@ export function coverageDays(p: LinePart, dailyCapacity: number): number {
 
 export type PartStatus = '차질' | '대응 중' | '주의' | '정상';
 
-export function partStatusOf(p: LinePart, disruptions: Disruption[], dailyCapacity: number): PartStatus {
+/** coverage: 재고 일수를 따로 줄 때 (색상별 차체는 다섯 색을 합친 재고 일수로 본다) */
+export function partStatusOf(p: LinePart, disruptions: Disruption[], dailyCapacity: number, coverage?: number): PartStatus {
   const mine = disruptions.filter((d) => d.partCode === p.partCode);
   if (mine.some((d) => d.status === '발생' || d.status === '기다리기')) return '차질';
   if (mine.some((d) => d.status === '대체발주')) return '대응 중';
-  if (coverageDays(p, dailyCapacity) < LOW_COVERAGE_DAYS) return '주의';
+  if ((coverage ?? coverageDays(p, dailyCapacity)) < LOW_COVERAGE_DAYS) return '주의';
   return '정상';
+}
+
+/** 묶음(색상별 차체)의 재고 일수: 변형들의 재고를 합쳐서 본다 */
+export function groupCoverageDays(group: PartGroup, dailyCapacity: number): number {
+  return round1(group.parts.reduce((sum, p) => sum + p.onHand / p.qtyPerCar, 0) / dailyCapacity);
 }
 
 /** 이 부품의 미입고 발주 중 가장 먼저 오는 것 */
@@ -122,6 +195,12 @@ export interface DayRow {
   /** 그날 투입을 제한한 부품 코드 (정상이면 null) */
   bottleneck: string | null;
   kind: DayKind;
+  /** 그날 투입한 차의 색상별 대수 (색상 코드 순). 색상별 차체가 없으면 빈 배열 */
+  colors: ColorCount[];
+}
+export interface ColorCount {
+  colorCode: string;
+  count: number;
 }
 export interface CumRow {
   date: ISODate;
@@ -149,6 +228,7 @@ export function arrivalsFromPos(pos: PurchaseOrder[], basis: ArrivalBasis): Arri
 
 export function simulate(s: Settings, lineParts: LinePart[], arrivals: Arrival[]): SimResult {
   const stock = stockOnHand(lineParts);
+  const groups = partGroups(lineParts);
   const completions = new Map<ISODate, number>();
   const days: DayRow[] = [];
   let totalInput = 0;
@@ -163,8 +243,26 @@ export function simulate(s: Settings, lineParts: LinePart[], arrivals: Arrival[]
     // 2) 투입 대수
     const input = Math.min(s.dailyCapacity, buildable(lineParts, stock));
     const bottleneck = input < s.dailyCapacity ? (bottleneckOf(lineParts, stock)?.partCode ?? null) : null;
-    // 3) 부품 소모
-    for (const p of lineParts) stock[p.partCode] -= input * p.qtyPerCar;
+    // 3) 부품 소모. 색상별 차체는 한 대마다 재고가 가장 많은 색을 쓴다 → 그 색의 차가 된다
+    const colorCount = new Map<string, number>();
+    for (const g of groups) {
+      if (g.parts.length === 1) {
+        stock[g.parts[0].partCode] -= input * g.parts[0].qtyPerCar;
+        continue;
+      }
+      for (let car = 0; car < input; car++) {
+        let pick = g.parts[0];
+        for (const p of g.parts) {
+          if (carsFromPart(p, stock) > carsFromPart(pick, stock)) pick = p;
+        }
+        stock[pick.partCode] -= pick.qtyPerCar;
+        const color = colorCodeOf(pick.partCode);
+        if (color) colorCount.set(color, (colorCount.get(color) ?? 0) + 1);
+      }
+    }
+    const colors = [...colorCount.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([colorCode, count]) => ({ colorCode, count }));
     // 4) 완성 예약
     const done = addDays(d, s.leadTimeDays);
     completions.set(done, (completions.get(done) ?? 0) + input);
@@ -175,6 +273,7 @@ export function simulate(s: Settings, lineParts: LinePart[], arrivals: Arrival[]
       completeDate: done,
       bottleneck,
       kind: input === s.dailyCapacity ? '정상' : input === 0 ? '정지' : '감산',
+      colors,
     });
   }
 

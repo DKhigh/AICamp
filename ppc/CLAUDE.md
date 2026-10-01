@@ -17,4 +17,5 @@
 
 ## 명령
 - `npm run dev` 개발 서버 / `npm test` 단위 테스트 / `npm run build` 타입 검사 + 빌드
-- `npm run data` Excel(data/ppc_data.xlsx) → src/data/reference.json 다시 만들기
+- `npm run data` Excel(data/ppc_data.xlsx + data/ppc_extra.xlsx) → src/data/reference.json, employees.json 다시 만들기
+- `npm run qr` 발표용 QR 무늬(src/data/qr.json) 다시 만들기 — 배포 주소가 바뀔 때만

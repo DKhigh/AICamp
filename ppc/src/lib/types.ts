@@ -9,6 +9,9 @@ export interface Part {
   materialName: string;
   defaultSupplier: string;
   kgPerUnit: number;
+  /** 색상별 변형(차체)일 때만: 기본 부품 코드와 색상 코드 */
+  baseCode?: string;
+  colorCode?: string;
 }
 export interface Supplier {
   code: string;
@@ -36,11 +39,35 @@ export interface DelayPreset {
   delayDays: number;
   compareCount: number;
 }
+/** 업체별 자재 공급단가 (원/kg) */
+export interface SupplierPrice {
+  supplierName: string;
+  materialName: string;
+  pricePerKg: number;
+}
+export interface CarColor {
+  code: string;
+  name: string;
+  description: string;
+}
+export interface PartCaution {
+  partName: string;
+  text: string;
+}
+/** 발주 수량에 따른 납품 지연. tiers는 minQty 오름차순 */
+export interface QtyDelay {
+  partName: string;
+  tiers: { minQty: number; days: number; label: string }[];
+}
 export interface Reference {
   parts: Part[];
   suppliers: Supplier[];
   materials: Material[];
   delayPresets: DelayPreset[];
+  prices: SupplierPrice[];
+  colors: CarColor[];
+  cautions: PartCaution[];
+  qtyDelays: QtyDelay[];
 }
 
 // DB

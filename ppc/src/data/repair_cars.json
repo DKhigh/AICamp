@@ -1,53 +1,90 @@
 [
   {
-    "serial": "T3G7U0MK",
+    "serial": "C02-T3G7U0MK",
     "receivedDate": "2026-10-02",
     "status": "수리 중",
     "faultArea": "변속기 · 브레이크",
     "symptom": "저단 변속 시 충격이 있고, 제동할 때 앞뒤 브레이크에서 소음이 난다.",
     "parts": [
-      { "partCode": "P024", "qty": 1 },
-      { "partCode": "P001", "qty": 4 }
-    ]
+      {
+        "partCode": "P024",
+        "qty": 1
+      },
+      {
+        "partCode": "P001",
+        "qty": 4
+      }
+    ],
+    "colorCode": "C02"
   },
   {
-    "serial": "K7M2Q9XA",
+    "serial": "C01-K7M2Q9XA",
     "receivedDate": "2026-10-03",
     "status": "수리 중",
     "faultArea": "브레이크",
     "symptom": "앞 브레이크 디스크가 마모되어 제동 거리가 길어졌다.",
-    "parts": [{ "partCode": "P001", "qty": 2 }]
+    "parts": [
+      {
+        "partCode": "P001",
+        "qty": 2
+      }
+    ],
+    "colorCode": "C01"
   },
   {
-    "serial": "R4T8B1ZN",
+    "serial": "C05-R4T8B1ZN",
     "receivedDate": "2026-10-04",
     "status": "부품 대기",
     "faultArea": "엔진",
     "symptom": "실린더 헤드 과열로 출력이 떨어지고 경고등이 켜진다.",
-    "parts": [{ "partCode": "P007", "qty": 1 }]
+    "parts": [
+      {
+        "partCode": "P007",
+        "qty": 1
+      }
+    ],
+    "colorCode": "C05"
   },
   {
-    "serial": "H9C3W6LD",
+    "serial": "C03-H9C3W6LD",
     "receivedDate": "2026-10-04",
     "status": "수리 중",
     "faultArea": "서스펜션",
     "symptom": "뒤 서스펜션 스프링이 파손되어 차체가 한쪽으로 기운다.",
-    "parts": [{ "partCode": "P004", "qty": 2 }]
+    "parts": [
+      {
+        "partCode": "P004",
+        "qty": 2
+      }
+    ],
+    "colorCode": "C03"
   },
   {
-    "serial": "V2X5J8PE",
+    "serial": "C04-V2X5J8PE",
     "receivedDate": "2026-10-05",
     "status": "진단 중",
     "faultArea": "조향",
     "symptom": "조향 랙에 유격이 있어 핸들이 헐겁다.",
-    "parts": [{ "partCode": "P010", "qty": 1 }]
+    "parts": [
+      {
+        "partCode": "P010",
+        "qty": 1
+      }
+    ],
+    "colorCode": "C04"
   },
   {
-    "serial": "B6N1F4YS",
+    "serial": "C01-B6N1F4YS",
     "receivedDate": "2026-10-05",
     "status": "진단 중",
     "faultArea": "배터리",
     "symptom": "배터리 팩 셀 불량으로 충전량이 빠르게 줄어든다.",
-    "parts": [{ "partCode": "P013", "qty": 1 }]
+    "parts": [
+      {
+        "partCode": "P013",
+        "qty": 1
+      }
+    ],
+    "colorCode": "C01"
   }
 ]

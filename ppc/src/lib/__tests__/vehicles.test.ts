@@ -6,6 +6,8 @@ import { serialOf } from '../serial';
 import { shipmentSchedule } from '../shipments';
 
 const SERIAL = /^[A-Z0-9]{8}$/;
+/** 색상 코드가 맨 앞에 붙은 차량 고유번호: C01-YRI0V072 */
+const COLORED_SERIAL = /^C0[1-5]-[A-Z0-9]{8}$/;
 
 describe('차량 고유번호', () => {
   it('알파벳 대문자·숫자 8자리, 같은 순번이면 항상 같은 번호', () => {
@@ -54,7 +56,7 @@ describe('일자별 출차', () => {
 describe('수리 중인 차량', () => {
   it('고유번호 형식이 맞고 서로 겹치지 않는다', () => {
     expect(repairCars.length).toBeGreaterThan(0);
-    expect(repairCars.every((c) => SERIAL.test(c.serial))).toBe(true);
+    expect(repairCars.every((c) => COLORED_SERIAL.test(c.serial) && c.serial.startsWith(c.colorCode + '-'))).toBe(true);
     expect(new Set(repairCars.map((c) => c.serial)).size).toBe(repairCars.length);
   });
 

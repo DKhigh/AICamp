@@ -38,10 +38,12 @@ export function buildPurchaseOrder(params: {
   kind: '일반' | '대체';
   disruptionId?: string | null;
   createdBy: string | null;
+  /** 발주 수량에 따른 납품 지연(일). 일반 발주에만 더한다 */
+  extraDays?: number;
 }): PurchaseOrder {
   const { existing, partCode, supplier, qty, baseDate, kind, createdBy } = params;
-  // 일반 발주는 기본 납기, 대체(긴급) 발주는 대체 납기 (§2.2 A3)
-  const arrival = addDays(baseDate, kind === '대체' ? supplier.altLeadDays : supplier.leadDays);
+  // 일반 발주는 기본 납기 + 수량 지연, 대체(긴급) 발주는 대체 납기 (§2.2 A3)
+  const arrival = addDays(baseDate, kind === '대체' ? supplier.altLeadDays : supplier.leadDays + (params.extraDays ?? 0));
   return {
     id: nextId(
       'PO-',

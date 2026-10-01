@@ -1,6 +1,8 @@
 // 입고되어 수리 중인 차량 (시연용 고정 데이터, src/data/repair_cars.json).
 // DB에 넣지 않으므로 화면에서 바뀌지 않고, 수리에 쓰는 부품은 표시만 한다(생산 재고·예측 계산에는 넣지 않는다).
 import repairJson from '../data/repair_cars.json';
+import { addDays, diffDays } from './date';
+import { DEMO_BASE_DATE } from './reference';
 import type { ISODate, LinePart } from './types';
 
 export interface RepairPartUse {
@@ -9,7 +11,9 @@ export interface RepairPartUse {
 }
 
 export interface RepairCar {
+  /** 색상 코드 + 고유번호: 'C02-T3G7U0MK' */
   serial: string;
+  colorCode: string;
   receivedDate: ISODate;
   status: string;
   /** 고장 난 곳 */
@@ -20,6 +24,12 @@ export interface RepairCar {
 }
 
 export const repairCars = repairJson as RepairCar[];
+
+/** 입고일을 기준일(오늘)에 맞춰 옮긴 목록. JSON의 날짜는 설계서 기준일(10/5)을 기준으로 적혀 있다 */
+export function repairCarsAt(baseDate: ISODate): RepairCar[] {
+  const offset = diffDays(baseDate, DEMO_BASE_DATE);
+  return repairCars.map((car) => ({ ...car, receivedDate: addDays(car.receivedDate, offset) }));
+}
 
 export interface RepairPartNeed {
   partCode: string;

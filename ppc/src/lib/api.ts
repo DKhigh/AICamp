@@ -2,8 +2,10 @@
 // 저장할 내용은 actions.ts의 순수 함수가 만들고, 여기서는 그 결과를 DB에 쓰기만 한다.
 import { buildAlternative, buildDisruption, buildPurchaseOrder, nextId } from './actions';
 import { MAX_DELAY_DAYS, MIN_DELAY_DAYS } from './constants';
+import { today } from './clock';
 import { authorize } from './employees';
-import { isCancellable } from './planning';
+import { qtyDelayOf } from './ordering';
+import { isCancellable, supplierLimitError, supplierLimitOf } from './planning';
 import { demoState, partOf, supplierOf } from './reference';
 import { localStore, supabaseStore, type Row, type Store } from './store';
 import { supabase } from './supabase';
@@ -146,7 +148,8 @@ export function creatorError(name: string | null): string | null {
 
 export const EMPTY_DB_MESSAGE = 'DB에 데이터가 없습니다. [데이터 초기화]를 눌러 시연 데이터를 넣으세요.';
 
-export function createApi(store: Store) {
+/** clock: 기준일(오늘)을 돌려주는 함수. 기준일은 DB 값이 아니라 항상 오늘이다 */
+export function createApi(store: Store, clock: () => string = today) {
   /** DB가 비어 있으면(설정 행이 없으면) null */
   async function fetchState(): Promise<AppState | null> {
     const [settings, lineParts, purchaseOrders, disruptions, customerOrders] = await Promise.all([
@@ -158,7 +161,7 @@ export function createApi(store: Store) {
     ]);
     if (settings.length === 0) return null;
     return {
-      settings: toSettings(settings[0]),
+      settings: { ...toSettings(settings[0]), baseDate: clock() },
       lineParts: lineParts.map(toLinePart).sort((a, b) => a.sortOrder - b.sortOrder),
       purchaseOrders: purchaseOrders.map(toPurchaseOrder).sort((a, b) => a.id.localeCompare(b.id)),
       disruptions: disruptions.map(toDisruption).sort((a, b) => a.id.localeCompare(b.id)),
@@ -190,7 +193,7 @@ export function createApi(store: Store) {
     for (const table of ['disruptions', 'purchase_orders', 'customer_orders', 'line_parts', 'settings'] as const) {
       await store.clear(table);
     }
-    const demo = demoState();
+    const demo = demoState(clock());
     await store.insert('settings', [fromSettings(demo.settings)]);
     await store.insert('line_parts', demo.lineParts.map(fromLinePart));
     await store.insert('customer_orders', demo.customerOrders.map(fromCustomerOrder));
@@ -210,6 +213,10 @@ export function createApi(store: Store) {
     const supplier = supplierOf(input.supplierName);
     if (!supplier) throw new Error(`공급업체를 찾을 수 없습니다: ${input.supplierName}`);
     const state = await freshState();
+    // 업체별 한도는 최신 상태로 확인한다 (다른 사람이 방금 같은 업체에 발주했을 수 있다)
+    assertValid(
+      supplierLimitError(supplierLimitOf(state.purchaseOrders, supplier.name, state.settings.baseDate), supplier.name, input.qty),
+    );
     const po = buildPurchaseOrder({
       existing: state.purchaseOrders,
       partCode: input.partCode,
@@ -218,6 +225,8 @@ export function createApi(store: Store) {
       baseDate: state.settings.baseDate,
       kind: '일반',
       createdBy,
+      // 같은 업체에 많이 시킬수록 늦게 온다 (Excel '지연시간')
+      extraDays: qtyDelayOf(state.purchaseOrders, partOf(input.partCode), supplier.name, input.qty, state.settings.baseDate).days,
     });
     await store.insert('purchase_orders', [fromPurchaseOrder(po)]);
     return po;

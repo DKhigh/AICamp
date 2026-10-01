@@ -41,6 +41,12 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* 사원번호처럼 가린 입력칸: Edge의 '눈 모양(값 보기)' 버튼을 없애 발표 화면에서 번호가 드러나지 않게 한다 */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+}
+
 /* ── 3D 차량 뷰어 (car-manager에서 이식) ─────────────────────────────────── */
 /* 캔버스가 컨테이너 높이를 밀어내지 않도록 흐름에서 뺀다 (안 그러면 크기 맞춤이 서로를 키운다) */
 .car-canvas {

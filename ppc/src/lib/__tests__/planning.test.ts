@@ -18,7 +18,10 @@ import {
   applyOriginalPoAction,
   bottleneckOf,
   buildable,
+  carsFromGroup,
   carsFromPart,
+  groupCoverageDays,
+  partGroups,
   coverageDays,
   coverQty,
   cumAt,
@@ -151,12 +154,22 @@ describe('§9.1 초기 상태 (기준일 10/5)', () => {
 
   it('부품별 가능 대수', () => {
     const cars = Object.fromEntries(lineParts.map((p) => [partOf(p.partCode).name, carsFromPart(p, onHand)]));
-    expect(cars).toEqual({ 엔진: 60, 변속기: 450, 브레이크: 450, 서스펜션: 90, 조향: 100, 차체: 440, 배터리: 430 });
+    expect(cars).toEqual({ 엔진: 60, 변속기: 450, 브레이크: 450, 서스펜션: 90, 조향: 100,
+      '차체(화이트)': 120, '차체(블랙)': 100, '차체(레드)': 60, '차체(블루)': 80, '차체(그레이)': 80,
+      배터리: 430,
+    });
+    // 차체는 다섯 색 가운데 하나만 들어가므로 가능 대수는 합계 440대다
+    const bodyGroup = partGroups(lineParts).find((g) => g.code === 'P012')!;
+    expect(carsFromGroup(bodyGroup, onHand)).toBe(440);
+    expect(groupCoverageDays(bodyGroup, settings.dailyCapacity)).toBe(22);
   });
 
   it('재고 일수와 카드 상태 (§5 F1-1)', () => {
     const days = Object.fromEntries(lineParts.map((p) => [p.partCode, coverageDays(p, settings.dailyCapacity)]));
-    expect(days).toEqual({ P007: 3, P024: 22.5, P001: 22.5, P004: 4.5, P010: 5, P012: 22, P013: 21.5 });
+    expect(days).toEqual({ P007: 3, P024: 22.5, P001: 22.5, P004: 4.5, P010: 5,
+      'P012-C01': 6, 'P012-C02': 5, 'P012-C03': 3, 'P012-C04': 4, 'P012-C05': 4,
+      P013: 21.5,
+    });
     const status = Object.fromEntries(
       lineParts.map((p) => [p.partCode, partStatusOf(p, state.disruptions, settings.dailyCapacity)]),
     );
