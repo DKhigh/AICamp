@@ -1,10 +1,14 @@
 /**
  * Car3DVisualizer — car-manager/car-3d-visualizer.js를 모듈로 옮긴 것.
- * 세단 3D 모델, 마우스 회전, 부품 줌인, 후드 열림, 3D → 화면 좌표 핫스팟 투영은 원본 그대로이고,
+ * 마우스 회전, 부품 줌인, 후드 열림, 3D → 화면 좌표 핫스팟 투영은 원본 방식 그대로이고,
  * PPC의 BOM 7개 부품(엔진·변속기·브레이크·서스펜션·조향·차체·배터리)에 맞게 다음을 바꿨다.
+ *  - 차체: 상자 조합 대신 옆모습 윤곽선을 폭 방향으로 밀어낸(Extrude) 세단. 휠 아치를 윤곽에서 파내고
+ *    바퀴·엔진을 차체 안쪽 치수에 맞춰, 부품이 차체를 뚫고 나오지 않는다
  *  - 핫스팟·카메라 시점을 7개 부품으로 재구성 (변속기·서스펜션·조향 메쉬 추가)
  *  - 부품 상태(차질/대응 중/주의/정상)를 해당 부품 메쉬의 색으로 표시
  *  - 대시보드 안에 들어가므로 휠 줌을 끄고(페이지 스크롤 유지), dispose()를 추가
+ *
+ * 좌표: 앞이 -x, 위가 +y, 운전석(왼쪽)이 +z. 길이 약 8.6, 폭 3.5, 높이 2.35.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -28,24 +32,24 @@ const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 const CAMERA_PRESETS: Record<FocusKey, CameraPreset> = {
   all: { pos: v(-9.0, 4.4, 9.8), target: v(0.1, 0.7, 0), hoodOpen: false, xray: false },
-  engine: { pos: v(-4.8, 2.9, 2.5), target: v(-2.6, 1.1, 0), hoodOpen: true, xray: false },
+  engine: { pos: v(-5.6, 3.1, 3.0), target: v(-2.75, 0.95, 0), hoodOpen: true, xray: true },
   transmission: { pos: v(-3.0, 3.3, 3.9), target: v(-1.5, 0.8, 0), hoodOpen: false, xray: true },
-  brake: { pos: v(-3.2, 0.85, 3.4), target: v(-2.6, 0.65, 1.85), hoodOpen: false, xray: false },
-  suspension: { pos: v(4.9, 2.7, 3.9), target: v(2.6, 0.95, 1.3), hoodOpen: false, xray: true },
+  brake: { pos: v(-3.3, 0.9, 3.6), target: v(-2.6, 0.62, 1.5), hoodOpen: false, xray: false },
+  suspension: { pos: v(4.9, 2.7, 3.9), target: v(2.6, 0.9, 1.1), hoodOpen: false, xray: true },
   steering: { pos: v(-2.6, 2.9, 3.6), target: v(-1.5, 1.05, 0.5), hoodOpen: false, xray: true },
-  body: { pos: v(0.0, 1.8, 6.2), target: v(0, 1.1, 0), hoodOpen: false, xray: false },
+  body: { pos: v(0.0, 1.8, 6.6), target: v(0, 1.1, 0), hoodOpen: false, xray: false },
   battery: { pos: v(-0.6, 2.8, 3.0), target: v(0, 0.8, 0.2), hoodOpen: false, xray: true },
 };
 
 /** 핫스팟 배지가 붙는 3D 좌표 */
 const ANCHORS: Record<CarPartKey, THREE.Vector3> = {
-  engine: v(-2.7, 1.45, 0.2),
+  engine: v(-2.75, 1.38, 0.2),
   transmission: v(-1.4, 1.1, 0.0),
-  brake: v(-2.6, 0.65, 1.85),
-  suspension: v(2.6, 1.25, 1.55),
+  brake: v(-2.6, 0.62, 1.72),
+  suspension: v(2.6, 1.15, 1.2),
   steering: v(-0.85, 1.65, 0.75),
-  body: v(0.5, 1.2, 1.78),
-  battery: v(0.9, 0.5, 1.4),
+  body: v(0.5, 1.15, 1.76),
+  battery: v(0.9, 0.55, 1.2),
 };
 
 const STATUS_COLOR: Record<Exclude<StatusLevel, 'normal'>, number> = {
@@ -53,6 +57,17 @@ const STATUS_COLOR: Record<Exclude<StatusLevel, 'normal'>, number> = {
   info: 0x3b82f6,
   warn: 0xf59e0b,
 };
+
+// ── 차체 치수 ───────────────────────────────────────────────────────────────
+const WHEEL_X = 2.6; // 앞바퀴 -WHEEL_X, 뒷바퀴 +WHEEL_X
+const WHEEL_Y = 0.62;
+const WHEEL_Z = 1.5; // 바퀴 중심. 타이어 바깥면(1.68)이 차체 옆면(1.75)보다 안쪽이다
+const WHEEL_R = 0.62;
+const ARCH_R = 0.78;
+const SILL_Y = 0.4;
+const CORE_HALF = 1.3; // 차체 중심부(엔진·실내가 들어가는 통)의 반폭
+const BODY_HALF = 1.75;
+const CABIN_HALF = 1.48;
 
 interface Accent {
   material: THREE.MeshStandardMaterial;
@@ -81,13 +96,13 @@ export class Car3DVisualizer {
   private disposed = false;
 
   private bodyPaint!: THREE.MeshPhysicalMaterial;
-  private glass!: THREE.MeshPhysicalMaterial;
+  private glass!: THREE.MeshLambertMaterial;
   private chrome!: THREE.MeshStandardMaterial;
+  private darkTrim!: THREE.MeshStandardMaterial;
   private tireRubber!: THREE.MeshStandardMaterial;
   private alloyRim!: THREE.MeshStandardMaterial;
   private brakeRotor!: THREE.MeshStandardMaterial;
   private engineMetal!: THREE.MeshStandardMaterial;
-  private turboGold!: THREE.MeshStandardMaterial;
   private batteryPack!: THREE.MeshStandardMaterial;
   private accents: Partial<Record<CarPartKey, Accent>> = {};
   private statuses: Partial<Record<CarPartKey, StatusLevel>> = {};
@@ -225,43 +240,75 @@ export class Car3DVisualizer {
     return obj;
   }
 
+  private box(parent: THREE.Object3D, size: [number, number, number], material: THREE.Material, x: number, y: number, z: number) {
+    return this.add(parent, new THREE.Mesh(new THREE.BoxGeometry(...size), material), x, y, z);
+  }
+
+  /** 옆모습 윤곽(xy)을 z 방향으로 밀어낸 메쉬. z = zFrom ~ zFrom + depth (bevel이 있으면 양쪽으로 그만큼 더) */
+  private extrude(shape: THREE.Shape, zFrom: number, depth: number, material: THREE.Material, bevel = 0) {
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth,
+      curveSegments: 20,
+      bevelEnabled: bevel > 0,
+      bevelThickness: bevel,
+      bevelSize: bevel,
+      bevelSegments: 3,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.z = zFrom;
+    mesh.castShadow = true;
+    this.carRoot.add(mesh);
+    return mesh;
+  }
+
+  /** 차체 아랫부분(벨트라인 아래)의 옆모습. withArches면 휠 아치를 파낸다 */
+  private bodyProfile(withArches: boolean): THREE.Shape {
+    const s = new THREE.Shape();
+    s.moveTo(-4.15, SILL_Y);
+    s.quadraticCurveTo(-4.34, 0.45, -4.32, 0.75); // 앞 범퍼
+    s.quadraticCurveTo(-4.3, 1.08, -3.85, 1.2); // 노즈
+    s.quadraticCurveTo(-2.8, 1.36, -1.75, 1.44); // 후드
+    s.lineTo(3.0, 1.52); // 벨트라인
+    s.quadraticCurveTo(3.9, 1.55, 4.2, 1.46); // 트렁크
+    s.quadraticCurveTo(4.36, 1.3, 4.32, 0.8); // 뒷면
+    s.quadraticCurveTo(4.3, 0.44, 4.1, SILL_Y); // 뒤 범퍼
+    if (withArches) {
+      const half = Math.sqrt(ARCH_R ** 2 - (WHEEL_Y - SILL_Y) ** 2);
+      const a = Math.asin((WHEEL_Y - SILL_Y) / ARCH_R);
+      for (const x of [WHEEL_X, -WHEEL_X]) {
+        s.lineTo(x + half, SILL_Y);
+        s.absarc(x, WHEEL_Y, ARCH_R, -a, Math.PI + a, false);
+      }
+    }
+    s.lineTo(-4.15, SILL_Y);
+    return s;
+  }
+
   private createCarModel() {
     this.scene.add(this.carRoot);
 
+    // 도장은 한 가지 색(펄 화이트)으로 고정한다
     this.bodyPaint = new THREE.MeshPhysicalMaterial({
-      color: 0xf8fafc,
-      metalness: 0.7,
-      roughness: 0.22,
+      color: 0xf3f5f8,
+      metalness: 0.25,
+      roughness: 0.32,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.1,
-      reflectivity: 0.9,
+      clearcoatRoughness: 0.12,
     });
-    this.glass = new THREE.MeshPhysicalMaterial({
-      color: 0x0f172a,
-      metalness: 0.9,
-      roughness: 0.05,
-      transmission: 0.6,
-      transparent: true,
-      opacity: 0.75,
-    });
-    this.chrome = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.95, roughness: 0.08 });
-    this.tireRubber = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85, metalness: 0.15 });
-    this.alloyRim = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.88, roughness: 0.18 });
-    this.brakeRotor = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.25 });
+    // 반사광이 없는 재질: 앞유리가 조명을 받아 하얗게 날아가 보이지 않게 한다
+    this.glass = new THREE.MeshLambertMaterial({ color: 0x0f172a, transparent: true, opacity: 0.82 });
+    this.chrome = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.15 });
+    this.darkTrim = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.3, roughness: 0.6 });
+    this.tireRubber = new THREE.MeshStandardMaterial({ color: 0x0b0f17, roughness: 0.92, metalness: 0 });
+    this.alloyRim = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.75, roughness: 0.25, side: THREE.DoubleSide });
+    this.brakeRotor = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.3 });
     this.engineMetal = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.35 });
-    this.turboGold = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.3 });
     this.batteryPack = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.6, roughness: 0.4 });
 
-    // 하부 섀시
-    const chassis = this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.3, 3.4), this.engineMetal), 0, 0.45, 0);
-    chassis.castShadow = true;
-    chassis.receiveShadow = true;
-
     this.buildBodyShell();
-    this.buildAnimatedHood();
-    this.buildGreenhouse();
-    this.buildFrontFascia();
-    this.buildRearEnd();
+    this.buildHood();
+    this.buildCabin();
+    this.buildExteriorDetails();
     this.buildEngineBay();
     this.buildTransmission();
     this.buildSteering();
@@ -270,131 +317,150 @@ export class Car3DVisualizer {
   }
 
   private buildBodyShell() {
-    const paint = this.bodyPaint;
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.85, 3.5), paint), 0, 0.95, 0).castShadow = true;
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.75, 3.46), paint), -2.8, 0.9, 0).castShadow = true;
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 3.46), paint), 2.8, 0.92, 0).castShadow = true;
+    // 중심부: 휠 아치가 없는 통. 엔진·변속기·배터리가 이 안에 들어 있어 외형 모드에서는 보이지 않는다
+    this.extrude(this.bodyProfile(false), -CORE_HALF, CORE_HALF * 2, this.bodyPaint).receiveShadow = true;
 
-    for (const z of [-1.75, 1.75]) {
-      const out = z > 0 ? 1 : -1;
-      this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.14, 0.12), this.engineMetal), 0, 0.38, z);
-      // 앞바퀴 뒤 펜더 벤트
-      this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.04), this.chrome), -1.8, 1.15, z + out * 0.01);
-      // 사이드 미러
-      const arm = this.add(
-        this.carRoot,
-        new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.25), this.engineMetal),
-        -1.3,
-        1.5,
-        z + out * 0.15,
-      );
-      arm.rotation.z = Math.PI / 4;
-      this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.18, 0.14), paint), -1.3, 1.58, z + out * 0.24);
-      // 도어 핸들
-      for (const x of [-0.4, 0.9]) {
-        this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.08, 0.06), this.chrome), x, 1.25, z + out * 0.02);
-      }
+    // 좌우 펜더·도어 패널: 휠 아치를 파낸 윤곽. 바퀴는 이 두께 안(z 1.3~1.75)에 들어간다
+    const bevel = 0.05;
+    const depth = BODY_HALF - bevel - (CORE_HALF - 0.1);
+    this.extrude(this.bodyProfile(true), CORE_HALF - 0.1, depth, this.bodyPaint, bevel);
+    this.extrude(this.bodyProfile(true), -(CORE_HALF - 0.1) - depth, depth, this.bodyPaint, bevel);
+
+    // 휠 하우스 안쪽(어두운 라이너)
+    const a = Math.asin((WHEEL_Y - SILL_Y) / ARCH_R);
+    const liner = new THREE.CircleGeometry(ARCH_R - 0.02, 40, -a, Math.PI + 2 * a);
+    for (const x of [-WHEEL_X, WHEEL_X]) {
+      this.add(this.carRoot, new THREE.Mesh(liner, this.darkTrim), x, WHEEL_Y, CORE_HALF + 0.004);
+      this.add(this.carRoot, new THREE.Mesh(liner, this.darkTrim), x, WHEEL_Y, -CORE_HALF - 0.004).rotation.y = Math.PI;
     }
   }
 
-  private buildAnimatedHood() {
-    // 앞유리 아래를 축으로 후드가 열린다
-    this.hoodPivot.position.set(-1.6, 1.35, 0);
+  private buildHood() {
+    // 카울(앞유리 아래)을 축으로 열리는 얇은 후드 패널. 차체 윗면 곡선을 그대로 따른다
+    const px = -1.78;
+    const py = 1.44;
+    this.hoodPivot.position.set(px, py, 0);
     this.carRoot.add(this.hoodPivot);
 
-    const hood = this.add(this.hoodPivot, new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.08, 3.25), this.bodyPaint), -1.18, 0.04, 0);
-    hood.rotation.z = 0.06;
+    const lift = 0.012;
+    const t = 0.035;
+    const s = new THREE.Shape();
+    s.moveTo(-3.8 - px, 1.208 + lift - py);
+    s.quadraticCurveTo(-2.8 - px, 1.36 + lift - py, 0, lift);
+    s.lineTo(0, lift + t);
+    s.quadraticCurveTo(-2.8 - px, 1.36 + lift + t - py, -3.8 - px, 1.208 + lift + t - py);
+
+    const half = 1.42;
+    const hood = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: half * 2, bevelEnabled: false, curveSegments: 16 }), this.bodyPaint);
+    hood.position.z = -half;
     hood.castShadow = true;
-
-    for (const z of [-0.65, 0.65]) {
-      const ridge = this.add(this.hoodPivot, new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.03, 0.06), this.chrome), -1.18, 0.09, z);
-      ridge.rotation.z = 0.06;
-    }
+    this.hoodPivot.add(hood);
   }
 
-  private buildGreenhouse() {
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 2.9), this.bodyPaint), 0.1, 2.38, 0).castShadow = true;
+  private buildCabin() {
+    // 유리 온실: 앞유리 → 지붕 → 패스트백 뒷유리
+    const roofFront: [number, number] = [-0.45, 2.26];
+    const roofRear: [number, number] = [1.2, 2.28];
+    const glass = new THREE.Shape();
+    glass.moveTo(-1.82, 1.3);
+    glass.lineTo(...roofFront);
+    glass.quadraticCurveTo(0.4, 2.4, ...roofRear);
+    glass.quadraticCurveTo(2.3, 2.05, 3.15, 1.3);
+    this.extrude(glass, -CABIN_HALF, CABIN_HALF * 2, this.glass).castShadow = false;
 
-    const windshield = this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 3.0), this.glass), -1.0, 1.88, 0);
-    windshield.rotation.z = 0.65;
-    const rearGlass = this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.06, 2.9), this.glass), 1.4, 1.85, 0);
-    rearGlass.rotation.z = -0.58;
+    // 옆면 프레임(A·B·C 필러와 루프 레일): 유리 윤곽에서 창문 두 개를 뚫은 판
+    const frame = new THREE.Shape();
+    frame.moveTo(-1.82, 1.3);
+    frame.lineTo(...roofFront);
+    frame.quadraticCurveTo(0.4, 2.4, ...roofRear);
+    frame.quadraticCurveTo(2.3, 2.05, 3.15, 1.3);
+    const frontWindow = new THREE.Path();
+    frontWindow.moveTo(-1.2, 1.56);
+    frontWindow.lineTo(-0.3, 2.13);
+    frontWindow.lineTo(0.33, 2.17);
+    frontWindow.lineTo(0.33, 1.57);
+    const rearWindow = new THREE.Path();
+    rearWindow.moveTo(0.55, 1.57);
+    rearWindow.lineTo(0.55, 2.17);
+    rearWindow.lineTo(1.3, 2.13);
+    rearWindow.lineTo(2.2, 1.63);
+    frame.holes.push(frontWindow, rearWindow);
+    const plate = 0.05;
+    this.extrude(frame, CABIN_HALF, plate, this.bodyPaint);
+    this.extrude(frame, -CABIN_HALF - plate, plate, this.bodyPaint);
 
-    for (const z of [-1.52, 1.52]) {
-      this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.72, 0.05), this.glass), 0.1, 1.82, z);
-      this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.76, 0.08), this.engineMetal), 0.1, 1.82, z);
-      this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.04, 0.04), this.chrome), 0.1, 2.22, z);
-    }
+    // 지붕 패널
+    const roof = new THREE.Shape();
+    roof.moveTo(-0.5, 2.22);
+    roof.quadraticCurveTo(0.4, 2.4, 1.25, 2.25);
+    roof.lineTo(1.25, 2.27);
+    roof.quadraticCurveTo(0.4, 2.45, -0.5, 2.24);
+    const roofHalf = CABIN_HALF + plate;
+    this.extrude(roof, -roofHalf, roofHalf * 2, this.bodyPaint);
   }
 
-  private buildFrontFascia() {
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.6, 3.4), this.bodyPaint), -4.05, 0.7, 0).castShadow = true;
+  private buildExteriorDetails() {
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: 0xbae6fd, emissiveIntensity: 0.8, roughness: 0.1 });
+    const tailMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, emissive: 0xef4444, emissiveIntensity: 0.9 });
 
-    const grilleMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5, metalness: 0.8 });
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.42, 2.1), grilleMat), -4.32, 0.88, 0);
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.46, 2.18), this.chrome), -4.31, 0.88, 0);
+    // 앞: 얇은 LED 헤드라이트, 그릴, 하단 흡기구
+    for (const z of [-1.12, 1.12]) this.box(this.carRoot, [0.3, 0.1, 0.9], lightMat, -4.2, 1.02, z);
+    this.box(this.carRoot, [0.08, 0.2, 1.2], this.darkTrim, -4.3, 0.98, 0);
+    this.box(this.carRoot, [0.08, 0.22, 2.6], this.darkTrim, -4.3, 0.62, 0);
 
-    const lightMat = new THREE.MeshStandardMaterial({
-      color: 0xe0f2fe,
-      emissive: 0x38bdf8,
-      emissiveIntensity: 0.75,
-      roughness: 0.1,
-    });
-    for (const z of [-1.25, 1.25]) {
-      const light = this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.55), lightMat), -4.1, 1.08, z);
-      light.rotation.y = z > 0 ? -0.2 : 0.2;
-    }
-  }
+    // 뒤: 좌우를 잇는 테일라이트 바, 하단 디퓨저
+    this.box(this.carRoot, [0.1, 0.09, 3.2], tailMat, 4.31, 1.27, 0);
+    this.box(this.carRoot, [0.08, 0.2, 2.6], this.darkTrim, 4.28, 0.58, 0);
 
-  private buildRearEnd() {
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.65, 3.42), this.bodyPaint), 4.0, 0.72, 0).castShadow = true;
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 2.9), this.bodyPaint), 3.85, 1.45, 0);
-
-    const tailMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, emissive: 0xef4444, emissiveIntensity: 0.95 });
-    this.add(this.carRoot, new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 2.85), tailMat), 4.28, 1.35, 0);
-
-    for (const z of [-0.95, 0.95]) {
-      const exhaust = this.add(this.carRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.35, 16), this.chrome), 4.25, 0.42, z);
-      exhaust.rotation.z = Math.PI / 2;
+    for (const out of [1, -1]) {
+      const z = out * BODY_HALF;
+      // 사이드 실 몰딩
+      this.box(this.carRoot, [3.55, 0.1, 0.05], this.darkTrim, 0, SILL_Y + 0.07, z + out * 0.01);
+      // 도어 분할선과 손잡이
+      for (const x of [-1.6, 0.35, 1.7]) this.box(this.carRoot, [0.018, 0.8, 0.02], this.darkTrim, x, 0.98, z + out * 0.002);
+      for (const x of [-0.05, 1.3]) this.box(this.carRoot, [0.34, 0.05, 0.05], this.chrome, x, 1.3, z + out * 0.01);
+      // 사이드 미러
+      this.box(this.carRoot, [0.1, 0.05, 0.3], this.darkTrim, -1.38, 1.5, out * (CABIN_HALF + 0.15));
+      this.box(this.carRoot, [0.26, 0.16, 0.12], this.bodyPaint, -1.38, 1.56, out * (CABIN_HALF + 0.34));
     }
   }
 
   private buildEngineBay() {
-    const engine = this.add(this.carRoot, new THREE.Group(), -2.7, 0.95, 0);
+    // 후드 아래에 들어가는 높이로 맞춘다 (후드는 이 위치에서 y ≈ 1.30~1.36)
+    const engine = this.add(this.carRoot, new THREE.Group(), -2.75, 0.75, 0);
 
-    this.add(engine, new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.65, 0.95), this.engineMetal), 0, 0.15, 0);
+    this.box(engine, [1.1, 0.5, 0.9], this.engineMetal, 0, 0.1, 0);
     // 실린더 헤드 커버 = 엔진 상태 표시 메쉬
-    const cover = this.accent('engine', 0xf1f5f9, 0.88, 0.18);
-    this.add(engine, new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.15, 0.85), cover), 0, 0.52, 0);
+    const cover = this.accent('engine', 0xe2e8f0, 0.8, 0.25);
+    this.box(engine, [0.95, 0.1, 0.8], cover, 0, 0.4, 0);
 
-    // 흡기 매니폴드 러너 6개
+    // 흡기 러너
     for (let i = 0; i < 6; i++) {
       const runner = this.add(
         engine,
-        new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.045, 8, 16, Math.PI), this.chrome),
-        -0.4 + i * 0.16,
-        0.58,
-        i % 2 === 0 ? 0.22 : -0.22,
+        new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 8, 16, Math.PI), this.chrome),
+        -0.35 + i * 0.14,
+        0.4,
+        i % 2 === 0 ? 0.2 : -0.2,
       );
-      runner.rotation.x = i % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
+      runner.rotation.y = Math.PI / 2;
     }
-    // 트윈 터보
-    for (const z of [-0.55, 0.55]) {
-      const turbo = this.add(engine, new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.07, 12, 24), this.turboGold), -0.35, 0.22, z);
+    // 터보, 연료펌프, 라디에이터
+    for (const z of [-0.6, 0.6]) {
+      const turbo = this.add(engine, new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.05, 12, 24), this.engineMetal), -0.3, 0.12, z);
       turbo.rotation.y = Math.PI / 2;
     }
-    // 고압 연료펌프, 라디에이터
-    this.add(engine, new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.28, 16), this.chrome), 0.42, 0.45, 0.28);
-    this.add(engine, new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.65, 1.8), this.engineMetal), -0.85, 0.18, 0);
+    this.add(engine, new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.2, 16), this.chrome), 0.42, 0.3, 0.25);
+    this.box(engine, [0.1, 0.5, 1.7], this.engineMetal, -0.85, 0.1, 0);
   }
 
   private buildTransmission() {
     const mat = this.accent('transmission', 0x94a3b8);
     const group = this.add(this.carRoot, new THREE.Group(), -1.55, 0.86, 0);
 
-    const bell = this.add(group, new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.34, 0.35, 20), mat), -0.35, 0, 0);
+    const bell = this.add(group, new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.32, 0.35, 20), mat), -0.35, 0, 0);
     bell.rotation.z = Math.PI / 2;
-    const gearCase = this.add(group, new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.2, 0.9, 20), mat), 0.25, 0, 0);
+    const gearCase = this.add(group, new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.2, 0.9, 20), mat), 0.25, 0, 0);
     gearCase.rotation.z = Math.PI / 2;
     // 뒤로 가는 구동축
     const shaft = this.add(group, new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.4, 12), this.engineMetal), 2.4, -0.05, 0);
@@ -405,8 +471,8 @@ export class Car3DVisualizer {
     const mat = this.accent('steering', 0x475569);
     const up = new THREE.Vector3(0, 1, 0);
 
-    // 앞바퀴 사이의 랙
-    const rack = this.add(this.carRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.1, 12), mat), -2.05, 0.66, 0);
+    // 앞바퀴 사이의 랙 (중심부 폭 안에 들어간다)
+    const rack = this.add(this.carRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.4, 12), mat), -2.05, 0.66, 0);
     rack.rotation.x = Math.PI / 2;
 
     // 랙에서 운전석 핸들까지의 컬럼
@@ -425,65 +491,63 @@ export class Car3DVisualizer {
   }
 
   private buildBattery() {
-    const group = this.add(this.carRoot, new THREE.Group(), 0.1, 0.52, 0);
-    this.add(group, new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.22, 2.6), this.batteryPack), 0, 0, 0);
+    const group = this.add(this.carRoot, new THREE.Group(), 0.1, 0.54, 0);
+    this.box(group, [3.4, 0.2, 2.3], this.batteryPack, 0, 0, 0);
 
     const cell = this.accent('battery', 0x64748b, 0.5, 0.4);
-    for (let x = -1.2; x <= 1.2; x += 0.8) {
-      this.add(group, new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.06, 2.3), cell), x, 0.12, 0);
-    }
+    for (let x = -1.2; x <= 1.2; x += 0.8) this.box(group, [0.55, 0.06, 2.0], cell, x, 0.11, 0);
   }
 
   private buildWheelsBrakesSuspension() {
     const caliperMat = this.accent('brake', 0x475569, 0.5, 0.3);
     const springMat = this.accent('suspension', 0x94a3b8);
+    const tireWidth = 0.36;
 
-    const wheelPositions = [
-      { x: -2.6, z: 1.78, isFront: true },
-      { x: -2.6, z: -1.78, isFront: true },
-      { x: 2.6, z: 1.78, isFront: false },
-      { x: 2.6, z: -1.78, isFront: false },
-    ];
+    for (const x of [-WHEEL_X, WHEEL_X]) {
+      for (const out of [1, -1]) {
+        const isFront = x < 0;
+        const wheel = this.add(this.carRoot, new THREE.Group(), x, WHEEL_Y, out * WHEEL_Z);
 
-    for (const wp of wheelPositions) {
-      const out = wp.z > 0 ? 1 : -1;
-      const wheel = this.add(this.carRoot, new THREE.Group(), wp.x, 0.65, wp.z);
+        // 타이어(가운데가 뚫린 고리)와 림 통: 스포크 사이로 브레이크가 보인다
+        const tire = this.add(wheel, new THREE.Mesh(new THREE.TorusGeometry(WHEEL_R - 0.13, 0.13, 14, 40), this.tireRubber), 0, 0, 0);
+        tire.scale.z = tireWidth / 0.26;
+        tire.castShadow = true;
+        const barrel = this.add(
+          wheel,
+          new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, tireWidth - 0.04, 36, 1, true), this.alloyRim),
+          0,
+          0,
+          0,
+        );
+        barrel.rotation.x = Math.PI / 2;
 
-      const tire = this.add(wheel, new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.38, 32), this.tireRubber), 0, 0, 0);
-      tire.rotation.x = Math.PI / 2;
-      tire.castShadow = true;
-      const rim = this.add(wheel, new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.39, 32), this.alloyRim), 0, 0, 0);
-      rim.rotation.x = Math.PI / 2;
+        // 5-더블 스포크와 허브
+        const face = out * (tireWidth / 2 - 0.03);
+        for (let s = 0; s < 5; s++) {
+          const spoke = this.box(wheel, [0.055, 0.8, 0.035], this.alloyRim, 0, 0, face);
+          spoke.rotation.z = (s * Math.PI) / 5;
+        }
+        const hub = this.add(wheel, new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 20), this.darkTrim), 0, 0, face + out * 0.01);
+        hub.rotation.x = Math.PI / 2;
 
-      // 10-스포크
-      const spokes = this.add(wheel, new THREE.Group(), 0, 0, out * 0.18);
-      for (let s = 0; s < 10; s++) {
-        const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.04), this.alloyRim);
-        spoke.rotation.z = (s * Math.PI) / 5;
-        spokes.add(spoke);
-      }
+        // 브레이크: 디스크 로터 + 캘리퍼(상태 표시 메쉬)
+        const rotor = this.add(wheel, new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.04, 32), this.brakeRotor), 0, 0, out * 0.04);
+        rotor.rotation.x = Math.PI / 2;
+        this.box(wheel, [0.16, isFront ? 0.3 : 0.22, 0.13], caliperMat, 0.24, 0.14, out * 0.04);
 
-      // 브레이크: 디스크 로터 + 캘리퍼(상태 표시 메쉬)
-      const rotor = this.add(wheel, new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), this.brakeRotor), 0, 0, out * 0.08);
-      rotor.rotation.x = Math.PI / 2;
-      this.add(wheel, new THREE.Mesh(new THREE.BoxGeometry(0.18, wp.isFront ? 0.34 : 0.24, 0.12), caliperMat), 0.3, 0.18, out * 0.08);
-
-      // 서스펜션: 로어암 + 댐퍼 + 코일 스프링(상태 표시 메쉬), 바퀴 안쪽
-      const strut = this.add(this.carRoot, new THREE.Group(), wp.x, 0.65, wp.z - out * 0.46);
-      this.add(strut, new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.5), this.engineMetal), 0, -0.05, out * 0.1);
-      this.add(strut, new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.9, 10), this.engineMetal), 0, 0.42, 0);
-      for (let i = 0; i < 5; i++) {
-        const coil = this.add(strut, new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.032, 8, 20), springMat), 0, 0.2 + i * 0.13, 0);
-        coil.rotation.x = Math.PI / 2;
+        // 서스펜션: 로어암 + 댐퍼 + 코일 스프링(상태 표시 메쉬). 차체 중심부 안쪽에 있다
+        const strut = this.add(this.carRoot, new THREE.Group(), x, WHEEL_Y, out * (WHEEL_Z - 0.4));
+        this.box(strut, [0.14, 0.06, 0.4], this.engineMetal, 0, -0.05, out * 0.05);
+        this.add(strut, new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.66, 10), this.engineMetal), 0, 0.3, 0);
+        for (let i = 0; i < 4; i++) {
+          const coil = this.add(strut, new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.03, 8, 20), springMat), 0, 0.14 + i * 0.12, 0);
+          coil.rotation.x = Math.PI / 2;
+        }
       }
     }
   }
 
   // ── 외부에서 부르는 조작 ─────────────────────────────────────────────────
-
-  setCarColor(hex: string) {
-    this.bodyPaint.color.set(hex);
-  }
 
   setMode(mode: ViewMode) {
     this.userMode = mode;
@@ -525,17 +589,18 @@ export class Car3DVisualizer {
     this.transitionStart = performance.now();
     this.isTransitioning = true;
 
-    this.targetHoodAngle = preset.hoodOpen ? -0.65 : 0;
+    this.targetHoodAngle = preset.hoodOpen ? -0.7 : 0;
     this.applyMode();
   }
 
   private applyMode() {
     const cutaway = this.userMode === 'cutaway' || CAMERA_PRESETS[this.focus].xray;
     this.bodyPaint.transparent = cutaway;
-    this.bodyPaint.opacity = cutaway ? 0.28 : 1.0;
+    this.bodyPaint.opacity = cutaway ? 0.22 : 1.0;
     this.bodyPaint.depthWrite = !cutaway;
     this.bodyPaint.needsUpdate = true;
-    this.glass.opacity = cutaway ? 0.2 : 0.75;
+    this.glass.opacity = cutaway ? 0.15 : 0.82;
+    this.glass.depthWrite = !cutaway;
   }
 
   // ── 프레임 ──────────────────────────────────────────────────────────────

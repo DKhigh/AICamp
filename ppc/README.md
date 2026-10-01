@@ -4,7 +4,9 @@
 
 ## 실행
 
-Node.js 22.12 이상이 필요합니다. (없으면 `winget install OpenJS.NodeJS.LTS`)
+**가장 쉬운 방법**: `ppc` 폴더의 **`start-ppc.bat`**(Windows)을 더블클릭합니다. 처음이면 패키지를 설치하고, 개발 서버를 띄운 뒤 브라우저를 자동으로 엽니다. Node.js가 없으면 설치할지 물어봅니다. macOS는 `start-ppc.command`를 씁니다.
+
+직접 실행하려면 Node.js 22.12 이상이 필요합니다. (없으면 `winget install OpenJS.NodeJS.LTS`)
 
 ```bash
 cd ppc

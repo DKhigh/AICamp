@@ -12,14 +12,6 @@ export interface CarViewerItem {
   isBottleneck: boolean;
 }
 
-const PAINT_COLORS = [
-  { hex: '#f8fafc', label: '스노우 화이트 펄', swatch: '#ffffff' },
-  { hex: '#94a3b8', label: '티타늄 실버', swatch: '#94a3b8' },
-  { hex: '#1e3a8a', label: '미드나잇 블루', swatch: '#1e3a8a' },
-  { hex: '#991b1b', label: '크림슨 레드', swatch: '#991b1b' },
-  { hex: '#0f172a', label: '스텔스 블랙', swatch: '#0f172a' },
-];
-
 export function CarViewer({
   items,
   focus,
@@ -38,7 +30,6 @@ export function CarViewer({
   const [failed, setFailed] = useState(false);
   const [mode, setMode] = useState<ViewMode>('exterior');
   const [autoRotate, setAutoRotate] = useState(false);
-  const [paint, setPaint] = useState(PAINT_COLORS[0].hex);
 
   useEffect(() => {
     const container = canvasHostRef.current;
@@ -70,7 +61,6 @@ export function CarViewer({
 
   useEffect(() => vizRef.current?.setMode(mode), [mode]);
   useEffect(() => vizRef.current?.setAutoRotate(autoRotate), [autoRotate]);
-  useEffect(() => vizRef.current?.setCarColor(paint), [paint]);
 
   if (failed) {
     return (
@@ -113,22 +103,6 @@ export function CarViewer({
         >
           360° 회전
         </button>
-        <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-2 py-1.5 shadow-sm backdrop-blur">
-          {PAINT_COLORS.map((c) => (
-            <button
-              key={c.hex}
-              type="button"
-              onClick={() => setPaint(c.hex)}
-              title={c.label}
-              aria-label={`도장 색상: ${c.label}`}
-              aria-pressed={paint === c.hex}
-              className={`h-4 w-4 rounded-full border border-slate-300 transition-transform hover:scale-125 ${
-                paint === c.hex ? 'ring-2 ring-sky-400 ring-offset-1' : ''
-              }`}
-              style={{ background: c.swatch }}
-            />
-          ))}
-        </div>
       </div>
 
       {focus ? (
