@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { DisruptionModal } from './components/DisruptionModal';
-import { EmployeeConfirmModal } from './components/EmployeeField';
+import { EmployeeConfirmModal, LoginModal } from './components/EmployeeField';
 import { OrderModal } from './components/OrderModal';
 import { TopBar } from './components/TopBar';
 import { Button, Card, Spinner } from './components/ui';
@@ -90,7 +90,7 @@ function NoData() {
 }
 
 function Shell() {
-  const { state, loadError, phase } = useAppData();
+  const { state, loadError, phase, loginOpen } = useAppData();
   const [orderModal, setOrderModal] = useState<{ partCode?: string; supplierName?: string } | null>(null);
   const [disruptionModal, setDisruptionModal] = useState(false);
 
@@ -148,6 +148,8 @@ function Shell() {
         <OrderModal state={state} initialPartCode={orderModal.partCode} initialSupplierName={orderModal.supplierName} onClose={() => setOrderModal(null)} />
       )}
       {state && disruptionModal && <DisruptionModal state={state} onClose={() => setDisruptionModal(false)} />}
+      {/* 다른 창 위에 떠야 하므로 맨 뒤에 둔다 */}
+      {loginOpen && <LoginModal />}
     </UiContext.Provider>
   );
 }

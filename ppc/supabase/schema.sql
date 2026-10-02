@@ -56,7 +56,8 @@ create table customer_orders (
   id text primary key,                 -- 'CO-001'
   customer text not null,
   qty int not null check (qty > 0),
-  due_date date not null
+  due_date date not null,
+  color_code text                      -- 주문한 차량 색상 'C01' … (이미 만든 프로젝트에는 migration_order_color.sql)
 );
 
 -- 활동 기록: 누가 언제 무엇을 했는지 (발주·차질·해결·납기 추가/취소·설정 변경 …)

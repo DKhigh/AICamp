@@ -28,6 +28,13 @@ export interface Offer {
   disrupted: boolean;
 }
 
+/** 검색창 자동완성 후보: 라인 부품 이름 → 그 부품을 파는 업체 이름 → 소재 이름 (중복 없이) */
+export function searchSuggestions(state: AppState): string[] {
+  const parts = partGroups(state.lineParts).map((g) => partOf(g.code));
+  const suppliers = parts.flatMap((p) => suppliersFor(p.materialName, reference.suppliers).map((s) => s.name)).sort((a, b) => a.localeCompare(b, 'ko'));
+  return [...new Set([...parts.map((p) => p.name), ...suppliers, ...parts.map((p) => p.materialName)])];
+}
+
 /**
  * 검색어를 공백으로 나눠, 모든 낱말이 부품명·부품 코드·분류·소재·업체명·업체 코드 가운데 어딘가에 들어 있는 줄만 남긴다.
  * 검색어가 비어 있으면 전부. 부품 순서(라인 순) → 가격이 싼 순 → 납기가 빠른 순으로 정렬한다.

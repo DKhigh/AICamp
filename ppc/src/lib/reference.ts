@@ -107,7 +107,15 @@ export function demoState(baseDate: string = DEMO_BASE_DATE): AppState {
       createdAt: atLocal(shift(po.orderDate), loggedTime),
     }),
   );
-  const customerOrders = demoJson.customerOrders.map((o) => ({ id: o.id, customer: o.customer, qty: o.qty, dueDate: shift(o.dueDate) }));
+  // 주문 색상은 색 이름으로 적어 두고 Excel '차량색상'의 코드로 바꾼다 (Excel에 그 색이 없으면 색을 가리지 않는 주문)
+  const colorCodeByName = (name: string) => reference.colors.find((c) => c.name === name)?.code ?? null;
+  const customerOrders = demoJson.customerOrders.map((o) => ({
+    id: o.id,
+    customer: o.customer,
+    qty: o.qty,
+    dueDate: shift(o.dueDate),
+    colorCode: colorCodeByName(o.colorName),
+  }));
 
   const logs: ActivityLog[] = [
     ...demoJson.customerOrders.map((o) => ({
@@ -116,7 +124,7 @@ export function demoState(baseDate: string = DEMO_BASE_DATE): AppState {
       actor: o.addedBy,
       action: '납기 추가',
       target: o.id,
-      detail: `${o.customer} ${num(o.qty)}대 · 납기 ${formatMD(shift(o.dueDate))}`,
+      detail: `${o.customer} ${num(o.qty)}대 · ${o.colorName} · 납기 ${formatMD(shift(o.dueDate))}`,
     })),
     ...purchaseOrders.map((po, i) => ({
       id: `seed-${po.id}`,

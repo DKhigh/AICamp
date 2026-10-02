@@ -124,6 +124,8 @@ export interface CustomerOrder {
   customer: string;
   qty: number;
   dueDate: ISODate;
+  /** 주문한 차량 색상 (Excel '차량색상'의 색상 코드). 그 색 차체로 만든다. 없으면 색을 가리지 않는다 */
+  colorCode?: string | null;
 }
 
 /** 활동 기록: 누가 언제 무엇을 했는지. 저장하는 작업마다 한 줄씩 남긴다 */

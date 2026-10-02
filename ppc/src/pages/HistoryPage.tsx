@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmployeeConfirmModal } from '../components/EmployeeField';
-import { Badge, Button, Card, DISRUPTION_STATUS_TONE, PO_STATUS_TONE } from '../components/ui';
+import { Badge, Button, Card, DISRUPTION_STATUS_TONE, disruptionStatusLabel, PO_STATUS_TONE } from '../components/ui';
 import { formatMD } from '../lib/date';
 import { num, timeLabel, won } from '../lib/format';
 import { poAmount, poOriginalAmount, totalSpent } from '../lib/ordering';
@@ -15,7 +15,7 @@ function decisionText(d: Disruption): string {
   if (d.altPoId) {
     return `대체 발주 ${d.altSupplierName} ${num(d.altQty ?? 0)}개 (${d.altPoId}) · 원래 발주 ${d.originalPoAction}`;
   }
-  if (d.status === '기다리기') return '기다리기';
+  if (d.status === '기다리기') return '대응하지 않음 (원래 발주를 기다림)';
   if (d.status === '해결') return '대체 발주 없이 해결';
   return '결정 전';
 }
@@ -141,7 +141,7 @@ export function HistoryPage({ state }: { state: AppState }) {
                       <td className="px-2 py-2.5 text-slate-700">{d.reason}</td>
                       <td className="tabular px-2 py-2.5 text-right text-slate-900">{d.delayDays}일</td>
                       <td className="px-2 py-2.5">
-                        <Badge tone={DISRUPTION_STATUS_TONE[d.status]}>{d.status}</Badge>
+                        <Badge tone={DISRUPTION_STATUS_TONE[d.status]}>{disruptionStatusLabel(d.status)}</Badge>
                       </td>
                       <td className="px-2 py-2.5 text-slate-700">{decisionText(d)}</td>
                       <td className="py-2.5 pl-2 pr-5 text-slate-700">{d.createdBy ?? '–'}</td>

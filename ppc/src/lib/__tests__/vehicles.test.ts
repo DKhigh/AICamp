@@ -1,5 +1,6 @@
 // 출차 일정과 수리 차량
 import { describe, expect, it } from 'vitest';
+import { baseScenarios } from '../actions';
 import { demoState } from '../reference';
 import { productionParts, repairCarViews, repairCars, repairPartNeeds } from '../repairs';
 import { carSerialOf, serialOf } from '../serial';
@@ -79,6 +80,42 @@ describe('고유번호는 주문과 그 주문 안의 순번으로 정한다 (BU
   });
 });
 
+describe('주문한 색상의 차체로 만든다', () => {
+  const state = demoState();
+  const carsOf = (s: typeof state, orderId: string | null) =>
+    shipmentSchedule(s)
+      .days.flatMap((d) => d.cars)
+      .filter((c) => c.orderId === orderId);
+
+  it('시연 주문: 화이트 60 · 블랙 80 · 블루 80, 재고용 차는 남은 차체로', () => {
+    expect(state.customerOrders.map((o) => [o.id, o.colorCode])).toEqual([['CO-001', 'C01'], ['CO-002', 'C02'], ['CO-003', 'C04']]);
+    expect(new Set(carsOf(state, 'CO-001').map((c) => c.colorCode))).toEqual(new Set(['C01']));
+    expect(new Set(carsOf(state, 'CO-002').map((c) => c.colorCode))).toEqual(new Set(['C02']));
+    expect(new Set(carsOf(state, 'CO-003').map((c) => c.colorCode))).toEqual(new Set(['C04']));
+    expect(carsOf(state, 'CO-003')).toHaveLength(80);
+    // 블루 차체 80개는 CO-003이 다 쓰므로 재고용 차에는 블루가 없다
+    expect(carsOf(state, null).some((c) => c.colorCode === 'C04')).toBe(false);
+    expect(carsOf(state, null)).toHaveLength(200);
+  });
+
+  it('그 색 차체가 모자라면 그 주문은 다 만들지 못하고, 색이 있는 다음 주문을 먼저 만든다', () => {
+    // 레드 100대 주문: 레드 차체는 60개뿐이다
+    const red = { ...state, customerOrders: [{ id: 'CO-009', customer: '레드', qty: 100, dueDate: '2026-10-06', colorCode: 'C03' }, ...state.customerOrders] };
+    const { wait } = baseScenarios(red);
+    const byId = Object.fromEntries(wait.orders.map((o) => [o.id, o.doneDate]));
+    expect(byId['CO-009']).toBeNull();
+    expect(carsOf(red, 'CO-009')).toHaveLength(60);
+    // 레드가 떨어진 뒤에는 화이트 주문(CO-001)을 이어서 만든다: 60 + 60대 → 10/12 완료
+    expect(byId['CO-001']).toBe('2026-10-12');
+    expect(wait.lateOrders.map((o) => o.id)).toContain('CO-009');
+  });
+
+  it('색을 정하지 않은 주문은 재고가 가장 많은 색으로 만든다', () => {
+    const any = { ...state, customerOrders: [{ id: 'CO-001', customer: 'A', qty: 3, dueDate: '2026-10-10', colorCode: null }] };
+    expect(carsOf(any, 'CO-001').map((c) => c.colorCode)).toEqual(['C01', 'C01', 'C01']);
+  });
+});
+
 describe('출차 실적 (기준일 이전)', () => {
   const schedule = shipmentSchedule(demoState());
 
@@ -94,7 +131,9 @@ describe('출차 실적 (기준일 이전)', () => {
   it('색상은 Excel 차량색상의 색이고, 고유번호는 예정 차량과 겹치지 않는다', () => {
     const pastCars = schedule.past.flatMap((d) => d.cars);
     expect(pastCars.every((c) => COLORED_SERIAL.test(c.serial) && c.serial.startsWith(c.colorCode + '-'))).toBe(true);
-    expect(schedule.pastColors.map((c) => c.colorCode)).toEqual(['C01', 'C02', 'C03', 'C04', 'C05']);
+    // 하루는 한 납품처의 차라 색이 하나다
+    expect(schedule.past.every((d) => d.colors.length === 1 && d.colors[0].count === 20)).toBe(true);
+    expect(schedule.pastColors.every((c) => ['C01', 'C02', 'C03', 'C04', 'C05'].includes(c.colorCode))).toBe(true);
     expect(schedule.pastColors.reduce((sum, c) => sum + c.count, 0)).toBe(140);
     const all = [...pastCars, ...schedule.days.flatMap((d) => d.cars)].map((c) => c.serial.slice(4));
     expect(new Set(all).size).toBe(140 + 420);

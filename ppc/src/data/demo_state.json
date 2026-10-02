@@ -65,9 +65,9 @@
     }
   ],
   "customerOrders": [
-    { "id": "CO-001", "customer": "누리렌터카", "qty": 60, "dueDate": "2026-10-10", "addedDate": "2026-09-29", "addedBy": "박해성(ICBM-26012)", "loggedTime": "10:20" },
-    { "id": "CO-002", "customer": "온길모빌리티", "qty": 80, "dueDate": "2026-10-14", "addedDate": "2026-09-30", "addedBy": "박해성(ICBM-26012)", "loggedTime": "13:45" },
-    { "id": "CO-003", "customer": "다온물류", "qty": 80, "dueDate": "2026-10-18", "addedDate": "2026-10-01", "addedBy": "이영수(ICBM-26001)", "loggedTime": "16:30" }
+    { "id": "CO-001", "customer": "누리렌터카", "qty": 60, "dueDate": "2026-10-10", "colorName": "화이트", "addedDate": "2026-09-29", "addedBy": "박해성(ICBM-26012)", "loggedTime": "10:20" },
+    { "id": "CO-002", "customer": "온길모빌리티", "qty": 80, "dueDate": "2026-10-14", "colorName": "블랙", "addedDate": "2026-09-30", "addedBy": "박해성(ICBM-26012)", "loggedTime": "13:45" },
+    { "id": "CO-003", "customer": "다온물류", "qty": 80, "dueDate": "2026-10-18", "colorName": "블루", "addedDate": "2026-10-01", "addedBy": "이영수(ICBM-26001)", "loggedTime": "16:30" }
   ],
   "disruptionExamples": [
     { "id": "예시 1", "partCode": "P004", "supplierName": "태성모터스", "reason": "납품 지연", "delayDays": 7 },

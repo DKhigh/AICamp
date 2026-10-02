@@ -18,7 +18,7 @@ import { num, won } from './format';
 import { capacityError, orderAmount, qtyDelayOf, supplierCapacityOf } from './ordering';
 import { duplicateOrderOf, isCancellable, supplierLimitError, supplierLimitOf } from './planning';
 import { disruptedSupplierNames } from './recommend';
-import { demoState, partOf, supplierOf } from './reference';
+import { colorOf, demoState, partOf, supplierOf } from './reference';
 import { DuplicateKeyError, localStore, supabaseStore, type Row, type Store } from './store';
 import { supabase } from './supabase';
 import type {
@@ -133,12 +133,14 @@ const toCustomerOrder = (r: Row): CustomerOrder => ({
   customer: r.customer as string,
   qty: r.qty as number,
   dueDate: r.due_date as string,
+  colorCode: (r.color_code as string | null | undefined) ?? null,
 });
 const fromCustomerOrder = (o: CustomerOrder): Row => ({
   id: o.id,
   customer: o.customer,
   qty: o.qty,
   due_date: o.dueDate,
+  color_code: o.colorCode ?? null,
 });
 
 const toLog = (r: Row): ActivityLog => ({
@@ -239,6 +241,25 @@ export function createApi(store: Store, clock: () => string = today) {
     }
   }
 
+  /**
+   * 자동차 주문 저장. DB에 color_code 열이 아직 없으면(supabase/migration_order_color.sql 실행 전)
+   * 색상 없이 저장한다: 그 주문은 색을 가리지 않는 주문이 되고, 화면이 SQL 실행을 안내한다.
+   */
+  async function insertCustomerOrders(orders: CustomerOrder[]): Promise<void> {
+    try {
+      await store.insert('customer_orders', orders.map(fromCustomerOrder));
+    } catch (e) {
+      if (!(e instanceof Error) || !e.message.includes('color_code')) throw e;
+      await store.insert(
+        'customer_orders',
+        orders.map((o) => {
+          const { color_code: _dropped, ...row } = fromCustomerOrder(o);
+          return row;
+        }),
+      );
+    }
+  }
+
   /** [데이터 초기화]: 명단에 있는 사원번호가 있어야 한다 (§5 C-1) */
   async function resetDemoData(employeeNo: string): Promise<void> {
     const actor = authorize(employeeNo);
@@ -260,7 +281,7 @@ export function createApi(store: Store, clock: () => string = today) {
     const demo = demoState(clock());
     await store.insert('settings', [fromSettings(demo.settings)]);
     await store.insert('line_parts', demo.lineParts.map(fromLinePart));
-    await store.insert('customer_orders', demo.customerOrders.map(fromCustomerOrder));
+    await insertCustomerOrders(demo.customerOrders);
     await store.insert('purchase_orders', demo.purchaseOrders.map(fromPurchaseOrder));
     try {
       await store.clear('activity_log');
@@ -372,7 +393,7 @@ export function createApi(store: Store, clock: () => string = today) {
         existing.id,
         `${part.name} · ${input.supplierName} · ${input.reason} · +${input.delayDays}일 (합계 ${built.disruption.delayDays}일) · ` +
           built.delayedPos.map((po) => `${po.id} 도착 ${formatMD(po.expectedArrival)}`).join(', ') +
-          (existing.status === '기다리기' ? ' · 기다리기 결정을 다시 검토' : ''),
+          (existing.status === '기다리기' ? " · '대응하지 않음' 결정을 다시 검토" : ''),
       );
       return { disruption: built.disruption, extended: true };
     }
@@ -478,7 +499,7 @@ export function createApi(store: Store, clock: () => string = today) {
     if (!disruption) throw new Error(`차질을 찾을 수 없습니다: ${input.disruptionId}`);
     if (disruption.status !== '발생') throw new Error('이미 결정이 끝난 차질입니다. 새로고침해서 확인하세요.');
     await store.update('disruptions', disruption.id, { status: '기다리기' });
-    await log(actor, '기다리기 결정', disruption.id, `${partOf(disruption.partCode).name} · ${disruption.supplierName} · ${disruption.delayDays}일 지연을 기다리기로 함`);
+    await log(actor, '대응하지 않음', disruption.id, `${partOf(disruption.partCode).name} · ${disruption.supplierName} · ${disruption.delayDays}일 지연에 대체 발주 없이 원래 발주를 기다리기로 함`);
   }
 
   /**
@@ -542,11 +563,20 @@ export function createApi(store: Store, clock: () => string = today) {
   }
 
   /** 납기 추가: 자동차 주문을 하나 더 넣는다. 명단에 있는 사원번호가 있어야 한다 */
-  async function addCustomerOrder(input: { customer: string; qty: number; dueDate: string; employeeNo: string }): Promise<CustomerOrder> {
+  async function addCustomerOrder(input: {
+    customer: string;
+    qty: number;
+    dueDate: string;
+    /** 납품할 차량 색상 (Excel '차량색상'의 색상 코드) */
+    colorCode?: string | null;
+    employeeNo: string;
+  }): Promise<CustomerOrder> {
     const customer = input.customer.trim();
     if (customer === '') throw new Error('고객 이름을 입력하세요.');
     assertValid(qtyError(input.qty));
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) throw new Error('납기 날짜를 선택하세요.');
+    const colorCode = input.colorCode ?? null;
+    if (colorCode !== null && !colorOf(colorCode)) throw new Error(`차량 색상을 찾을 수 없습니다: ${colorCode}`);
     const actor = authorize(input.employeeNo);
     const order = await withFreshId(async () => {
       const state = await freshState();
@@ -557,11 +587,12 @@ export function createApi(store: Store, clock: () => string = today) {
         customer,
         qty: input.qty,
         dueDate: input.dueDate,
+        colorCode,
       };
-      await store.insert('customer_orders', [fromCustomerOrder(built)]);
+      await insertCustomerOrders([built]);
       return built;
     });
-    await log(actor, '납기 추가', order.id, `${order.customer} ${num(order.qty)}대 · 납기 ${formatMD(order.dueDate)}`);
+    await log(actor, '납기 추가', order.id, `${order.customer} ${num(order.qty)}대${colorCode ? ` · ${colorOf(colorCode)!.name}` : ''} · 납기 ${formatMD(order.dueDate)}`);
     return order;
   }
 

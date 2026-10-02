@@ -2,7 +2,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { getApi, type Api } from '../lib/api';
 import { AUTO_REFRESH_MS } from '../lib/constants';
+import { findEmployee, type Employee } from '../lib/employees';
 import type { AppState } from '../lib/types';
+
+const SESSION_KEY = 'ppc.session.employeeNo';
+
+/** 이 탭에서 로그인해 둔 사원 (탭을 닫으면 풀린다) */
+function readSession(): Employee | null {
+  try {
+    return findEmployee(window.sessionStorage.getItem(SESSION_KEY));
+  } catch {
+    return null;
+  }
+}
 
 export interface Toast {
   id: number;
@@ -24,6 +36,13 @@ interface AppDataValue {
    * 저장이 끝나기 전에 또 부르면(버튼을 연달아 누른 경우) 두 번째 호출은 아무것도 하지 않고 undefined를 돌려준다.
    */
   save: <T>(action: (api: Api) => Promise<T>) => Promise<T | undefined>;
+  /** 로그인한 사원. 저장하는 작업은 로그인해야 할 수 있고, 로그인한 뒤에는 사원번호를 다시 묻지 않는다 */
+  session: Employee | null;
+  /** 명단에 있는 사원번호면 로그인하고 true */
+  login: (employeeNo: string) => boolean;
+  logout: () => void;
+  loginOpen: boolean;
+  setLoginOpen: (open: boolean) => void;
   toasts: Toast[];
   notify: (kind: Toast['kind'], text: string) => void;
   dismissToast: (id: number) => void;
@@ -42,6 +61,28 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const loadSeq = useRef(0);
   const seeding = useRef<Promise<void> | null>(null);
   const saving = useRef(false);
+  const [session, setSession] = useState<Employee | null>(readSession);
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  const login = useCallback((employeeNo: string) => {
+    const employee = findEmployee(employeeNo);
+    if (!employee) return false;
+    setSession(employee);
+    try {
+      window.sessionStorage.setItem(SESSION_KEY, employee.no);
+    } catch {
+      // 저장하지 못해도 이 화면을 닫기 전까지는 로그인 상태다
+    }
+    return true;
+  }, []);
+  const logout = useCallback(() => {
+    setSession(null);
+    try {
+      window.sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      // 무시
+    }
+  }, []);
 
   const dismissToast = useCallback((id: number) => {
     setToasts((list) => list.filter((t) => t.id !== id));
@@ -127,6 +168,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     refreshing,
     refresh,
     save,
+    session,
+    login,
+    logout,
+    loginOpen,
+    setLoginOpen,
     toasts,
     notify,
     dismissToast,

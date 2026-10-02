@@ -204,5 +204,8 @@ export function staleDataReasons(state: AppState): string[] {
   const future = state.purchaseOrders.some((po) => po.orderDate > state.settings.baseDate) ||
     state.disruptions.some((d) => d.detectedDate > state.settings.baseDate);
   if (future) reasons.push('기준일(오늘)보다 뒤 날짜로 입력된 발주·차질 기록이 있습니다');
+  if (state.customerOrders.some((o) => !o.colorCode)) {
+    reasons.push('차량 색상이 없는 자동차 주문이 있습니다 (Supabase에서 supabase/migration_order_color.sql을 실행한 뒤 초기화하세요)');
+  }
   return reasons;
 }

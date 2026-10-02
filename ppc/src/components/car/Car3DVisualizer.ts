@@ -31,7 +31,8 @@ interface CameraPreset {
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 const CAMERA_PRESETS: Record<FocusKey, CameraPreset> = {
-  all: { pos: v(-9.0, 4.4, 9.8), target: v(0.1, 0.7, 0), hoodOpen: false, xray: false },
+  // 차가 가로로 놓였을 때도 앞뒤가 잘리지 않도록 넉넉히 떨어져서 본다
+  all: { pos: v(-12.6, 6.0, 13.7), target: v(0.1, 0.6, 0), hoodOpen: false, xray: false },
   engine: { pos: v(-5.6, 3.1, 3.0), target: v(-2.75, 0.95, 0), hoodOpen: true, xray: true },
   transmission: { pos: v(-3.0, 3.3, 3.9), target: v(-1.5, 0.8, 0), hoodOpen: false, xray: true },
   brake: { pos: v(-3.3, 0.9, 3.6), target: v(-2.6, 0.62, 1.5), hoodOpen: false, xray: false },

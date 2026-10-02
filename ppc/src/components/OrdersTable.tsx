@@ -2,7 +2,8 @@
 import { formatMD } from '../lib/date';
 import { num } from '../lib/format';
 import type { OrderForecast } from '../lib/planning';
-import { Button } from './ui';
+import { colorOf } from '../lib/reference';
+import { Button, ColorSwatch } from './ui';
 
 export function OrderStatus({ order }: { order: OrderForecast }) {
   if (order.lateDays === null) {
@@ -20,11 +21,12 @@ export function OrdersTable({ orders, onRemove }: { orders: OrderForecast[]; onR
   }
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[560px] text-left text-[13px]">
+      <table className="w-full min-w-[640px] text-left text-[13px]">
         <thead className="border-b border-slate-100 text-[11px] font-semibold text-slate-500">
           <tr>
             <th className="py-2 pl-5 pr-2">주문번호</th>
             <th className="px-2 py-2">고객</th>
+            <th className="px-2 py-2">색상</th>
             <th className="px-2 py-2 text-right">수량</th>
             <th className="px-2 py-2">납기</th>
             <th className="px-2 py-2">예상 완료일</th>
@@ -37,6 +39,16 @@ export function OrdersTable({ orders, onRemove }: { orders: OrderForecast[]; onR
             <tr key={o.id}>
               <td className="py-2.5 pl-5 pr-2 font-mono font-semibold text-slate-900">{o.id}</td>
               <td className="px-2 py-2.5 text-slate-900">{o.customer}</td>
+              <td className="whitespace-nowrap px-2 py-2.5 text-slate-700">
+                {o.colorCode ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <ColorSwatch code={o.colorCode} />
+                    {colorOf(o.colorCode)?.name ?? o.colorCode}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">색 무관</span>
+                )}
+              </td>
               <td className="tabular px-2 py-2.5 text-right text-slate-900">{num(o.qty)}대</td>
               <td className="tabular px-2 py-2.5 text-slate-700">{formatMD(o.dueDate)}</td>
               <td className="tabular px-2 py-2.5 font-semibold text-slate-900">{o.doneDate ? formatMD(o.doneDate) : '–'}</td>

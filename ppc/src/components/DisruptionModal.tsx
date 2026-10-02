@@ -10,7 +10,7 @@ import { disruptionExamples, partOf } from '../lib/reference';
 import type { AppState, DisruptionExample } from '../lib/types';
 import { useAppData } from '../state/AppData';
 import { EmployeeField } from './EmployeeField';
-import { Button, Field, INPUT_CLASS, Modal, parseIntStrict } from './ui';
+import { Button, disruptionStatusLabel, Field, INPUT_CLASS, Modal, parseIntStrict } from './ui';
 
 export function DisruptionModal({ state, onClose }: { state: AppState; onClose: () => void }) {
   const { save, notify } = useAppData();
@@ -64,11 +64,15 @@ export function DisruptionModal({ state, onClose }: { state: AppState; onClose: 
     const result = await save((api) => api.registerDisruption({ partCode, supplierName, reason, delayDays, employeeNo: employeeNo.trim() }));
     setSaving(false);
     if (result) {
-      if (result.extended) {
-        notify('success', `${result.disruption.id}의 지연을 ${delayDays}일 연장했습니다. (합계 ${result.disruption.delayDays}일)`);
-      }
+      notify(
+        'success',
+        result.extended
+          ? `${result.disruption.id}의 지연을 ${delayDays}일 연장했습니다. (합계 ${result.disruption.delayDays}일)`
+          : `차질 ${result.disruption.id}을(를) 등록했습니다. 대시보드 위쪽의 [대응하기]에서 대응할 수 있습니다.`,
+      );
       onClose();
-      navigate(`/disruptions/${result.disruption.id}`);
+      // 대응 화면으로 바로 가지 않는다: 대시보드에서 영향을 먼저 본다
+      navigate('/');
     }
   }
 
@@ -190,12 +194,12 @@ export function DisruptionModal({ state, onClose }: { state: AppState; onClose: 
         ) : existing ? (
           <p role="alert" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
             <strong>
-              이미 진행 중인 차질 {existing.id}({existing.delayDays}일 지연 · {existing.status})이 있습니다.
+              이미 진행 중인 차질 {existing.id}({existing.delayDays}일 지연 · {disruptionStatusLabel(existing.status)})이 있습니다.
             </strong>{' '}
             새 차질을 만들지 않고 {existing.id}의 지연을 연장합니다
             {totalDays !== null && !delayProblem && ` (${existing.delayDays}일 → ${totalDays}일)`}. 발주{' '}
             <strong>{targets.map((po) => po.id).join(', ')}</strong>의 도착 예정일이 입력한 일수만큼 더 밀리고, 연장한 내용은 이력에 남습니다.
-            {existing.status === '기다리기' && ' 기다리기로 결정했던 차질은 다시 결정해야 합니다.'}
+            {existing.status === '기다리기' && " '대응하지 않음'으로 결정했던 차질은 다시 결정해야 합니다."}
           </p>
         ) : (
           <p className="rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-600">

@@ -10,6 +10,7 @@ import { CustomerOrdersCard } from '../components/dashboard/CustomerOrdersCard';
 import { PoTable } from '../components/PoTable';
 import { Badge, Button, Card, ColorSwatch, GradeBadge, PART_STATUS_TONE } from '../components/ui';
 import { cautionOf } from '../lib/cautions';
+import { LOW_COVERAGE_DAYS } from '../lib/constants';
 import { dashboardModel, type DashboardModel, type PartRow } from '../lib/dashboard';
 import { ddayLabel, num, won } from '../lib/format';
 import { gradeOf } from '../lib/recommend';
@@ -28,10 +29,10 @@ function DisruptionBanner({ disruption }: { disruption: Disruption }) {
     <div
       role="alert"
       className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-3 ${
-        responding ? 'border-blue-200 bg-blue-50' : 'border-red-200 bg-red-50'
+        responding ? 'border-blue-200 bg-blue-50' : 'border-red-400 bg-red-200'
       }`}
     >
-      <p className={`text-sm font-semibold ${responding ? 'text-blue-800' : 'text-red-700'}`}>
+      <p className={`text-sm font-semibold ${responding ? 'text-blue-800' : 'text-red-900'}`}>
         {responding ? (
           <>
             대응 중: {part.name}({part.code}) · {disruption.supplierName} {disruption.delayDays}일 지연 → {disruption.altSupplierName}에
@@ -40,7 +41,7 @@ function DisruptionBanner({ disruption }: { disruption: Disruption }) {
         ) : (
           <>
             ⚠ 진행 중 차질: {part.name}({part.code}) · {disruption.supplierName} · {disruption.delayDays}일 지연
-            {disruption.status === '기다리기' && ' (기다리기로 결정)'}
+            {disruption.status === '기다리기' && ' (대응하지 않음으로 결정)'}
           </>
         )}
       </p>
@@ -52,6 +53,33 @@ function DisruptionBanner({ disruption }: { disruption: Disruption }) {
       >
         {responding ? '상세 보기 →' : '대응하기 →'}
       </Link>
+    </div>
+  );
+}
+
+/**
+ * 재고 부족 경고 (노란색, 차질 배너 아래). 필요 재고는 차를 LOW_COVERAGE_DAYS(5)일 동안 차질 없이 만들 수 있는 양이고,
+ * 생산에 쓸 수 있는 재고(수리용 제외)가 그보다 적은 부품을 모아서 보여 준다. 색상별 차체는 다섯 색을 합쳐서 본다.
+ */
+function LowStockBanner({ rows, dailyCapacity }: { rows: PartRow[]; dailyCapacity: number }) {
+  const low = rows
+    .map((row) => ({ row, need: LOW_COVERAGE_DAYS * dailyCapacity * row.linePart.qtyPerCar }))
+    .filter(({ row, need }) => row.available < need);
+  if (low.length === 0) return null;
+  return (
+    <div role="alert" className="rounded-xl border border-amber-300 bg-amber-100 px-5 py-3 text-sm text-amber-900">
+      <p className="font-bold">
+        ⚠ 재고 부족 주의: {low.length}개 부품의 재고가 {LOW_COVERAGE_DAYS}일 생산분보다 적습니다 (하루 {num(dailyCapacity)}대 기준)
+      </p>
+      <ul className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-[13px]">
+        {low.map(({ row, need }) => (
+          <li key={row.part.code}>
+            <strong>{row.part.name}</strong> 생산용 {num(row.available)}개 ({row.coverage.toFixed(1)}일분) · 필요 {num(need)}개 ·{' '}
+            <strong>{num(need - row.available)}개 부족</strong>
+            {row.nextPo && row.nextDday !== null ? ` · 다음 입고 ${ddayLabel(row.nextDday)} +${num(row.nextPo.qty)}개` : ' · 입고 예정 없음'}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -237,6 +265,8 @@ export function Dashboard({ state }: { state: AppState }) {
         <DisruptionBanner key={d.id} disruption={d} />
       ))}
 
+      <LowStockBanner rows={model.parts} dailyCapacity={state.settings.dailyCapacity} />
+
       <KpiRow kpi={model.kpi} />
 
       <Card
@@ -263,7 +293,8 @@ export function Dashboard({ state }: { state: AppState }) {
             </Suspense>
           </div>
           <div className="grid grid-cols-2 content-start gap-3">
-            {model.parts.map((row) => {
+            {/* 한 칸짜리 부품 카드를 먼저 놓고, 두 칸을 쓰는 색상별 차체 카드는 맨 아래에 둔다 */}
+            {[...model.parts.filter((row) => !row.variants), ...model.parts.filter((row) => row.variants)].map((row) => {
               const common = {
                 row,
                 selected: focusCode === row.part.code,

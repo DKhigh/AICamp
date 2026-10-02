@@ -1,21 +1,23 @@
 // 상단 바 (DESIGN.md §5 C-1)
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { formatWithWeekday } from '../lib/date';
+import { searchSuggestions } from '../lib/search';
 import { useAppData } from '../state/AppData';
 import { useUi } from '../state/Ui';
 import { EmployeeConfirmModal } from './EmployeeField';
-import { Spinner } from './ui';
 
 const HEADER_BUTTON =
   'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-slate-200 transition-colors hover:bg-white/20 hover:text-white disabled:opacity-50';
 
 export function TopBar() {
-  const { api, state, refresh, refreshing, save, notify } = useAppData();
+  const { api, state, save, notify, session, logout, setLoginOpen } = useAppData();
   const { openOrder, openDisruption } = useUi();
   const navigate = useNavigate();
   const [resetOpen, setResetOpen] = useState(false);
   const [query, setQuery] = useState('');
+  // 검색 자동완성 후보: 라인 부품 이름, 그 부품을 파는 업체, 소재
+  const suggestions = useMemo(() => (state ? searchSuggestions(state) : []), [state?.lineParts]);
 
   /** 사원번호를 확인한 뒤 초기화한다 */
   async function reset(employeeNo: string): Promise<boolean> {
@@ -90,11 +92,23 @@ export function TopBar() {
           <input
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              // 자동완성 목록에서 고르면 바로 검색한다
+              if (suggestions.includes(e.target.value)) navigate(`/search?q=${encodeURIComponent(e.target.value)}`);
+            }}
             placeholder="부품·업체 검색 (예: 엔진, 대성메탈)"
             aria-label="발주 가능한 부품·업체 검색"
+            list="search-suggestions"
+            autoComplete="off"
             className="w-full rounded-l-md border border-white/15 bg-white/10 px-3 py-1.5 text-[13px] text-white outline-none placeholder:text-slate-400 focus:border-sky-400 focus:bg-white/15"
           />
+          {/* 자동완성: '대성'을 치면 대성메탈·대성정밀이 뜬다 */}
+          <datalist id="search-suggestions">
+            {suggestions.map((word) => (
+              <option key={word} value={word} />
+            ))}
+          </datalist>
           <button type="submit" className="whitespace-nowrap rounded-r-md border border-l-0 border-white/15 bg-white/15 px-3 py-1.5 text-[13px] font-semibold text-slate-100 hover:bg-white/25">
             검색
           </button>
@@ -112,9 +126,15 @@ export function TopBar() {
           >
             ⚠ 차질 발생
           </button>
-          <button type="button" className={HEADER_BUTTON} onClick={() => void refresh()} disabled={refreshing} title="DB를 다시 읽습니다 (10초마다 자동)">
-            {refreshing ? <Spinner /> : '⟳'} 새로고침
-          </button>
+          {session ? (
+            <button type="button" className={HEADER_BUTTON} onClick={logout} title={`${session.name} · ${session.dept} — 누르면 로그아웃합니다`}>
+              <span className="text-emerald-300">●</span> {session.name} · 로그아웃
+            </button>
+          ) : (
+            <button type="button" className={`${HEADER_BUTTON} border-sky-400/60 text-white`} onClick={() => setLoginOpen(true)}>
+              로그인
+            </button>
+          )}
           <button type="button" className={HEADER_BUTTON} onClick={() => setResetOpen(true)}>
             데이터 초기화
           </button>

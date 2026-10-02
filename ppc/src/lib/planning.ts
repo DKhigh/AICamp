@@ -226,6 +226,20 @@ export interface DayRow {
   kind: DayKind;
   /** 그날 투입한 차의 색상별 대수 (색상 코드 순). 색상별 차체가 없으면 빈 배열 */
   colors: ColorCount[];
+  /** 그날 투입한 차 한 대씩: 어떤 색 차체를 썼고 어느 주문의 차인지 */
+  cars: SimCar[];
+}
+export interface SimCar {
+  colorCode: string | null;
+  /** 이 차가 채우는 자동차 주문. 주문에 배정되지 않은 차(재고용)는 null */
+  orderId: string | null;
+}
+/** 만들어야 하는 차: 주문 한 건. 납기가 빠른 순으로 넘긴다 */
+export interface Demand {
+  id: string;
+  qty: number;
+  /** 주문한 차량 색상. 그 색 차체가 있어야 만들 수 있다. null이면 색을 가리지 않는다 */
+  colorCode: string | null;
 }
 export interface ColorCount {
   colorCode: string;
@@ -242,6 +256,8 @@ export interface SimResult {
   totalInput: number;
   /** 기간 종료 시 남는 부품 재고 */
   endStock: Stock;
+  /** 주문번호 → 그 주문의 마지막 차가 완성되는 날. 기간 안에 다 만들지 못하면 null */
+  orderDone: Record<string, ISODate | null>;
 }
 
 export type ArrivalBasis = 'planned' | 'expected';
@@ -255,45 +271,83 @@ export function arrivalsFromPos(pos: PurchaseOrder[], basis: ArrivalBasis): Arri
   }));
 }
 
-export function simulate(s: Settings, lineParts: LinePart[], arrivals: Arrival[]): SimResult {
+/**
+ * 하루씩 투입을 계산한다. demand(주문, 납기 빠른 순)를 주면 차 한 대마다 주문을 배정하고,
+ * 색상별 차체는 그 주문이 요구하는 색을 쓴다:
+ * - 그 색 차체가 없으면 그 주문의 차는 만들 수 없다 → 색이 있는 다음 주문의 차를 먼저 만든다
+ * - 주문이 색을 가리지 않거나 주문 수량을 다 채운 뒤(재고용)에는 재고가 가장 많은 색을 쓴다
+ */
+export function simulate(s: Settings, lineParts: LinePart[], arrivals: Arrival[], demand: Demand[] = []): SimResult {
   const stock = stockOnHand(lineParts);
   const groups = partGroups(lineParts);
+  // 색상별 차체처럼 한 대에 그중 하나만 쓰는 묶음과, 나머지 부품
+  const colorGroup = groups.find((g) => g.parts.some((p) => colorCodeOf(p.partCode) !== null)) ?? null;
+  const plain = lineParts.filter((p) => !colorGroup || !colorGroup.parts.includes(p));
+  const remaining = demand.map((d) => d.qty);
+  const orderDone: Record<string, ISODate | null> = Object.fromEntries(demand.map((d) => [d.id, d.qty === 0 ? s.baseDate : null]));
   const completions = new Map<ISODate, number>();
   const days: DayRow[] = [];
   let totalInput = 0;
 
+  /** 재고가 가장 많은 색의 차체 (없으면 null) */
+  const mostStocked = (): LinePart | null => {
+    let pick: LinePart | null = null;
+    for (const p of colorGroup?.parts ?? []) {
+      if (carsFromPart(p, stock) > 0 && (!pick || carsFromPart(p, stock) > carsFromPart(pick, stock))) pick = p;
+    }
+    return pick;
+  };
+
   for (let i = 0; i < s.horizonDays; i++) {
     const d = addDays(s.baseDate, i);
+    const done = addDays(d, s.leadTimeDays);
     // 1) 그날 도착분 입고. 예정일이 기준일보다 지났는데 미입고면 기준일에 들어온 것으로 본다
     for (const a of arrivals) {
       const arriveOn = a.date < s.baseDate ? s.baseDate : a.date;
       if (arriveOn === d && a.partCode in stock) stock[a.partCode] += a.qty;
     }
-    // 2) 투입 대수
-    const input = Math.min(s.dailyCapacity, buildable(lineParts, stock));
-    const bottleneck = input < s.dailyCapacity ? (bottleneckOf(lineParts, stock)?.partCode ?? null) : null;
-    // 3) 부품 소모. 색상별 차체는 한 대마다 재고가 가장 많은 색을 쓴다 → 그 색의 차가 된다
-    const colorCount = new Map<string, number>();
-    for (const g of groups) {
-      if (g.parts.length === 1) {
-        stock[g.parts[0].partCode] -= input * g.parts[0].qtyPerCar;
-        continue;
-      }
-      for (let car = 0; car < input; car++) {
-        let pick = g.parts[0];
-        for (const p of g.parts) {
-          if (carsFromPart(p, stock) > carsFromPart(pick, stock)) pick = p;
+    // 2) 차체를 뺀 부품으로 만들 수 있는 대수
+    const limit = Math.min(s.dailyCapacity, plain.length > 0 ? buildable(plain, stock) : s.dailyCapacity);
+    // 3) 차 한 대씩: 주문을 정하고 그 색 차체를 쓴다
+    const cars: SimCar[] = [];
+    for (let k = 0; k < limit; k++) {
+      let body: LinePart | null = null;
+      let orderIndex = -1;
+      if (colorGroup) {
+        for (let j = 0; j < demand.length && !body; j++) {
+          if (remaining[j] <= 0) continue;
+          const wanted = demand[j].colorCode;
+          const candidate = wanted === null ? mostStocked() : (colorGroup.parts.find((p) => colorCodeOf(p.partCode) === wanted) ?? null);
+          if (candidate && carsFromPart(candidate, stock) > 0) {
+            body = candidate;
+            orderIndex = j;
+          }
         }
-        stock[pick.partCode] -= pick.qtyPerCar;
-        const color = colorCodeOf(pick.partCode);
-        if (color) colorCount.set(color, (colorCount.get(color) ?? 0) + 1);
+        // 지금 만들 수 있는 주문이 없으면 재고용으로 만든다
+        if (!body) body = mostStocked();
+        if (!body) break; // 차체가 하나도 없다
+        stock[body.partCode] -= body.qtyPerCar;
+      } else {
+        orderIndex = remaining.findIndex((r) => r > 0);
       }
+      if (orderIndex >= 0) {
+        remaining[orderIndex] -= 1;
+        if (remaining[orderIndex] === 0) orderDone[demand[orderIndex].id] = done;
+      }
+      cars.push({ colorCode: body ? colorCodeOf(body.partCode) : null, orderId: orderIndex >= 0 ? demand[orderIndex].id : null });
     }
+    const input = cars.length;
+    const bottleneck =
+      input >= s.dailyCapacity ? null : input < limit && colorGroup ? colorGroup.code : (bottleneckOf(plain, stock)?.partCode ?? colorGroup?.code ?? null);
+    // 4) 나머지 부품 소모
+    for (const p of plain) stock[p.partCode] -= input * p.qtyPerCar;
+
+    const colorCount = new Map<string, number>();
+    for (const car of cars) if (car.colorCode) colorCount.set(car.colorCode, (colorCount.get(car.colorCode) ?? 0) + 1);
     const colors = [...colorCount.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([colorCode, count]) => ({ colorCode, count }));
-    // 4) 완성 예약
-    const done = addDays(d, s.leadTimeDays);
+    // 5) 완성 예약
     completions.set(done, (completions.get(done) ?? 0) + input);
     totalInput += input;
     days.push({
@@ -303,10 +357,11 @@ export function simulate(s: Settings, lineParts: LinePart[], arrivals: Arrival[]
       bottleneck,
       kind: input === s.dailyCapacity ? '정상' : input === 0 ? '정지' : '감산',
       colors,
+      cars,
     });
   }
 
-  // 5) 누적 완성: baseDate ~ baseDate + horizonDays - 1 + leadTimeDays
+  // 6) 누적 완성: baseDate ~ baseDate + horizonDays - 1 + leadTimeDays
   const cumulative: CumRow[] = [];
   let cum = 0;
   for (let i = 0; i < s.horizonDays + s.leadTimeDays; i++) {
@@ -316,7 +371,7 @@ export function simulate(s: Settings, lineParts: LinePart[], arrivals: Arrival[]
     cumulative.push({ date: d, completed, cum });
   }
 
-  return { days, cumulative, totalInput, endStock: stock };
+  return { days, cumulative, totalInput, endStock: stock, orderDone };
 }
 
 /** 그 날짜까지의 누적 완성 대수. 기간 밖이면 가장 가까운 끝 값 */
@@ -340,14 +395,17 @@ export interface OrderForecast extends CustomerOrder {
   lateDays: number | null;
 }
 
-export function forecastOrders(orders: CustomerOrder[], cumulative: CumRow[]): OrderForecast[] {
-  const sorted = [...orders].sort((a, b) =>
-    a.dueDate === b.dueDate ? a.id.localeCompare(b.id) : a.dueDate < b.dueDate ? -1 : 1,
-  );
+/** 납기가 빠른 순 (같으면 주문번호 순). 이 순서로 차를 배정한다 */
+export function sortOrdersByDue<T extends CustomerOrder>(orders: T[]): T[] {
+  return [...orders].sort((a, b) => (a.dueDate === b.dueDate ? a.id.localeCompare(b.id) : a.dueDate < b.dueDate ? -1 : 1));
+}
+
+/** 시뮬레이션이 주문마다 계산한 완료일로 납기 충족 여부를 만든다 */
+export function forecastOrders(orders: CustomerOrder[], orderDone: Record<string, ISODate | null>): OrderForecast[] {
   let need = 0;
-  return sorted.map((o) => {
+  return sortOrdersByDue(orders).map((o) => {
     need += o.qty;
-    const doneDate = cumulative.find((row) => row.cum >= need)?.date ?? null;
+    const doneDate = orderDone[o.id] ?? null;
     return { ...o, cumNeed: need, doneDate, lateDays: doneDate ? diffDays(doneDate, o.dueDate) : null };
   });
 }
@@ -405,8 +463,9 @@ export function evaluateScenario(
   arrivals: Arrival[],
   normalTotalInput?: number,
 ): ScenarioOutcome {
-  const sim = simulate(s, lineParts, arrivals);
-  const forecast = forecastOrders(orders, sim.cumulative);
+  const demand = sortOrdersByDue(orders).map((o): Demand => ({ id: o.id, qty: o.qty, colorCode: o.colorCode ?? null }));
+  const sim = simulate(s, lineParts, arrivals, demand);
+  const forecast = forecastOrders(orders, sim.orderDone);
   const stopDates = sim.days.filter((d) => d.kind === '정지').map((d) => d.date);
   const reducedDates = sim.days.filter((d) => d.kind === '감산').map((d) => d.date);
   const last = forecast[forecast.length - 1];

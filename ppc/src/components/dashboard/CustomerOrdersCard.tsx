@@ -6,6 +6,7 @@ import { addDays, formatMD } from '../../lib/date';
 import { employeeError } from '../../lib/employees';
 import { num } from '../../lib/format';
 import type { OrderForecast } from '../../lib/planning';
+import { reference } from '../../lib/reference';
 import type { AppState } from '../../lib/types';
 import { useAppData } from '../../state/AppData';
 import { EmployeeConfirmModal, EmployeeField } from '../EmployeeField';
@@ -20,6 +21,9 @@ function AddOrderModal({ state, onClose }: { state: AppState; onClose: () => voi
   const [dueDate, setDueDate] = useState(addDays(baseDate, 14));
   const [employeeNo, setEmployeeNo] = useState('');
   const [saving, setSaving] = useState(false);
+  // 납품할 차량 색상 (Excel '차량색상'). 그 색 차체로 만든다
+  const [colorCode, setColorCode] = useState(reference.colors[0]?.code ?? '');
+  const bodyStock = state.lineParts.find((p) => p.partCode.endsWith(`-${colorCode}`))?.onHand ?? null;
 
   const qty = parseIntStrict(qtyText);
   const qtyProblem = qtyText === '' ? null : qtyError(qty);
@@ -28,8 +32,8 @@ function AddOrderModal({ state, onClose }: { state: AppState; onClose: () => voi
 
   // 저장하기 전에 이 주문이 납기를 맞출 수 있는지, 다른 주문을 밀어내는지 계산해 경고한다
   const preview = useMemo(
-    () => (qtyText !== '' && !qtyProblem && !dueProblem ? previewNewOrder(state, { qty, dueDate }) : null),
-    [state, qty, qtyText, qtyProblem, dueProblem, dueDate],
+    () => (qtyText !== '' && !qtyProblem && !dueProblem ? previewNewOrder(state, { qty, dueDate, colorCode: colorCode || null }) : null),
+    [state, qty, qtyText, qtyProblem, dueProblem, dueDate, colorCode],
   );
   const warnings: string[] = [];
   if (preview) {
@@ -41,7 +45,8 @@ function AddOrderModal({ state, onClose }: { state: AppState; onClose: () => voi
     }
     if (mine.lateDays === null) {
       warnings.push(
-        `예측 기간(${formatMD(preview.periodEnd)}까지) 안에 완료되지 않습니다. 그때까지 만들 수 있는 차는 모두 ${num(preview.periodTotal)}대이고, 이 주문까지 필요한 양은 ${num(mine.cumNeed)}대입니다.`,
+        `예측 기간(${formatMD(preview.periodEnd)}까지) 안에 완료되지 않습니다. 그때까지 만들 수 있는 차는 모두 ${num(preview.periodTotal)}대이고, 이 주문까지 필요한 양은 ${num(mine.cumNeed)}대입니다.` +
+          (bodyStock !== null && qty > bodyStock ? ` 이 색 차체는 ${num(bodyStock)}개뿐이라 차체 발주가 필요합니다.` : ''),
       );
     } else if (mine.lateDays > 0) {
       warnings.push(`예상 완료일은 ${formatMD(mine.doneDate!)}입니다. 납기 ${formatMD(dueDate)}보다 ${mine.lateDays}일 늦습니다.`);
@@ -56,7 +61,7 @@ function AddOrderModal({ state, onClose }: { state: AppState; onClose: () => voi
   async function submit() {
     if (!canSave) return;
     setSaving(true);
-    const order = await save((api) => api.addCustomerOrder({ customer, qty, dueDate, employeeNo: employeeNo.trim() }));
+    const order = await save((api) => api.addCustomerOrder({ customer, qty, dueDate, colorCode: colorCode || null, employeeNo: employeeNo.trim() }));
     setSaving(false);
     if (order) {
       notify('success', `${order.id} 납기를 추가했습니다. (${order.customer} ${num(order.qty)}대 · 납기 ${formatMD(order.dueDate)})`);
@@ -81,6 +86,18 @@ function AddOrderModal({ state, onClose }: { state: AppState; onClose: () => voi
         <EmployeeField value={employeeNo} onChange={setEmployeeNo} />
         <Field label="고객">
           <input className={INPUT_CLASS} value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="예: 한울모빌리티" maxLength={30} />
+        </Field>
+        <Field
+          label="차량 색상"
+          hint={bodyStock === null ? undefined : `이 색 차체 재고 ${num(bodyStock)}개 · 주문한 색의 차체로 만들고, 출차 일정에도 이 색으로 나옵니다`}
+        >
+          <select className={INPUT_CLASS} value={colorCode} onChange={(e) => setColorCode(e.target.value)}>
+            {reference.colors.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name} ({c.code}) · {c.description}
+              </option>
+            ))}
+          </select>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="수량 (대)" error={qtyProblem}>

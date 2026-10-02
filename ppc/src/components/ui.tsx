@@ -35,6 +35,11 @@ export const DISRUPTION_STATUS_TONE: Record<DisruptionStatus, Tone> = {
   해결: 'green',
 };
 
+/** 차질 상태의 화면 표기. DB에는 '기다리기'로 저장하고 화면에서는 '대응하지 않음'으로 보여 준다 */
+export function disruptionStatusLabel(status: DisruptionStatus): string {
+  return status === '기다리기' ? '대응하지 않음' : status;
+}
+
 export function GradeBadge({ rate, grade }: { rate: number; grade: RateGrade }) {
   return (
     <Badge tone={GRADE_TONE[grade]}>

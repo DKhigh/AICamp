@@ -329,7 +329,7 @@ describe('납기 추가 · 납기 취소 (사원번호 필요)', () => {
   it('납기 추가: CO-004가 생기고 예측에 반영된다', async () => {
     const api = await freshApi();
     const order = await api.addCustomerOrder({ customer: ' 한울모빌리티 ', qty: 100, dueDate: '2026-10-25', employeeNo: '0000' });
-    expect(order).toEqual({ id: 'CO-004', customer: '한울모빌리티', qty: 100, dueDate: '2026-10-25' });
+    expect(order).toEqual({ id: 'CO-004', customer: '한울모빌리티', qty: 100, dueDate: '2026-10-25', colorCode: null });
     const state = (await api.fetchState())!;
     const { wait } = baseScenarios(state);
     // 누적 320대 → 10/22 완료 (10/7부터 하루 20대)

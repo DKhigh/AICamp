@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EmployeeConfirmModal } from '../components/EmployeeField';
 import { OrderStatus } from '../components/OrdersTable';
 import { CHART_COLORS, ScenarioChart, type ChartRow, type ChartSeries } from '../components/ScenarioChart';
-import { Badge, Button, Card, DISRUPTION_STATUS_TONE, Field, GradeBadge, INPUT_CLASS, parseIntStrict } from '../components/ui';
+import { Badge, Button, Card, DISRUPTION_STATUS_TONE, disruptionStatusLabel, Field, GradeBadge, INPUT_CLASS, parseIntStrict } from '../components/ui';
 import { altScenario, baseScenarios, resolvablePos } from '../lib/actions';
 import { qtyError } from '../lib/api';
 import { RISK_LATE_DAYS, SUPPLIER_ORDER_LIMIT } from '../lib/constants';
@@ -118,7 +118,7 @@ function CustomerNoticePanel({ wait, part }: { wait: ScenarioOutcome; part: Part
 
   return (
     <Card
-      title="고객 안내 문구 (기다리기 선택)"
+      title="고객 안내 문구 (대응하지 않음 선택)"
       aside={
         notices.length > 1 && (
           <Button size="sm" onClick={() => void copy(notices.map((n) => n.text).join('\n'))}>
@@ -151,29 +151,36 @@ function CustomerNoticePanel({ wait, part }: { wait: ScenarioOutcome; part: Part
 
 function CandidateRow({
   c,
-  selected,
-  planQty,
-  onSelect,
+  part,
+  checked,
+  qtyText,
+  problem,
+  onToggle,
+  onQty,
 }: {
   c: Candidate;
-  selected: boolean;
-  /** 발주 계획에서 이 업체에 배정한 수량 (없으면 0) */
-  planQty: number;
-  onSelect: () => void;
+  part: Part;
+  /** 이 업체에 대체 발주를 넣을지 */
+  checked: boolean;
+  qtyText: string;
+  problem: string | null;
+  onToggle: () => void;
+  onQty: (text: string) => void;
 }) {
   const risk = c.grade === '위험';
   const selectable = c.maxQty > 0;
+  // 공급 능력은 kg이 아니라 이 부품 개수로 보여 준다
+  const monthlyQty = Math.floor(c.monthlyCapacityKg / part.kgPerUnit + 1e-9);
   return (
-    <tr className={`${risk ? 'bg-red-50' : ''} ${planQty > 0 ? 'bg-accent-light' : ''} ${selected ? 'outline outline-2 -outline-offset-2 outline-accent' : ''}`}>
+    <tr className={`${risk ? 'bg-red-50' : ''} ${checked ? 'bg-accent-light' : ''}`}>
       <td className="py-2 pl-5 pr-2">
         <label className="flex items-center gap-2 whitespace-nowrap">
           <input
-            type="radio"
-            name="candidate"
-            checked={selected}
+            type="checkbox"
+            checked={checked}
             disabled={!selectable}
-            onChange={onSelect}
-            aria-label={`${c.name}을(를) 첫 번째 대체 업체로 선택`}
+            onChange={onToggle}
+            aria-label={`${c.name}에 대체 발주`}
             className="h-4 w-4 accent-blue-700 disabled:opacity-40"
           />
           <strong className="tabular text-slate-900">{c.rank}</strong>
@@ -185,20 +192,39 @@ function CandidateRow({
       </td>
       <td className="tabular px-2 py-2 text-slate-900">{c.altLeadDays}일</td>
       <td className="tabular px-2 py-2 font-semibold text-slate-900">{formatMD(c.arrival)}</td>
-      <td className="tabular px-2 py-2 text-right text-slate-700" title={`월 공급가능량 ${num(c.monthlyCapacityKg)}kg 중 최근 한 달 발주 ${num(Math.round(c.usedKg))}kg`}>
-        {num(Math.round(c.remainingKg))}kg
-        <span className="text-[11px] text-slate-400"> / {num(c.monthlyCapacityKg)}</span>
+      <td
+        className={`tabular px-2 py-2 text-right ${selectable ? 'text-slate-900' : 'font-semibold text-red-600'}`}
+        title={`월 공급가능량 ${num(c.monthlyCapacityKg)}kg ÷ ${part.name} 1개당 ${part.kgPerUnit}kg = 월 ${num(monthlyQty)}개 · 최근 한 달 발주 ${num(Math.round(c.usedKg))}kg을 빼고 남은 양`}
+      >
+        <strong>{num(c.maxQty)}개</strong>
+        <span className="text-[11px] text-slate-400"> / 월 {num(monthlyQty)}개</span>
       </td>
-      <td className="px-2 py-2 text-center">
-        {c.capacityOk ? (
-          <span className="font-bold text-emerald-700">✓ 최대 {num(c.maxQty)}개</span>
-        ) : (
-          <span className="font-bold text-red-600" title="남은 공급 능력이 모자랍니다">
-            ✗ 최대 {num(c.maxQty)}개
+      <td className="px-2 py-2 text-right">
+        {checked ? (
+          <span className="inline-flex flex-col items-end">
+            <span className="whitespace-nowrap">
+              <input
+                type="number"
+                min={1}
+                max={c.maxQty}
+                step={1}
+                inputMode="numeric"
+                value={qtyText}
+                onChange={(e) => onQty(e.target.value)}
+                aria-label={`${c.name} 발주 수량`}
+                aria-invalid={!!problem}
+                className={`tabular w-20 rounded-md border px-2 py-1 text-right text-sm font-bold text-accent outline-none focus:ring-2 ${
+                  problem ? 'border-red-400 focus:ring-red-100' : 'border-slate-300 focus:border-accent focus:ring-blue-100'
+                }`}
+              />{' '}
+              개
+            </span>
+            {problem && <span className="mt-0.5 text-[11px] font-medium text-red-600">{problem}</span>}
           </span>
+        ) : (
+          <span className="text-slate-300">–</span>
         )}
       </td>
-      <td className="tabular px-2 py-2 text-right font-bold text-accent">{planQty > 0 ? `${num(planQty)}개` : ''}</td>
       <td className="py-2 pl-2 pr-5">
         <GradeBadge rate={c.onTimeRate} grade={c.grade} />
       </td>
@@ -219,18 +245,6 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
     [settings, state.lineParts, state.purchaseOrders, disruption.id],
   );
   const noAltNeeded = cover === 0;
-
-  const [action, setAction] = useState<OriginalPoAction>('유지');
-  const [qtyText, setQtyText] = useState(cover > 0 ? String(cover) : '');
-  const [pickedName, setPickedName] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
-  const [confirming, setConfirming] = useState<'alt' | 'wait' | null>(null);
-
-  const qty = parseIntStrict(qtyText);
-  const qtyProblem = qtyText === '' ? null : qtyError(qty);
-  const hasQty = qtyText !== '' && !qtyProblem;
-  const calcQty = hasQty ? qty : 0;
-
   const { normal, wait } = useMemo(() => baseScenarios(state), [state]);
 
   // 업체별로 최근 한 달 동안 이미 발주한 양(kg): 남은 공급 능력을 계산한다
@@ -243,8 +257,6 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
   );
   // 지연된 원래 발주 가운데 가장 먼저 오는 날: 이보다 늦게 오는 업체는 후보에서 뺀다
   const originalArrival = delayedPos.length > 0 ? delayedPos.map((po) => po.expectedArrival).sort()[0] : null;
-  // 한 업체에는 한도(50개)까지만 넣으므로, 공급 가능 여부도 그 수량으로 본다
-  const perSupplierQty = Math.min(Math.max(calcQty, 1), SUPPLIER_ORDER_LIMIT);
   const rec = useMemo(
     () =>
       recommendSuppliers({
@@ -252,31 +264,65 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
         excludeSupplierName: disruption.supplierName,
         suppliers: reference.suppliers,
         baseDate: settings.baseDate,
-        qty: perSupplierQty,
+        qty: 1,
         usedKg,
         disruptedSuppliers: disruptedSupplierNames(state.disruptions),
         originalArrival,
       }),
-    [part, disruption.supplierName, settings.baseDate, perSupplierQty, usedKg, state.disruptions, originalArrival],
+    [part, disruption.supplierName, settings.baseDate, usedKg, state.disruptions, originalArrival],
   );
-  const candidate = rec.ranked.find((c) => c.name === pickedName && c.maxQty > 0) ?? rec.ranked.find((c) => c.maxQty > 0) ?? null;
 
-  // 발주 계획: 수량이 업체당 한도를 넘으면 순위대로 여러 업체에 나눈다
-  const plan = useMemo(
-    () => (candidate && hasQty ? splitPlan(rec.ranked, qty, candidate.name, SUPPLIER_ORDER_LIMIT) : { allocations: [], shortBy: 0 }),
-    [rec.ranked, candidate, hasQty, qty],
-  );
-  const planBySupplier = new Map(plan.allocations.map((a) => [a.supplier.name, a.qty]));
-  const planOk = plan.allocations.length > 0 && plan.shortBy === 0;
+  /** 추천 설정: 목표 수량을 순위대로, 한 업체에 기본 50개씩 나눈다 → 업체별 수량 */
+  const recommendPicks = (target: number): Record<string, string> =>
+    Object.fromEntries(splitPlan(rec.ranked, target, null, SUPPLIER_ORDER_LIMIT).allocations.map((a) => [a.supplier.name, String(a.qty)]));
+
+  const [action, setAction] = useState<OriginalPoAction>('유지');
+  // 목표 수량: [추천 설정]이 이 수량을 업체에 나눠 채운다
+  const [targetText, setTargetText] = useState(cover > 0 ? String(cover) : '');
+  // 체크한 업체 → 그 업체에 넣을 수량(입력칸의 글자). 처음에는 추천대로 채워 둔다
+  const [picks, setPicks] = useState<Record<string, string>>(() => recommendPicks(cover));
+  const [showAll, setShowAll] = useState(false);
+  const [confirming, setConfirming] = useState<'alt' | 'wait' | null>(null);
+
+  const target = parseIntStrict(targetText);
+  const targetProblem = targetText === '' ? null : qtyError(target);
+
+  const rowProblem = (c: Candidate): string | null => {
+    const text = picks[c.name];
+    if (text === undefined) return null;
+    const n = parseIntStrict(text);
+    if (!Number.isInteger(n) || n < 1) return '1 이상의 정수';
+    return n > c.maxQty ? `최대 ${num(c.maxQty)}개` : null;
+  };
+  const checkedRows = rec.ranked.filter((c) => c.name in picks);
+  const rowsValid = checkedRows.every((c) => rowProblem(c) === null);
+  // 발주 계획: 체크한 업체와 그 수량
+  const plan = { allocations: rowsValid ? checkedRows.map((c) => ({ supplier: c, qty: parseIntStrict(picks[c.name]) })) : [] };
+  const qty = plan.allocations.reduce((sum, a) => sum + a.qty, 0);
+  const hasQty = qty > 0;
+  const calcQty = qty;
+  const planOk = plan.allocations.length > 0;
   const split = plan.allocations.length > 1;
+  const candidate = plan.allocations[0]?.supplier ?? rec.ranked.find((c) => c.maxQty > 0) ?? null;
   const planAmount = plan.allocations.reduce((sum, a) => sum + (unitPriceOf(part, a.supplier.name) ?? 0) * a.qty, 0);
   const lastArrival = plan.allocations.map((a) => a.supplier.arrival).sort().pop() ?? null;
+  const maxTotal = rec.ranked.reduce((sum, c) => sum + c.maxQty, 0);
 
   const visible = showAll ? rec.ranked : rec.ranked.slice(0, 3);
-  // 계획에 들어간 업체가 상위 3곳 밖이면 접힌 상태에서도 보이게 한다
-  const shown = [...visible, ...rec.ranked.filter((c) => !visible.includes(c) && planBySupplier.has(c.name))];
+  // 체크한 업체가 상위 3곳 밖이면 접힌 상태에서도 보이게 한다
+  const shown = [...visible, ...rec.ranked.filter((c) => !visible.includes(c) && c.name in picks)];
   const riskCandidates = rec.ranked.filter((c) => c.grade === '위험');
   const riskInPlan = plan.allocations.find((a) => a.supplier.grade === '위험')?.supplier ?? null;
+
+  function toggle(c: Candidate) {
+    setPicks((prev) => {
+      const next = { ...prev };
+      if (c.name in next) delete next[c.name];
+      // 새로 체크하면 기본 50개 (남은 공급 능력이 그보다 적으면 그만큼)
+      else next[c.name] = String(Math.min(SUPPLIER_ORDER_LIMIT, c.maxQty));
+      return next;
+    });
+  }
 
   const scenarioAllocations = plan.allocations.map((a) => ({ altLeadDays: a.supplier.altLeadDays, qty: a.qty }));
   const alt = useMemo(
@@ -316,9 +362,19 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
 
   function chooseAction(next: OriginalPoAction) {
     setAction(next);
-    // 옵션을 바꾸면 대체 수량을 그 옵션의 기본값으로 다시 채운다
+    // 옵션을 바꾸면 목표 수량과 업체별 수량을 그 옵션의 추천값으로 다시 채운다
     const recommended = recommendedQty(next, cover, delayedQty);
-    setQtyText(recommended > 0 ? String(recommended) : '');
+    setTargetText(recommended > 0 ? String(recommended) : '');
+    setPicks(recommendPicks(recommended));
+  }
+
+  /** 원래 발주 처리 옵션마다 실제로 어떻게 되는지: 유지와 감량은 대체 수량이 같아도 받는 총량이 다르다 */
+  function actionResult(a: OriginalPoAction): string {
+    const altQty = a === action ? qty : recommendedQty(a, cover, delayedQty);
+    const after = applyOriginalPoAction(state.purchaseOrders, disruption.id, a, altQty);
+    const kept = delayedPosOf(after, disruption.id).reduce((sum, po) => sum + po.qty, 0);
+    const original = a === '유지' ? `원래 발주 ${num(delayedQty)}개 그대로 받음` : a === '감량' ? `원래 발주 ${num(delayedQty)}개 → ${num(kept)}개로 줄임` : `원래 발주 ${num(delayedQty)}개 취소`;
+    return `${original} + 대체 ${num(altQty)}개 = 모두 ${num(kept + altQty)}개 받음`;
   }
 
   const planName = split ? `${plan.allocations.length}곳 분할` : (candidate?.name ?? '');
@@ -331,7 +387,7 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
   }));
   const chartSeries: ChartSeries[] = [
     { key: 'normal', name: '정상 계획', color: CHART_COLORS.gray, dashed: true },
-    { key: 'wait', name: '기다리기', color: CHART_COLORS.red },
+    { key: 'wait', name: '대응하지 않음', color: CHART_COLORS.red },
     ...(alt ? [{ key: 'alt', name: `대체 (${planName})`, color: CHART_COLORS.blue }] : []),
     ...(altLate ? [{ key: 'altLate', name: `대체 · ${RISK_LATE_DAYS}일 늦을 경우`, color: CHART_COLORS.blue, dashed: true }] : []),
   ];
@@ -360,7 +416,7 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
       await api.decideWait({ disruptionId: disruption.id, employeeNo });
       return true;
     });
-    if (ok) notify('success', '기다리기로 결정했습니다. 아래 고객 안내 문구를 확인하세요.');
+    if (ok) notify('success', "'대응하지 않음'으로 결정했습니다. 아래 고객 안내 문구를 확인하세요.");
     return !!ok;
   }
 
@@ -384,8 +440,8 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
         </EmployeeConfirmModal>
       )}
       {confirming === 'wait' && (
-        <EmployeeConfirmModal title="기다리기로 결정" confirmLabel="기다리기로 결정" onConfirm={chooseWait} onClose={() => setConfirming(null)}>
-          대체 발주 없이 원래 발주({delayedPos.map((po) => `${po.id} ${formatMD(po.expectedArrival)} 도착 예정`).join(', ') || '지연 중인 발주 없음'})를
+        <EmployeeConfirmModal title="대응하지 않음" confirmLabel="대응하지 않음" onConfirm={chooseWait} onClose={() => setConfirming(null)}>
+          이 차질에 대응하지 않습니다. 대체 발주 없이 원래 발주({delayedPos.map((po) => `${po.id} ${formatMD(po.expectedArrival)} 도착 예정`).join(', ') || '지연 중인 발주 없음'})를
           기다립니다. 예상: 라인 정지 {wait.lineStopDays}일 · 생산 손실 {num(wait.loss)}대 · 납기 지연 주문 {wait.lateOrders.length}건. 결정한 사람은
           이력에 남습니다.
         </EmployeeConfirmModal>
@@ -409,24 +465,64 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
             {!noAltNeeded && (
               <p className="px-5 pt-4 text-sm font-semibold leading-relaxed text-slate-900">{recommendMessage(disruption, part, rec.ranked[0])}</p>
             )}
-            {split && (
-              <p className="mx-5 mt-3 rounded-lg border border-blue-200 bg-accent-light px-4 py-3 text-[13px] leading-relaxed text-slate-800">
-                <strong>여러 업체에 나눠 발주하는 것을 추천합니다.</strong> 필요한 {num(qty)}개가 한 업체 한도({SUPPLIER_ORDER_LIMIT}개)를 넘습니다:{' '}
-                <strong>{plan.allocations.map((a) => `${a.supplier.name} ${num(a.qty)}개`).join(' + ')}</strong>
-                {lastArrival && ` · 마지막 도착 ${formatMD(lastArrival)}`}. 첫 번째 업체는 아래 표에서 바꿀 수 있고, 나머지는 순위대로 채웁니다.
-              </p>
-            )}
+            <div className="mx-5 mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-blue-200 bg-accent-light px-4 py-3 text-[13px] text-slate-800">
+              <label className="font-semibold">
+                목표 수량{' '}
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  value={targetText}
+                  onChange={(e) => setTargetText(e.target.value)}
+                  aria-label="대체 목표 수량"
+                  placeholder={noAltNeeded ? '불필요' : ''}
+                  className="tabular mx-1 w-24 rounded-md border border-slate-300 bg-white px-2 py-1 text-right text-sm outline-none focus:border-accent focus:ring-2 focus:ring-blue-100"
+                />
+                개
+              </label>
+              <Button size="sm" variant="primary" onClick={() => setPicks(recommendPicks(target))} disabled={targetText === '' || !!targetProblem}>
+                추천 설정
+              </Button>
+              <span className="text-xs text-slate-600">
+                목표 수량을 순위대로 한 업체에 {SUPPLIER_ORDER_LIMIT}개씩 나눠 체크합니다. 체크와 수량은 아래 표에서 직접 바꿀 수 있습니다.
+              </span>
+              {targetProblem && <span className="w-full text-xs font-medium text-red-600">{targetProblem}</span>}
+              {!targetProblem && targetText !== '' && target > maxTotal && (
+                <span className="w-full text-xs font-medium text-red-600">
+                  후보 업체의 남은 공급 능력을 모두 합쳐도 {num(maxTotal)}개입니다. 목표 {num(target)}개를 다 채울 수 없습니다.
+                </span>
+              )}
+            </div>
+            <p className="tabular px-5 pt-3 text-[13px] text-slate-800">
+              {planOk ? (
+                <>
+                  발주 계획: <strong>{plan.allocations.map((a) => `${a.supplier.name} ${num(a.qty)}개`).join(' + ')}</strong> = 합계{' '}
+                  <strong className="text-accent">{num(qty)}개</strong>
+                  {lastArrival && ` · 마지막 도착 ${formatMD(lastArrival)}`}
+                  {!targetProblem && targetText !== '' && qty !== target && (
+                    <span className={qty < target ? 'font-semibold text-red-600' : 'text-slate-500'}>
+                      {' '}
+                      · 목표 {num(target)}개보다 {num(Math.abs(target - qty))}개 {qty < target ? '적음' : '많음'}
+                    </span>
+                  )}
+                </>
+              ) : rowsValid ? (
+                <span className="text-slate-500">대체 발주를 넣을 업체를 체크하세요. [추천 설정]을 누르면 추천 업체가 자동으로 체크됩니다.</span>
+              ) : (
+                <span className="font-semibold text-red-600">수량이 잘못된 업체가 있습니다. 표의 빨간 안내를 확인하세요.</span>
+              )}
+            </p>
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[820px] text-left text-[13px]">
                 <thead className="border-y border-slate-100 text-[11px] font-semibold text-slate-500">
                   <tr>
-                    <th className="py-2 pl-5 pr-2">순위</th>
+                    <th className="py-2 pl-5 pr-2">선택 · 순위</th>
                     <th className="px-2 py-2">업체</th>
                     <th className="px-2 py-2">대체 납기</th>
                     <th className="px-2 py-2">도착 예정</th>
-                    <th className="px-2 py-2 text-right">남은 공급 능력 / 월</th>
-                    <th className="px-2 py-2 text-center">공급 가능</th>
-                    <th className="px-2 py-2 text-right">발주 계획</th>
+                    <th className="px-2 py-2 text-right">남은 {part.name} 공급 능력</th>
+                    <th className="px-2 py-2 text-right">발주 수량</th>
                     <th className="py-2 pl-2 pr-5">납기 준수율</th>
                   </tr>
                 </thead>
@@ -435,9 +531,12 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                     <CandidateRow
                       key={c.code}
                       c={c}
-                      selected={c.name === candidate.name}
-                      planQty={planBySupplier.get(c.name) ?? 0}
-                      onSelect={() => setPickedName(c.name)}
+                      part={part}
+                      checked={c.name in picks}
+                      qtyText={picks[c.name] ?? ''}
+                      problem={rowProblem(c)}
+                      onToggle={() => toggle(c)}
+                      onQty={(text) => setPicks((prev) => ({ ...prev, [c.name]: text }))}
                     />
                   ))}
                 </tbody>
@@ -459,7 +558,8 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
               )}
             </div>
             <p className="px-5 pb-3 text-[11px] text-slate-500">
-              후보는 같은 소재({part.materialName})를 공급하는 업체입니다. 남은 공급 능력 = 월 공급가능량 − 최근 한 달 동안 그 업체에 이미 발주한 양.
+              후보는 같은 소재({part.materialName})를 공급하는 업체입니다. 남은 공급 능력 = (월 공급가능량 − 최근 한 달 동안 그 업체에 이미 발주한 양) ÷ {part.name} 1개당
+              소재 {part.kgPerUnit}kg. 한 업체에 넣는 수량은 기본 {SUPPLIER_ORDER_LIMIT}개이고, 남은 공급 능력까지 바꿀 수 있습니다.
             </p>
           </>
         ) : (
@@ -467,7 +567,7 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
             {part.materialName}를 공급할 수 있는 다른 업체가 없습니다
             {rec.excludedDisrupted.length + rec.excludedTooLate.length > 0 &&
               ` (차질 진행 중 ${rec.excludedDisrupted.length}곳, 원래 발주보다 늦는 ${rec.excludedTooLate.length}곳 제외)`}
-            . 기다리기만 선택할 수 있습니다.
+            . '대응하지 않음'만 선택할 수 있습니다.
           </p>
         )}
       </Card>
@@ -493,40 +593,27 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                   <span className="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <input type="radio" name="original-po-action" checked={action === a} onChange={() => chooseAction(a)} className="h-4 w-4 accent-blue-700" />
                     {a}
-                    <span className="text-xs font-medium text-slate-500">대체 {num(recommendedQty(a, cover, delayedQty))}개</span>
+                    <span className="text-xs font-medium text-slate-500">추천 대체 {num(recommendedQty(a, cover, delayedQty))}개</span>
                   </span>
                   <span className="mt-1 block text-xs leading-snug text-slate-600">{ACTION_HELP[a]}</span>
+                  <span className="tabular mt-1.5 block rounded bg-white/70 px-2 py-1 text-xs font-semibold leading-snug text-slate-900">{actionResult(a)}</span>
                 </label>
               ))}
             </div>
           </fieldset>
 
           <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-            <label className="text-[13px] font-semibold text-slate-700">
-              대체 수량{' '}
-              <input
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={qtyText}
-                onChange={(e) => setQtyText(e.target.value)}
-                aria-invalid={!!qtyProblem}
-                placeholder={noAltNeeded ? '불필요' : ''}
-                className={`tabular mx-1 w-28 rounded-md border px-2.5 py-1.5 text-right text-sm outline-none focus:ring-2 ${
-                  qtyProblem ? 'border-red-400 focus:ring-red-100' : 'border-slate-300 focus:border-accent focus:ring-blue-100'
-                }`}
-              />
-              개
-            </label>
-            <p className="pt-2 text-xs text-slate-500">
-              {action === '취소'
-                ? `추천: 원래 발주 전량 ${num(delayedQty)}개`
-                : noAltNeeded
-                  ? '추천: 0개 (재고와 다른 입고 예정분으로 지연 기간을 버틸 수 있음)'
-                  : `추천: ${num(cover)}개 = 지연된 발주가 올 때까지 모자라는 양 (현재 재고와 다른 입고 예정분을 뺀 값)`}
+            <p className="text-[13px] font-semibold text-slate-700">
+              대체 수량 합계 <strong className="tabular text-base text-slate-900">{num(qty)}개</strong>
+              <span className="ml-2 text-xs font-medium text-slate-500">
+                {action === '취소'
+                  ? `추천: 원래 발주 전량 ${num(delayedQty)}개`
+                  : noAltNeeded
+                    ? '추천: 0개 (재고와 다른 입고 예정분으로 지연 기간을 버틸 수 있음)'
+                    : `추천: ${num(cover)}개 = 지연된 발주가 올 때까지 모자라는 양 (현재 재고와 다른 입고 예정분을 뺀 값)`}
+                {' · 수량은 위 추천 표에서 바꿉니다'}
+              </span>
             </p>
-            {qtyProblem && <p className="w-full text-xs font-medium text-red-600">{qtyProblem}</p>}
             {planOk && (
               <p className="tabular w-full text-[13px] text-slate-700">
                 대체 발주 금액 <strong className="text-slate-900">{won(planAmount)}</strong>
@@ -541,13 +628,6 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
             )}
           </div>
 
-          {hasQty && plan.shortBy > 0 && (
-            <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px] font-semibold text-red-700">
-              후보 업체를 모두 써도 {num(plan.shortBy)}개가 모자랍니다 (업체당 {SUPPLIER_ORDER_LIMIT}개 한도 · 남은 공급 능력 기준, 최대{' '}
-              {num(qty - plan.shortBy)}개). 대체 수량을 {num(qty - plan.shortBy)}개 이하로 줄이세요.
-            </p>
-          )}
-
           {shortBy > 0 && (
             <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px] font-semibold text-red-700">
               {firstShortDay
@@ -558,7 +638,7 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
 
           <div className="grid gap-3 md:grid-cols-2">
             <OutcomeCard
-              title="기다리기"
+              title="대응하지 않음 (원래 발주를 기다림)"
               tone="red"
               outcome={wait}
               orderTotal={orderTotal}
@@ -588,8 +668,8 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                 {!candidate
                   ? '대체할 수 있는 업체가 없습니다.'
                   : noAltNeeded && !hasQty
-                    ? '대체 발주가 필요하지 않습니다. 기다리기를 권합니다.'
-                    : '대체 수량을 입력하면 결과를 계산합니다.'}
+                    ? "대체 발주가 필요하지 않습니다. '대응하지 않음'을 권합니다."
+                    : '추천 표에서 업체를 체크하고 수량을 넣으면 결과를 계산합니다.'}
               </div>
             )}
           </div>
@@ -610,7 +690,7 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                   <tr>
                     <th className="px-3 py-2">주문</th>
                     <th className="px-3 py-2">납기</th>
-                    <th className="px-3 py-2">기다리기</th>
+                    <th className="px-3 py-2">대응하지 않음</th>
                     <th className="px-3 py-2">대체</th>
                   </tr>
                 </thead>
@@ -645,9 +725,9 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
           </details>
 
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
-            <p className="mr-auto text-xs text-slate-500">결정을 누르면 사원번호를 확인한 뒤 저장합니다.</p>
+            <p className="mr-auto text-xs text-slate-500">결정은 로그인한 사원 이름으로 이력에 남습니다.</p>
             <Button onClick={() => setConfirming('wait')} disabled={disruption.status === '기다리기'}>
-              {disruption.status === '기다리기' ? '기다리기로 결정됨' : '기다리기로 결정'}
+              {disruption.status === '기다리기' ? '대응하지 않음으로 결정됨' : '대응하지 않음'}
             </Button>
             <Button variant="primary" onClick={() => setConfirming('alt')} disabled={!alt}>
               대체 발주 확정
@@ -684,7 +764,7 @@ function DecidedSection({ state, disruption, part }: { state: AppState; disrupti
             </ul>
           </>
         ) : (
-          <p className="font-semibold">대체 발주 없이 원래 발주를 기다리기로 했습니다.</p>
+          <p className="font-semibold">대응하지 않음: 대체 발주 없이 원래 발주를 기다리기로 했습니다.</p>
         )}
         {originals.length > 0 && (
           <ul className="space-y-1 text-[13px] text-slate-600">
@@ -825,7 +905,7 @@ export function DisruptionPage({ state }: { state: AppState }) {
           ← 대시보드
         </Link>
         <h1 className="text-lg font-extrabold tracking-tight text-slate-900">차질 {disruption.id}</h1>
-        <Badge tone={DISRUPTION_STATUS_TONE[disruption.status]}>상태: {disruption.status}</Badge>
+        <Badge tone={DISRUPTION_STATUS_TONE[disruption.status]}>상태: {disruptionStatusLabel(disruption.status)}</Badge>
         {disruption.status !== '해결' && (
           <Button size="sm" className="ml-auto" onClick={() => setResolving(true)}>
             해결 완료

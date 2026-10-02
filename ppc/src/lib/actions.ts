@@ -7,7 +7,6 @@ import {
   arrivalsFromPos,
   changedPos,
   evaluateScenario,
-  forecastOrders,
   isLate,
   openPos,
   type Arrival,
@@ -306,7 +305,7 @@ export interface OrderPreview {
 }
 
 /** 납기를 추가하기 전에 그 주문이 납기를 맞출 수 있는지, 다른 주문을 밀어내는지 미리 계산한다 */
-export function previewNewOrder(state: AppState, draft: { qty: number; dueDate: ISODate }): OrderPreview {
+export function previewNewOrder(state: AppState, draft: { qty: number; dueDate: ISODate; colorCode?: string | null }): OrderPreview {
   const { wait } = baseScenarios(state);
   const cumulative = wait.sim.cumulative;
   // 실제로 받을 번호를 쓴다: 납기가 같은 주문끼리는 번호 순으로 배정되기 때문이다
@@ -314,7 +313,12 @@ export function previewNewOrder(state: AppState, draft: { qty: number; dueDate: 
     'CO-',
     state.customerOrders.map((o) => o.id),
   );
-  const after = forecastOrders([...state.customerOrders, { id: draftId, customer: '', qty: draft.qty, dueDate: draft.dueDate }], cumulative);
+  const after = evaluateScenario(
+    state.settings,
+    productionParts(state.lineParts),
+    [...state.customerOrders, { id: draftId, customer: '', qty: draft.qty, dueDate: draft.dueDate, colorCode: draft.colorCode ?? null }],
+    arrivalsFromPos(state.purchaseOrders, 'expected'),
+  ).orders;
   const lateBefore = new Set(wait.orders.filter(isLate).map((o) => o.id));
   const last = cumulative[cumulative.length - 1];
   return {

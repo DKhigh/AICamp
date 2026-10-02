@@ -1,5 +1,6 @@
 // 일자별 출차(완성) 차량 목록.
-// - 출차 예정: 현재 예측(§6.4 시뮬레이션)의 완성 대수를 차량 한 대씩으로 펼친다 (오늘부터).
+// - 출차 예정: 현재 예측(§6.4 시뮬레이션)이 투입한 차를 완성일에 한 대씩 놓는다 (오늘부터).
+//   어느 주문의 차인지, 무슨 색 차체를 썼는지는 시뮬레이션이 정한다: 주문이 요구한 색의 차체로 만든다.
 // - 출차 실적: 기준일 이전 며칠 동안 이미 출차한 차량. 시연 데이터의 규칙(demo_state.json pastShipments)으로 만든다.
 import { baseScenarios } from './actions';
 import { addDays, diffDays } from './date';
@@ -13,9 +14,9 @@ export interface ShipCar {
   seq: number;
   /** 색상 코드 + 고유번호: 'C01-XXXXXXXX'. 색상별 차체가 없는 옛 데이터면 색상 코드 없이 8자리 */
   serial: string;
-  /** 이 차에 들어간 차체의 색상. 그 색 차체가 있어야 이 색 차를 만들 수 있다 */
+  /** 이 차에 들어간 차체의 색상 = 주문이 요구한 색 (재고용 차는 재고가 가장 많던 색) */
   colorCode: string | null;
-  /** 이 차가 채우는 자동차 주문 (납기 빠른 순으로 배정). 주문 수량을 넘는 차는 null. 실적은 null */
+  /** 이 차가 채우는 자동차 주문. 주문에 배정되지 않은 재고용 차는 null. 실적은 null */
   orderId: string | null;
   customer: string | null;
 }
@@ -53,59 +54,58 @@ const PAST_EPOCH = '2026-01-01';
 /**
  * 기준일 이전 며칠의 출차 실적. 날짜마다 정해진 규칙으로 만들기 때문에
  * 어느 날 열어 보아도 같은 날짜에는 같은 차량(고유번호·색상)이 나온다.
+ * 하루는 한 납품처의 차이고, 색상은 납품처마다 Excel '차량색상'의 색 가운데 하나다.
  */
 export function pastShipments(baseDate: ISODate): ShipDay[] {
   const { days, perDay, customers } = pastShipmentRule;
-  // 색상은 Excel '차량색상' 시트의 색을 돌아가며 쓴다
   const colorCodes = reference.colors.map((c) => c.code);
   let cum = 0;
   return Array.from({ length: days }, (_, i): ShipDay => {
     const date = addDays(baseDate, i - days);
-    const dayNo = diffDays(date, PAST_EPOCH);
-    const customer = customers[Math.floor(Math.abs(dayNo) / 3) % customers.length] ?? null;
-    const total = new Map<string, number>();
-    const cars = Array.from({ length: perDay }, (_, k) => {
-      const colorCode = colorCodes[(k + Math.abs(dayNo)) % colorCodes.length];
-      total.set(colorCode, (total.get(colorCode) ?? 0) + 1);
-      return { colorCode, id: serialOf(PAST_SERIAL_BASE + Math.abs(dayNo) * 1000 + k) };
-    })
-      .sort((a, b) => a.colorCode.localeCompare(b.colorCode))
-      .map((car, k): ShipCar => ({ seq: k + 1, serial: `${car.colorCode}-${car.id}`, colorCode: car.colorCode, orderId: null, customer }));
+    const dayNo = Math.abs(diffDays(date, PAST_EPOCH));
+    // 사흘마다 납품처가 바뀌고, 납품처가 바뀌면 주문 색상도 바뀐다
+    const block = Math.floor(dayNo / 3);
+    const customer = customers[block % customers.length] ?? null;
+    const colorCode = colorCodes[block % colorCodes.length] ?? null;
+    const cars = Array.from({ length: perDay }, (_, k): ShipCar => {
+      const id = serialOf(PAST_SERIAL_BASE + dayNo * 1000 + k);
+      return { seq: k + 1, serial: colorCode ? `${colorCode}-${id}` : id, colorCode, orderId: null, customer };
+    });
     cum += perDay;
-    return { date, count: perDay, cum, colors: sortedCounts(total), cars, past: true };
+    return { date, count: perDay, cum, colors: colorCode ? [{ colorCode, count: perDay }] : [], cars, past: true };
   });
 }
 
 export function shipmentSchedule(state: AppState): ShipSchedule {
   const { wait } = baseScenarios(state);
-  const orders = wait.orders; // 납기 오름차순, cumNeed 포함
-  // 완성일 → 그날 완성되는 차의 색상 구성 (투입한 날 쓴 차체 색)
-  const colorsByDate = new Map(wait.sim.days.map((d) => [d.completeDate, d.colors]));
+  const orderById = new Map(wait.orders.map((o) => [o.id, o]));
+  // 완성일 → 그날 완성되는 차 (투입한 날 정해진 주문과 차체 색)
+  const carsByDate = new Map(wait.sim.days.map((d) => [d.completeDate, d.cars]));
   const total = new Map<string, number>();
-  const orderTotal = orders.reduce((sum, o) => sum + o.qty, 0);
+  // 고유번호는 주문과 그 주문 안에서의 순번으로 정한다 (다른 주문이 끼어들어도 바뀌지 않는다)
+  const builtPerOrder = new Map<string | null, number>();
   let seq = 0;
 
   const days = wait.sim.cumulative.map((row): ShipDay => {
-    const colors = colorsByDate.get(row.date) ?? [];
-    // 색상 코드 순으로 한 대씩 펼친다. 색상 정보가 없으면(옛 데이터) 색 없이 대수만큼
-    const carColors: (string | null)[] = colors.flatMap((c) => Array<string>(c.count).fill(c.colorCode));
-    while (carColors.length < row.completed) carColors.push(null);
-
-    const cars = carColors.slice(0, row.completed).map((colorCode): ShipCar => {
+    const dayColors = new Map<string, number>();
+    const cars = (carsByDate.get(row.date) ?? []).map((car): ShipCar => {
       seq += 1;
-      const order = orders.find((o) => seq <= o.cumNeed) ?? null;
-      if (colorCode) total.set(colorCode, (total.get(colorCode) ?? 0) + 1);
-      // 고유번호는 주문과 그 주문 안에서의 순번으로 정한다 (다른 주문이 끼어들어도 바뀌지 않는다)
-      const id = carSerialOf(order?.id ?? null, order ? seq - (order.cumNeed - order.qty) : seq - orderTotal);
+      const index = (builtPerOrder.get(car.orderId) ?? 0) + 1;
+      builtPerOrder.set(car.orderId, index);
+      if (car.colorCode) {
+        total.set(car.colorCode, (total.get(car.colorCode) ?? 0) + 1);
+        dayColors.set(car.colorCode, (dayColors.get(car.colorCode) ?? 0) + 1);
+      }
+      const id = carSerialOf(car.orderId, index);
       return {
         seq,
-        serial: colorCode ? `${colorCode}-${id}` : id,
-        colorCode,
-        orderId: order?.id ?? null,
-        customer: order?.customer ?? null,
+        serial: car.colorCode ? `${car.colorCode}-${id}` : id,
+        colorCode: car.colorCode,
+        orderId: car.orderId,
+        customer: car.orderId ? (orderById.get(car.orderId)?.customer ?? null) : null,
       };
     });
-    return { date: row.date, count: row.completed, cum: row.cum, colors, cars, past: false };
+    return { date: row.date, count: row.completed, cum: row.cum, colors: sortedCounts(dayColors), cars, past: false };
   });
 
   const past = pastShipments(state.settings.baseDate);
