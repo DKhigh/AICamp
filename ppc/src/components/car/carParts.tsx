@@ -12,6 +12,30 @@ export const CAR_PART_BY_CODE: Record<string, CarPartKey> = {
   P013: 'battery',
 };
 
+/**
+ * 3D 모델의 도장 색. Excel '차량색상' 시트의 색 이름으로 정한다 (Excel에는 색 이름만 있다).
+ * 표에 없는 이름은 펄 화이트로 칠한다.
+ */
+const PAINT_BY_COLOR_NAME: Record<string, number> = {
+  화이트: 0xf3f5f8,
+  블랙: 0x15181f,
+  레드: 0xb3161c,
+  블루: 0x1f4fd1,
+  그레이: 0x6b7280,
+  실버: 0xc9ced6,
+  네이비: 0x172554,
+  그린: 0x15803d,
+  옐로우: 0xeab308,
+  오렌지: 0xea580c,
+  브라운: 0x7c2d12,
+  베이지: 0xd9c8a3,
+};
+export const DEFAULT_PAINT = 0xf3f5f8;
+
+export function paintOf(colorName: string | null | undefined): number {
+  return PAINT_BY_COLOR_NAME[colorName ?? ''] ?? DEFAULT_PAINT;
+}
+
 export const STATUS_LEVEL: Record<PartStatus, StatusLevel> = {
   차질: 'danger',
   '대응 중': 'info',

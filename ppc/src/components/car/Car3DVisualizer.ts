@@ -290,7 +290,7 @@ export class Car3DVisualizer {
   private createCarModel() {
     this.scene.add(this.carRoot);
 
-    // 도장은 한 가지 색(펄 화이트)으로 고정한다
+    // 처음 도장은 펄 화이트. setBodyColor로 Excel '차량색상'의 색으로 바꿀 수 있다
     this.bodyPaint = new THREE.MeshPhysicalMaterial({
       color: 0xf3f5f8,
       metalness: 0.25,
@@ -580,6 +580,16 @@ export class Car3DVisualizer {
     this.applyMode();
   }
 
+  /** 차체 도장 색을 바꾼다 (Excel '차량색상'의 색). 유리·몰딩·바퀴는 그대로다 */
+  setBodyColor(hex: number) {
+    this.bodyPaint.color.setHex(hex);
+    // 어두운 색은 금속성을 조금 높여야 형태가 보인다
+    const dark = this.bodyPaint.color.getHSL({ h: 0, s: 0, l: 0 }).l < 0.25;
+    this.bodyPaint.metalness = dark ? 0.55 : 0.25;
+    this.bodyPaint.roughness = dark ? 0.28 : 0.32;
+    this.bodyPaint.needsUpdate = true;
+  }
+
   setAutoRotate(on: boolean) {
     this.autoRotate = on;
   }
@@ -651,7 +661,7 @@ export class Car3DVisualizer {
   /** 전체 보기에서 차가 가로로 놓여도 잘리지 않게 하는 거리 배율: 화면이 좁을수록 멀어진다 */
   private fitScale(): number {
     const aspect = this.camera.aspect || 1;
-    return Math.min(2.2, Math.max(1, 1.3 / aspect));
+    return Math.min(2.2, Math.max(1, 0.95 / aspect));
   }
 
   private updateHotspots() {
@@ -685,7 +695,7 @@ export class Car3DVisualizer {
   private placePill(el: HTMLElement, x: number, y: number, width: number, height: number) {
     const pill = el.querySelector<HTMLElement>('.car-hotspot-pill');
     if (!pill) return;
-    const shrink = width < 480 ? 0.7 : 1;
+    const shrink = width < 480 ? 0.85 : 1;
     const dx = Number(el.dataset.dx ?? 0) * shrink;
     const dy = Number(el.dataset.dy ?? 0) * shrink;
     const halfW = pill.offsetWidth / 2;

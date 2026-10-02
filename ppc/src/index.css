@@ -132,6 +132,26 @@ input[type='password']::-ms-clear {
   box-shadow: 0 8px 20px rgba(29, 78, 216, 0.22);
   outline: none;
 }
+/* 휴대폰 폭: 배지를 작게 해서 차와 서로를 덜 가리게 한다 */
+@media (max-width: 480px) {
+  .car-hotspot-pill {
+    gap: 4px;
+    padding: 3px 7px 3px 3px;
+  }
+  .car-hotspot-icon {
+    width: 18px;
+    height: 18px;
+  }
+  .car-hotspot-icon svg {
+    width: 11px;
+    height: 11px;
+  }
+  .car-hotspot-pill .status-dot {
+    width: 7px;
+    height: 7px;
+  }
+}
+
 .car-hotspot-pill.is-active {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.18);

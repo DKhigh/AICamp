@@ -14,7 +14,7 @@ import { LOW_COVERAGE_DAYS } from '../lib/constants';
 import { dashboardModel, type DashboardModel, type PartRow } from '../lib/dashboard';
 import { dashPartName, ddayLabel, num, won } from '../lib/format';
 import { gradeOf } from '../lib/recommend';
-import { colorOf, partOf, supplierOf } from '../lib/reference';
+import { colorOf, partOf, reference, supplierOf } from '../lib/reference';
 import { repairCars } from '../lib/repairs';
 import type { AppState, Disruption } from '../lib/types';
 import { useUi } from '../state/Ui';
@@ -184,8 +184,10 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
   const caution = cautionOf(part.name);
   const [showCaution, setShowCaution] = useState(false);
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-      <div className="min-w-0 flex-1">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      {/* 좁은 화면에서는 내용이 한 줄을 다 쓰고 버튼(발주·차질 상세)은 그 아래로 내려간다.
+          버튼이 옆에 붙으면 내용 칸이 좁아져 항목이 한 줄에 하나씩 세로로 늘어선다 */}
+      <div className="min-w-0 flex-1 basis-full sm:basis-0">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-base font-bold tracking-tight text-slate-900">
             {dashPartName(part.name)}
@@ -246,7 +248,7 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
           </div>
         )}
       </div>
-      <div className="flex shrink-0 gap-2">
+      <div className="flex shrink-0 flex-wrap gap-2">
         <Button auth variant="primary" onClick={onOrder}>
           발주
         </Button>
@@ -267,6 +269,8 @@ export function Dashboard({ state }: { state: AppState }) {
   const { openOrder } = useUi();
   const model = useMemo(() => dashboardModel(state), [state]);
   const [focusCode, setFocusCode] = useState<string | null>(null);
+  // 3D 모델에 칠해 볼 차량 색상 (Excel '차량색상'). 보기만 바뀌고 데이터에는 영향이 없다
+  const [paintCode, setPaintCode] = useState(reference.colors[0]?.code ?? null);
 
   const focusRow = model.parts.find((p) => p.part.code === focusCode) ?? null;
   const focusKey = focusRow ? (CAR_PART_BY_CODE[focusRow.part.code] ?? null) : null;
@@ -298,6 +302,8 @@ export function Dashboard({ state }: { state: AppState }) {
                 items={viewerItems}
                 focus={focusKey}
                 onFocus={(key) => setFocusCode(codeOfKey(key))}
+                colorCode={paintCode}
+                onColorChange={setPaintCode}
                 detail={
                   focusRow && (
                     <PartDetail

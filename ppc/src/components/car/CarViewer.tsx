@@ -3,7 +3,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import blueprintUrl from '../../assets/sedan_blueprint.png';
 import type { PartStatus } from '../../lib/planning';
 import { Car3DVisualizer, type CarPartKey, type StatusLevel, type ViewMode } from './Car3DVisualizer';
-import { CarPartIcon, HOTSPOT_OFFSET, STATUS_LEVEL } from './carParts';
+import { colorOf, reference } from '../../lib/reference';
+import { ColorSwatch } from '../ui';
+import { CarPartIcon, HOTSPOT_OFFSET, paintOf, STATUS_LEVEL } from './carParts';
 
 export interface CarViewerItem {
   key: CarPartKey;
@@ -18,6 +20,8 @@ export function CarViewer({
   onFocus,
   detail,
   initialMode = 'exterior',
+  colorCode = null,
+  onColorChange,
 }: {
   items: CarViewerItem[];
   focus: CarPartKey | null;
@@ -26,6 +30,10 @@ export function CarViewer({
   detail: ReactNode;
   /** 처음 보기 모드. 수리 차량 화면은 안쪽 부품이 보이도록 X-Ray로 연다 */
   initialMode?: ViewMode;
+  /** 차체 도장 색 (Excel '차량색상'의 색상 코드). 없으면 펄 화이트 */
+  colorCode?: string | null;
+  /** 주면 뷰어에 색상 고르기 버튼이 생긴다 */
+  onColorChange?: (colorCode: string) => void;
 }) {
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const hotspotRefs = useRef<Partial<Record<CarPartKey, HTMLDivElement | null>>>({});
@@ -63,6 +71,7 @@ export function CarViewer({
   }, [statusKey]);
 
   useEffect(() => vizRef.current?.setMode(mode), [mode]);
+  useEffect(() => vizRef.current?.setBodyColor(paintOf(colorOf(colorCode)?.name)), [colorCode]);
   useEffect(() => vizRef.current?.setAutoRotate(autoRotate), [autoRotate]);
 
   if (failed) {
@@ -107,6 +116,33 @@ export function CarViewer({
           360° 회전
         </button>
       </div>
+
+      {/* 차량 색상 고르기: Excel '차량색상'의 색으로 도장을 바꿔 본다 */}
+      {onColorChange && !focus && (
+        <div
+          className="absolute right-3 top-3 z-30 flex items-center gap-1 rounded-md border border-slate-200 bg-white/90 px-1.5 py-1 shadow-sm backdrop-blur"
+          role="group"
+          aria-label="차량 색상"
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          {reference.colors.map((c) => {
+            const active = c.code === colorCode;
+            return (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => onColorChange(c.code)}
+                aria-pressed={active}
+                aria-label={`차량 색상 ${c.name}`}
+                title={`${c.name} · ${c.description}`}
+                className={`flex h-6 w-6 items-center justify-center rounded-full transition-shadow ${active ? 'ring-2 ring-accent ring-offset-1' : 'hover:ring-2 hover:ring-slate-300'}`}
+              >
+                <ColorSwatch code={c.code} size={16} />
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {focus ? (
         <button
@@ -157,7 +193,7 @@ export function CarViewer({
                 <span className="car-hotspot-icon">
                   <CarPartIcon part={item.key} />
                 </span>
-                <span className="text-[12px] font-bold tracking-tight text-slate-900 sm:text-[13px]">{item.name}</span>
+                <span className="text-[11px] font-bold tracking-tight text-slate-900 sm:text-[13px]">{item.name}</span>
                 {item.isBottleneck && (
                   <span className="rounded bg-slate-900 px-1 py-px text-[10px] font-bold text-white">병목</span>
                 )}

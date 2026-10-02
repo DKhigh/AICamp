@@ -141,6 +141,8 @@ export function RepairsPage({ state }: { state: AppState }) {
                   onFocus={setFocusKey}
                   detail={null}
                   initialMode="cutaway"
+                  // 수리 차량의 실제 색으로 칠한다
+                  colorCode={selected.colorCode}
                 />
               </Suspense>
             </div>

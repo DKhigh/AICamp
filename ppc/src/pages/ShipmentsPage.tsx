@@ -16,16 +16,20 @@ import type { AppState } from '../lib/types';
 function ColorSummary({ label, colors, note }: { label: string; colors: ColorCount[]; note?: string }) {
   if (colors.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[13px] shadow-card">
-      <span className="text-xs font-semibold text-slate-500">{label}</span>
-      {colors.map((c) => (
-        <span key={c.colorCode} className="inline-flex items-center gap-1.5 text-slate-700" title={colorOf(c.colorCode)?.description}>
-          <ColorSwatch code={c.colorCode} />
-          {colorOf(c.colorCode)?.name ?? c.colorCode} <span className="font-mono text-[11px] text-slate-400">{c.colorCode}</span>
-          <strong className="tabular text-slate-900">{num(c.count)}대</strong>
-        </span>
-      ))}
-      {note && <span className="text-xs text-slate-500">· {note}</span>}
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] shadow-card sm:px-5">
+      {/* 제목, 색상별 대수, 설명을 각각 한 줄로 둔다: 색상별 대수가 중간에서 끊기지 않고 한 줄에 나란히 보인다 */}
+      <p className="text-xs font-semibold text-slate-500">{label}</p>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 sm:flex-nowrap sm:gap-x-6">
+        {colors.map((c) => (
+          <span key={c.colorCode} className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-700" title={colorOf(c.colorCode)?.description}>
+            <ColorSwatch code={c.colorCode} />
+            {colorOf(c.colorCode)?.name ?? c.colorCode}
+            <span className="hidden font-mono text-[11px] text-slate-400 md:inline">{c.colorCode}</span>
+            <strong className="tabular text-slate-900">{num(c.count)}대</strong>
+          </span>
+        ))}
+      </div>
+      {note && <p className="mt-1.5 text-xs leading-snug text-slate-500">{note}</p>}
     </div>
   );
 }
