@@ -9,9 +9,14 @@ export function gradeOf(onTimeRate: number): RateGrade {
   return '위험';
 }
 
-/** 그 소재를 공급할 수 있고 상태가 '정상'인 업체. 소재 비교는 정확히 일치로만 한다 (§4.2-2) */
+/** 발주할 수 있는 업체 상태 (Excel 공급업체 시트의 '상태'). 이 밖의 상태(예: 거래 중지)는 후보에서 뺀다 */
+export const ORDERABLE_STATUSES = ['우수', '정상', '주의'];
+/** 조심해서 써야 하는 상태: 발주는 되지만 경고를 띄우고 추천에서는 뒤로 미룬다 */
+export const CAUTION_STATUS = '주의';
+
+/** 그 소재를 공급할 수 있고 발주할 수 있는 상태인 업체. 소재 비교는 정확히 일치로만 한다 (§4.2-2) */
 export function suppliersFor(materialName: string, suppliers: Supplier[]): Supplier[] {
-  return suppliers.filter((s) => s.materials.includes(materialName) && s.status === '정상');
+  return suppliers.filter((s) => s.materials.includes(materialName) && ORDERABLE_STATUSES.includes(s.status));
 }
 
 /**
@@ -73,7 +78,7 @@ export function splitPlan(ranked: Candidate[], qty: number, firstName: string | 
 }
 
 export const RANK_RULE_TEXT =
-  '① 남은 공급 능력으로 필요한 양을 댈 수 있는지 ② 납기 준수율 80% 미만(위험)은 뒤로 ③ 빨리 오는 순 ④ 준수율 높은 순 ⑤ 공급량 큰 순 · 진행 중인 차질이 있는 업체와 원래 발주보다 늦게 오는 업체는 제외';
+  '① 남은 공급 능력으로 필요한 양을 댈 수 있는지 ② 납기 준수율 80% 미만(위험)과 상태 \'주의\' 업체는 뒤로 ③ 빨리 오는 순 ④ 준수율 높은 순 ⑤ 공급량 큰 순 · 진행 중인 차질이 있는 업체와 원래 발주보다 늦게 오는 업체는 제외';
 
 export function recommendSuppliers(params: {
   part: Part;
@@ -122,6 +127,7 @@ export function recommendSuppliers(params: {
     (a, b) =>
       Number(b.capacityOk) - Number(a.capacityOk) ||
       isRisk(a) - isRisk(b) || // 위험 업체는 빨라도 후순위
+      Number(a.status === CAUTION_STATUS) - Number(b.status === CAUTION_STATUS) || // 상태 '주의' 업체도 뒤로
       a.altLeadDays - b.altLeadDays ||
       b.onTimeRate - a.onTimeRate ||
       b.monthlyCapacityKg - a.monthlyCapacityKg ||

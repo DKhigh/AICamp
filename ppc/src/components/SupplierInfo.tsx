@@ -69,7 +69,9 @@ export function SupplierModal({ state, supplierName, onClose }: { state: AppStat
         <>
           {supplier.name} <span className="font-mono text-xs font-medium text-slate-400">{supplier.code}</span>
           <span className="ml-2 align-middle">
-            <Badge tone={activeDisruptions.length > 0 ? 'red' : 'green'}>{activeDisruptions.length > 0 ? '차질 진행 중' : supplier.status}</Badge>
+            <Badge tone={activeDisruptions.length > 0 ? 'red' : supplier.status === '주의' ? 'orange' : 'green'}>
+              {activeDisruptions.length > 0 ? '차질 진행 중' : `상태 ${supplier.status}`}
+            </Badge>
           </span>
         </>
       }

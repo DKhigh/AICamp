@@ -145,6 +145,8 @@ function KpiRow({ kpi }: { kpi: DashboardModel['kpi'] }) {
         value={num(kpi.buildableNow)}
         unit="대"
         sub={kpi.bottleneckNow ? `병목: ${dashPartName(kpi.bottleneckNow.name)} · 수리용 재고 제외` : undefined}
+        to="/stock"
+        linkLabel="현재 재고"
       />
       <KpiCard
         label="입고 예정 포함 생산 가능"

@@ -88,6 +88,8 @@ export class Car3DVisualizer {
 
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
+  /** 겉 장식(그릴, 전후 램프, 몰딩, 손잡이, 미러). X-Ray 투시에서는 숨긴다 */
+  private exterior = new THREE.Group();
   private renderer: THREE.WebGLRenderer;
   private controls: OrbitControls;
   private carRoot = new THREE.Group();
@@ -409,38 +411,40 @@ export class Car3DVisualizer {
   }
 
   private buildExteriorDetails() {
+    // 그릴·램프·몰딩 같은 겉 장식은 한 묶음으로 두고, X-Ray 투시에서는 통째로 숨긴다 (안쪽 부품을 가리지 않게)
+    this.carRoot.add(this.exterior);
     const lightMat = new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: 0xbae6fd, emissiveIntensity: 0.9, roughness: 0.1 });
     const tailMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, emissive: 0xef4444, emissiveIntensity: 0.9 });
 
     // 앞: 좌우를 잇는 얇은 주간주행등 — 가운데가 끊긴 세 토막으로 나눠 이 모델만의 얼굴을 만든다
-    this.box(this.carRoot, [0.06, 0.035, 1.5], lightMat, -4.27, 1.1, 0);
-    for (const z of [-1.2, 1.2]) this.box(this.carRoot, [0.1, 0.05, 0.62], lightMat, -4.2, 1.09, z);
+    this.box(this.exterior, [0.06, 0.035, 1.5], lightMat, -4.27, 1.1, 0);
+    for (const z of [-1.2, 1.2]) this.box(this.exterior, [0.1, 0.05, 0.62], lightMat, -4.2, 1.09, z);
     // 넓은 그릴: 무늬 그물 대신 가로 살 다섯 줄 (상표·로고는 넣지 않는다)
-    this.box(this.carRoot, [0.07, 0.5, 2.5], this.darkTrim, -4.31, 0.74, 0);
-    for (let i = 0; i < 5; i++) this.box(this.carRoot, [0.03, 0.022, 2.36 - i * 0.16], this.chrome, -4.35, 0.94 - i * 0.095, 0);
+    this.box(this.exterior, [0.07, 0.5, 2.5], this.darkTrim, -4.31, 0.74, 0);
+    for (let i = 0; i < 5; i++) this.box(this.exterior, [0.03, 0.022, 2.36 - i * 0.16], this.chrome, -4.35, 0.94 - i * 0.095, 0);
     // 그릴 양옆의 세로형 헤드램프와 하단 립
-    for (const z of [-1.4, 1.4]) this.box(this.carRoot, [0.07, 0.3, 0.16], lightMat, -4.27, 0.78, z);
-    this.box(this.carRoot, [0.14, 0.05, 2.9], this.chrome, -4.24, 0.42, 0);
+    for (const z of [-1.4, 1.4]) this.box(this.exterior, [0.07, 0.3, 0.16], lightMat, -4.27, 0.78, z);
+    this.box(this.exterior, [0.14, 0.05, 2.9], this.chrome, -4.24, 0.42, 0);
 
     // 뒤: 좌우를 잇는 테일라이트 바 + 양 끝에서 아래로 꺾이는 세로 램프, 하단 디퓨저와 크롬 띠
-    this.box(this.carRoot, [0.1, 0.05, 3.1], tailMat, 4.32, 1.3, 0);
-    for (const z of [-1.5, 1.5]) this.box(this.carRoot, [0.1, 0.24, 0.07], tailMat, 4.31, 1.16, z);
-    this.box(this.carRoot, [0.08, 0.22, 2.7], this.darkTrim, 4.28, 0.58, 0);
-    this.box(this.carRoot, [0.1, 0.035, 2.3], this.chrome, 4.29, 0.46, 0);
+    this.box(this.exterior, [0.1, 0.05, 3.1], tailMat, 4.32, 1.3, 0);
+    for (const z of [-1.5, 1.5]) this.box(this.exterior, [0.1, 0.24, 0.07], tailMat, 4.31, 1.16, z);
+    this.box(this.exterior, [0.08, 0.22, 2.7], this.darkTrim, 4.28, 0.58, 0);
+    this.box(this.exterior, [0.1, 0.035, 2.3], this.chrome, 4.29, 0.46, 0);
 
     for (const out of [1, -1]) {
       const z = out * BODY_HALF;
       // 사이드 실 몰딩과 그 위의 크롬 띠
-      this.box(this.carRoot, [3.55, 0.1, 0.05], this.darkTrim, 0, SILL_Y + 0.07, z + out * 0.01);
-      this.box(this.carRoot, [3.3, 0.025, 0.05], this.chrome, 0, SILL_Y + 0.14, z + out * 0.012);
+      this.box(this.exterior, [3.55, 0.1, 0.05], this.darkTrim, 0, SILL_Y + 0.07, z + out * 0.01);
+      this.box(this.exterior, [3.3, 0.025, 0.05], this.chrome, 0, SILL_Y + 0.14, z + out * 0.012);
       // 벨트라인(창문 아래)을 따라가는 크롬 선
-      this.box(this.carRoot, [4.3, 0.022, 0.03], this.chrome, 0.62, 1.5, z + out * 0.004);
+      this.box(this.exterior, [4.3, 0.022, 0.03], this.chrome, 0.62, 1.5, z + out * 0.004);
       // 도어 분할선과 문 안으로 숨은 손잡이
-      for (const x of [-1.6, 0.46, 1.9]) this.box(this.carRoot, [0.018, 0.8, 0.02], this.darkTrim, x, 0.98, z + out * 0.002);
-      for (const x of [0.06, 1.5]) this.box(this.carRoot, [0.3, 0.03, 0.02], this.chrome, x, 1.32, z + out * 0.004);
+      for (const x of [-1.6, 0.46, 1.9]) this.box(this.exterior, [0.018, 0.8, 0.02], this.darkTrim, x, 0.98, z + out * 0.002);
+      for (const x of [0.06, 1.5]) this.box(this.exterior, [0.3, 0.03, 0.02], this.chrome, x, 1.32, z + out * 0.004);
       // 사이드 미러
-      this.box(this.carRoot, [0.1, 0.05, 0.3], this.darkTrim, -1.38, 1.5, out * (CABIN_HALF + 0.15));
-      this.box(this.carRoot, [0.26, 0.16, 0.12], this.bodyPaint, -1.38, 1.56, out * (CABIN_HALF + 0.34));
+      this.box(this.exterior, [0.1, 0.05, 0.3], this.darkTrim, -1.38, 1.5, out * (CABIN_HALF + 0.15));
+      this.box(this.exterior, [0.26, 0.16, 0.12], this.bodyPaint, -1.38, 1.56, out * (CABIN_HALF + 0.34));
     }
   }
 
@@ -623,6 +627,7 @@ export class Car3DVisualizer {
     this.bodyPaint.needsUpdate = true;
     this.glass.opacity = cutaway ? 0.15 : 0.82;
     this.glass.depthWrite = !cutaway;
+    this.exterior.visible = !cutaway;
   }
 
   // ── 프레임 ──────────────────────────────────────────────────────────────

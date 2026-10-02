@@ -9,6 +9,7 @@ import { Button, Card, Spinner } from './components/ui';
 import { EMPTY_DB_MESSAGE } from './lib/api';
 import { staleDataReasons } from './lib/dashboard';
 import { SearchPage } from './pages/SearchPage';
+import { StockPage } from './pages/StockPage';
 import { Dashboard } from './pages/Dashboard';
 import { DisruptionPage } from './pages/DisruptionPage';
 import { HistoryPage } from './pages/HistoryPage';
@@ -139,6 +140,7 @@ function Shell() {
                   <Route path="/shipments" element={<ShipmentsPage state={state} />} />
                   <Route path="/repairs" element={<RepairsPage state={state} />} />
                   <Route path="/search" element={<SearchPage state={state} />} />
+                  <Route path="/stock" element={<StockPage state={state} />} />
                   <Route path="*" element={<Dashboard state={state} />} />
                 </Routes>
               ) : (

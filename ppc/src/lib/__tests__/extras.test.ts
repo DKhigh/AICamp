@@ -88,7 +88,7 @@ describe('2. 같은 업체에 많이 발주할수록 늦게 온다 (Excel 지연
   it('대체(긴급) 발주에는 수량 지연을 더하지 않는다', async () => {
     const api = await freshApi();
     await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
-    const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '유지', employeeNo: '0000' });
+    const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 50, action: '유지', employeeNo: '0000' });
     expect(alt.expectedArrival).toBe('2026-10-07'); // 대체 납기 2일 그대로
   });
 });
@@ -206,13 +206,17 @@ describe('4. 발주 권한자 (Excel 발주권한자 시트)', () => {
 });
 
 describe('5. 발주 금액 (Excel 업체별_자재단가)', () => {
-  it('부품 1개 값 = 업체의 자재 단가(원/kg) × 부품 1개당 소재 필요량(kg)', () => {
+  it('부품 1개 값 = 기준단가(원/개) × (업체의 자재 단가 ÷ 자재 기준 단가), 100원 단위', () => {
+    // 기준단가는 Excel 제품별_기준단가 (현실 단가)
+    expect(Object.fromEntries(['P007', 'P024', 'P001', 'P004', 'P010', 'P012', 'P013'].map((c) => [partOf(c).name, partOf(c).basePrice]))).toEqual({
+      엔진: 4200000, 변속기: 2400000, 브레이크: 180000, 서스펜션: 380000, 조향: 420000, 차체: 220000, 배터리: 1600000,
+    });
     expect(pricePerKgOf(partOf('P013'), '대성메탈')).toBe(3660);
-    expect(unitPriceOf(partOf('P013'), '대성메탈')).toBe(14640); // 3,660원 × 4kg
-    expect(unitPriceOf(partOf('P007'), '한빛오토텍')).toBe(5835); // 3,890원 × 1.5kg
-    expect(unitPriceOf(partOf('P007'), '진성오토텍')).toBe(5790); // 같은 부품도 업체마다 다르다
-    expect(unitPriceOf(partOf('P012-C02'), '동아기공')).toBe(1380); // 색이 달라도 차체 값은 같다
-    expect(orderAmount(partOf('P013'), '대성메탈', 50)).toBe(732000);
+    expect(unitPriceOf(partOf('P013'), '대성메탈')).toBe(1521000); // 1,600,000원 × 3,660 ÷ 3,850
+    expect(unitPriceOf(partOf('P007'), '한빛오토텍')).toBe(4243600); // 4,200,000원 × 3,890 ÷ 3,850
+    expect(unitPriceOf(partOf('P007'), '진성오토텍')).toBe(4210900); // 같은 부품도 업체마다 다르다
+    expect(unitPriceOf(partOf('P012-C02'), '동아기공')).toBe(209400); // 색이 달라도 차체 값은 같다
+    expect(orderAmount(partOf('P013'), '대성메탈', 50)).toBe(76050000);
     // 그 자재를 팔지 않는 업체는 단가가 없다
     expect(unitPriceOf(partOf('P013'), '태성모터스')).toBeNull();
   });
@@ -229,28 +233,28 @@ describe('5. 발주 금액 (Excel 업체별_자재단가)', () => {
     const api = await freshApi();
     let state = (await api.fetchState())!;
     const amounts = Object.fromEntries(state.purchaseOrders.map((p) => [p.id, poAmount(p)]));
-    expect(amounts).toEqual({ 'PO-001': 2334000, 'PO-002': 6006000, 'PO-003': 2079440 });
-    expect(totalSpent(state.purchaseOrders)).toBe(10419440);
+    expect(amounts).toEqual({ 'PO-001': 1697440000, 'PO-002': 524720000, 'PO-003': 149804000 });
+    expect(totalSpent(state.purchaseOrders)).toBe(2371964000);
 
     const po = await order(api, 'P013', '대성메탈', 50);
-    expect(poAmount(po)).toBe(732000);
+    expect(poAmount(po)).toBe(76050000);
     state = (await api.fetchState())!;
-    expect(totalSpent(state.purchaseOrders)).toBe(11151440);
-    expect(dashboardModel(state).poRows.find((r) => r.po.id === po.id)!.amount).toBe(732000);
+    expect(totalSpent(state.purchaseOrders)).toBe(2448014000);
+    expect(dashboardModel(state).poRows.find((r) => r.po.id === po.id)!.amount).toBe(76050000);
 
     // 취소하면 쓴 돈에서 빠진다
     await api.cancelPurchaseOrder({ poId: po.id, employeeNo: '0000' });
     state = (await api.fetchState())!;
     expect(poAmount(state.purchaseOrders.find((p) => p.id === po.id)!)).toBe(0);
-    expect(totalSpent(state.purchaseOrders)).toBe(10419440);
+    expect(totalSpent(state.purchaseOrders)).toBe(2371964000);
   });
 
   it('대체 발주는 대체 업체 단가로, 감량하면 원래 발주 금액도 줄어든다', async () => {
     const api = await freshApi();
     await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
-    const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '감량', employeeNo: '0000' });
-    expect(poAmount(alt)).toBe(579000); // 5,790원 × 100
+    const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 50, action: '감량', employeeNo: '0000' });
+    expect(poAmount(alt)).toBe(210545000); // 4,210,900원 × 50
     const state = (await api.fetchState())!;
-    expect(poAmount(state.purchaseOrders.find((p) => p.id === 'PO-001')!)).toBe(1750500); // 5,835원 × 300
+    expect(poAmount(state.purchaseOrders.find((p) => p.id === 'PO-001')!)).toBe(1485260000); // 4,243,600원 × 350
   });
 });

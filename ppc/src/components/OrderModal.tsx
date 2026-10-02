@@ -4,9 +4,9 @@ import { qtyError } from '../lib/api';
 import { addDays, diffDays, formatMD } from '../lib/date';
 import { employeeError } from '../lib/employees';
 import { ddayLabel, num, won } from '../lib/format';
-import { capacityError, pricePerKgOf, qtyDelayOf, supplierCapacityOf, unitPriceOf } from '../lib/ordering';
+import { basePricePerKgOf, capacityError, pricePerKgOf, qtyDelayOf, supplierCapacityOf, unitPriceOf } from '../lib/ordering';
 import { duplicateOrderOf, supplierLimitError, supplierLimitOf } from '../lib/planning';
-import { disruptedSupplierNames, gradeOf, suppliersFor } from '../lib/recommend';
+import { CAUTION_STATUS, disruptedSupplierNames, gradeOf, suppliersFor } from '../lib/recommend';
 import { partOf, reference } from '../lib/reference';
 import type { AppState } from '../lib/types';
 import { useAppData } from '../state/AppData';
@@ -63,9 +63,10 @@ export function OrderModal({
   const duplicate = supplier && validQty ? duplicateOrderOf(state.purchaseOrders, { partCode, supplierName: supplier.name, qty }, baseDate) : null;
   const supplierDisrupted = !!supplier && disruptedSupplierNames(state.disruptions).includes(supplier.name);
 
-  // 금액: 업체의 자재 단가(원/kg) × 부품 1개당 소재 필요량(kg) × 수량
+  // 금액: 부품 기준단가 × (업체의 자재 단가 ÷ 자재 기준 단가) × 수량
   const perKg = supplier ? pricePerKgOf(part, supplier.name) : null;
   const unitPrice = supplier ? unitPriceOf(part, supplier.name) : null;
+  const basePerKg = basePricePerKgOf(part);
   const amount = unitPrice !== null && validQty ? unitPrice * qty : null;
 
   // 도착 예정일 = 기준일 + 업체 기본 납기 + 수량에 따른 지연 (같은 업체에 많이 시킬수록 늦다)
@@ -125,13 +126,14 @@ export function OrderModal({
           </select>
         </Field>
 
-        <Field label="업체" hint={`${part.materialName}를 공급할 수 있는 정상 업체 ${suppliers.length}곳 · 단가는 업체마다 다릅니다`}>
+        <Field label="업체" hint={`${part.materialName}를 공급하는 업체 ${suppliers.length}곳 · 단가는 업체마다 다릅니다`}>
           <select className={INPUT_CLASS} value={supplierName} onChange={(e) => setSupplierName(e.target.value)}>
             {suppliers.map((s) => {
               const price = unitPriceOf(part, s.name);
               return (
                 <option key={s.code} value={s.name}>
                   {s.name} (개당 {price === null ? '단가 없음' : won(price)} · 기본 납기 {s.leadDays}일 · 준수율 {s.onTimeRate}% {gradeOf(s.onTimeRate)})
+                  {s.status === CAUTION_STATUS ? ' · 상태 주의' : ''}
                   {s.name === part.defaultSupplier ? ' · 기본 업체' : ''}
                 </option>
               );
@@ -142,6 +144,12 @@ export function OrderModal({
         {supplier && grade === '위험' && (
           <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[13px] font-medium text-red-700">
             이 업체는 납기 준수율이 {supplier.onTimeRate}%(위험)라 예정일보다 늦을 수 있습니다.
+          </p>
+        )}
+
+        {supplier?.status === CAUTION_STATUS && (
+          <p role="alert" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] font-medium text-amber-900">
+            이 업체는 상태가 '주의'입니다 (납기 준수율 {supplier.onTimeRate}%). 발주는 할 수 있지만 예정대로 받지 못할 수 있습니다.
           </p>
         )}
 
@@ -197,7 +205,8 @@ export function OrderModal({
           <p className="tabular mt-1 text-right text-xs text-slate-600">
             {unitPrice === null || perKg === null
               ? '이 업체의 단가가 없어 발주할 수 없습니다.'
-              : `개당 ${won(unitPrice)} (${part.materialName} ${won(perKg)}/kg × ${part.kgPerUnit}kg)` + (validQty ? ` × ${num(qty)}개` : '')}
+              : `개당 ${won(unitPrice)} (기준단가 ${won(part.basePrice)} × 이 업체의 ${part.materialName} 단가 ${won(perKg)}/kg ÷ 기준 ${won(basePerKg ?? 0)}/kg)` +
+                (validQty ? ` × ${num(qty)}개` : '')}
           </p>
         </div>
 

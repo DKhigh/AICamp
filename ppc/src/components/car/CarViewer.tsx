@@ -17,18 +17,21 @@ export function CarViewer({
   focus,
   onFocus,
   detail,
+  initialMode = 'exterior',
 }: {
   items: CarViewerItem[];
   focus: CarPartKey | null;
   onFocus: (key: CarPartKey | null) => void;
   /** 선택한 부품의 상세 카드 (뷰어 아래쪽에 떠 있다) */
   detail: ReactNode;
+  /** 처음 보기 모드. 수리 차량 화면은 안쪽 부품이 보이도록 X-Ray로 연다 */
+  initialMode?: ViewMode;
 }) {
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const hotspotRefs = useRef<Partial<Record<CarPartKey, HTMLDivElement | null>>>({});
   const vizRef = useRef<Car3DVisualizer | null>(null);
   const [failed, setFailed] = useState(false);
-  const [mode, setMode] = useState<ViewMode>('exterior');
+  const [mode, setMode] = useState<ViewMode>(initialMode);
   const [autoRotate, setAutoRotate] = useState(false);
 
   useEffect(() => {

@@ -29,7 +29,7 @@ import {
   stopBreakdown,
   type ScenarioOutcome,
 } from '../lib/planning';
-import { disruptedSupplierNames, RANK_RULE_TEXT, recommendSuppliers, splitPlan, type Candidate } from '../lib/recommend';
+import { CAUTION_STATUS, disruptedSupplierNames, RANK_RULE_TEXT, recommendSuppliers, splitPlan, type Candidate } from '../lib/recommend';
 import { materialOf, partOf, reference } from '../lib/reference';
 import { productionParts } from '../lib/repairs';
 import type { AppState, Disruption, OriginalPoAction, Part, PurchaseOrder } from '../lib/types';
@@ -186,6 +186,7 @@ function CandidateRow({
           />
           <strong className="tabular text-slate-900">{c.rank}</strong>
           {risk && <span className="text-[11px] font-semibold text-red-600">위험 · 빨라도 후순위</span>}
+          {c.status === CAUTION_STATUS && <span className="text-[11px] font-semibold text-amber-700">상태 주의 · 후순위</span>}
         </label>
       </td>
       <td className="px-2 py-2 font-semibold text-slate-900">

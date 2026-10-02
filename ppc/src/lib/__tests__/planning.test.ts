@@ -140,8 +140,14 @@ describe('reference.json (§4.2)', () => {
     expect(gradeOf(94)).toBe('보통');
     expect(gradeOf(80)).toBe('보통');
     expect(gradeOf(79)).toBe('위험');
-    // 새 Excel의 납기 준수율은 모든 업체가 93%라 등급은 전부 '보통'이다
-    expect(reference.suppliers.every((s) => s.onTimeRate === 93 && gradeOf(s.onTimeRate) === '보통')).toBe(true);
+    // Excel의 납기 준수율은 86~97%: 우수(95% 이상) 18곳, 보통 30곳, 위험(80% 미만)은 없다
+    const count = (g: string) => reference.suppliers.filter((s) => gradeOf(s.onTimeRate) === g).length;
+    expect([count('우수'), count('보통'), count('위험')]).toEqual([18, 30, 0]);
+    expect(gradeOf(supplierOf('한빛오토텍')!.onTimeRate)).toBe('우수');
+    expect(gradeOf(supplierOf('태성모터스')!.onTimeRate)).toBe('보통');
+    // 업체 상태: 우수 5 · 정상 33 · 주의 10. 셋 다 발주할 수 있다
+    const status = (st: string) => reference.suppliers.filter((s) => s.status === st).length;
+    expect([status('우수'), status('정상'), status('주의')]).toEqual([5, 33, 10]);
   });
 });
 
@@ -362,18 +368,20 @@ describe('§9.2 차질 사례', () => {
       expect(recommendedQty('취소', cover, delayed)).toBe(1400);
     });
 
-    it('대체 후보 22곳 (위험 0), 1·2·3순위는 대체 납기 2일 업체 중 공급량 큰 순', () => {
-      const rec = recommendFor(c, 560);
+    it('대체 후보 22곳 (위험 0): 빨리 오는 순 → 준수율 높은 순, 상태 주의 업체는 맨 뒤', () => {
+      // 한 업체에 넣는 기본 수량 50개 (서스펜션 1개에 철강 18kg → 900kg)
+      const rec = recommendFor(c, 50);
       expect(rec.total).toBe(22);
       expect(rec.riskCount).toBe(0);
-      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.monthlyCapacityKg])).toEqual([
-        ['광성정밀', 'S021', 2, 5420],
-        ['진우기공', 'S041', 2, 5040],
-        ['대림정공', 'S013', 2, 4972],
+      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.onTimeRate])).toEqual([
+        ['한빛기공', 'S045', 2, 96],
+        ['신성기공', 'S033', 2, 96],
+        ['동진오토', 'S009', 2, 95],
       ]);
-      expect(rec.ranked[0].requiredKg).toBe(1680);
-      expect(rec.ranked[0].capacityOk).toBe(true);
+      expect(rec.ranked[0].requiredKg).toBe(900);
+      expect([rec.ranked[0].capacityOk, rec.ranked[0].maxQty]).toEqual([true, 200]); // 3,600kg ÷ 18kg
       expect(rec.ranked[0].arrival).toBe(D('10/7'));
+      expect(rec.ranked.slice(-3).every((x) => x.status === '주의')).toBe(true);
     });
 
     it('대체(1순위, 유지): 정지 0 · 손실 0 · 10/17 완료 · 지연 0건', () => {
@@ -393,8 +401,8 @@ describe('§9.2 차질 사례', () => {
       expect(runAlt(c, '진우기공', '취소', 1400).sim.endStock.P004).toBe(80);
     });
 
-    it('자재 평균 대체 납기 3.7일', () => {
-      expect(materialOf('철강 소재')?.altAvgLeadDays).toBe(3.7);
+    it('자재 평균 대체 납기 2.8일', () => {
+      expect(materialOf('철강 소재')?.altAvgLeadDays).toBe(2.8);
     });
   });
 
@@ -434,21 +442,21 @@ describe('§9.2 차질 사례', () => {
       expect(recommendedQty('취소', cover, delayed)).toBe(400);
     });
 
-    it('대체 후보 14곳 (위험 0), 1·2·3순위', () => {
-      const rec = recommendFor(c, 100);
+    it('대체 후보 14곳 (위험 0), 1·2·3순위 — 엔진은 1개에 110kg이라 한 업체가 댈 수 있는 양이 적다', () => {
+      const rec = recommendFor(c, 25);
       expect(rec.total).toBe(14);
       expect(rec.riskCount).toBe(0);
-      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.monthlyCapacityKg])).toEqual([
-        ['에이스메탈', 'S025', 2, 4144],
-        ['진성오토텍', 'S017', 2, 3696],
-        ['동진오토', 'S009', 2, 3248],
+      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.onTimeRate, x.maxQty])).toEqual([
+        ['동진오토', 'S009', 2, 95, 53],
+        ['에이스메탈', 'S025', 2, 95, 25],
+        ['진성오토텍', 'S017', 2, 94, 50],
       ]);
-      expect(rec.ranked[0].requiredKg).toBe(150);
+      expect(rec.ranked[0].requiredKg).toBe(2750);
       expect(rec.ranked[0].arrival).toBe(D('10/7'));
-      // 늦게 오는 업체가 맨 뒤
-      expect(rec.ranked.slice(-2).map((x) => [x.name, x.altLeadDays])).toEqual([
-        ['대성정밀', 6],
-        ['삼진메탈', 6],
+      // 상태 주의 업체가 맨 뒤
+      expect(rec.ranked.slice(-2).map((x) => [x.name, x.altLeadDays, x.status])).toEqual([
+        ['삼진메탈', 6, '주의'],
+        ['대성정밀', 6, '주의'],
       ]);
     });
 
@@ -470,8 +478,8 @@ describe('§9.2 차질 사례', () => {
       expect(runAlt(c, '진성오토텍', '취소', 400).sim.endStock.P007).toBe(40);
     });
 
-    it('자재 평균 대체 납기 4.3일', () => {
-      expect(materialOf('알루미늄 소재')?.altAvgLeadDays).toBe(4.3);
+    it('자재 평균 대체 납기 4.8일', () => {
+      expect(materialOf('알루미늄 소재')?.altAvgLeadDays).toBe(4.8);
     });
 
     it('문구 T1 ~ T5 (§6.10)', () => {
@@ -528,15 +536,15 @@ describe('§9.2 차질 사례', () => {
     });
 
     it('대체 후보 12곳 (위험 0), 1·2·3순위', () => {
-      const rec = recommendFor(c, 120);
+      const rec = recommendFor(c, 50);
       expect(rec.total).toBe(12);
       expect(rec.riskCount).toBe(0);
-      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.monthlyCapacityKg])).toEqual([
-        ['광성정밀', 'S021', 2, 5420],
-        ['대림정공', 'S013', 2, 4972],
-        ['대원소재', 'S037', 2, 3316],
+      expect(rec.ranked.slice(0, 3).map((x) => [x.name, x.code, x.altLeadDays, x.onTimeRate])).toEqual([
+        ['광성정밀', 'S021', 2, 92],
+        ['대림정공', 'S013', 2, 91],
+        ['서광정밀', 'S030', 4, 97],
       ]);
-      expect(rec.ranked[0].requiredKg).toBeCloseTo(264);
+      expect(rec.ranked[0].requiredKg).toBeCloseTo(700);
       expect(rec.ranked[0].arrival).toBe(D('10/7'));
     });
 
@@ -557,8 +565,8 @@ describe('§9.2 차질 사례', () => {
       expect(runAlt(c, '대림정공', '취소', 340).sim.endStock.P010).toBe(20);
     });
 
-    it('자재 평균 대체 납기 4.5일', () => {
-      expect(materialOf('합금강 소재')?.altAvgLeadDays).toBe(4.5);
+    it('자재 평균 대체 납기 4.8일', () => {
+      expect(materialOf('합금강 소재')?.altAvgLeadDays).toBe(4.8);
     });
   });
 });

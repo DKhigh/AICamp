@@ -138,12 +138,12 @@ describe('F2-4 결정 저장', () => {
 
   it('유지: PO-004 대체 발주가 생기고 PO-001은 400 · 10/12 · 지연으로 남는다', async () => {
     const api = await case2();
-    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '유지', employeeNo: '0000' });
+    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 50, action: '유지', employeeNo: '0000' });
     const state = (await api.fetchState())!;
     expect(state.purchaseOrders.find((p) => p.id === 'PO-004')).toMatchObject({
       kind: '대체',
       supplierName: '진성오토텍',
-      qty: 100,
+      qty: 50,
       expectedArrival: '2026-10-07',
       disruptionId: 'D-001',
     });
@@ -151,28 +151,27 @@ describe('F2-4 결정 저장', () => {
     expect(state.disruptions[0]).toMatchObject({
       status: '대체발주',
       altSupplierName: '진성오토텍',
-      altQty: 100,
+      altQty: 50,
       altPoId: 'PO-004',
       originalPoAction: '유지',
     });
-    // 주문 납기 현황이 모두 충족으로 돌아오고 엔진 카드는 '대응 중'
+    // 50개로는 80개 부족분을 다 메우지 못하지만 정지는 4일에서 줄어든다. 엔진 카드는 '대응 중'
     const { wait } = baseScenarios(state);
-    expect(wait.orders.map((o) => o.doneDate)).toEqual(['2026-10-09', '2026-10-13', '2026-10-17']);
-    expect(wait.lateOrders).toHaveLength(0);
+    expect(wait.lineStopDays).toBeLessThan(4);
     const engine = state.lineParts.find((p) => p.partCode === 'P007')!;
     expect(partStatusOf(engine, state.disruptions, state.settings.dailyCapacity)).toBe('대응 중');
   });
 
-  it('감량: PO-001이 300 (원래 400)', async () => {
+  it('감량: PO-001이 350 (원래 400)', async () => {
     const api = await case2();
-    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '감량', employeeNo: '0000' });
+    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 50, action: '감량', employeeNo: '0000' });
     const state = (await api.fetchState())!;
-    expect(state.purchaseOrders.find((p) => p.id === 'PO-001')).toMatchObject({ qty: 300, originalQty: 400, status: '지연' });
+    expect(state.purchaseOrders.find((p) => p.id === 'PO-001')).toMatchObject({ qty: 350, originalQty: 400, status: '지연' });
   });
 
-  it('취소(400개): PO-001이 입고 예정 표에서 사라지고 취소로 남는다', async () => {
+  it('취소: PO-001이 입고 예정 표에서 사라지고 취소로 남는다', async () => {
     const api = await case2();
-    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 400, action: '취소', employeeNo: '0000' });
+    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 50, action: '취소', employeeNo: '0000' });
     const state = (await api.fetchState())!;
     expect(openPos(state.purchaseOrders).map((p) => p.id)).not.toContain('PO-001');
     expect(state.purchaseOrders.find((p) => p.id === 'PO-001')).toMatchObject({ status: '취소', qty: 400 });
@@ -180,9 +179,9 @@ describe('F2-4 결정 저장', () => {
 
   it('이미 결정한 차질은 다시 확정할 수 없다', async () => {
     const api = await case2();
-    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '유지', employeeNo: '0000' });
+    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 50, action: '유지', employeeNo: '0000' });
     await expect(
-      api.confirmAlternative({ disruptionId: 'D-001', supplierName: '동진오토', qty: 100, action: '유지', employeeNo: '0000' }),
+      api.confirmAlternative({ disruptionId: 'D-001', supplierName: '동진오토', qty: 50, action: '유지', employeeNo: '0000' }),
     ).rejects.toThrow('이미 결정이 끝난 차질');
     expect((await api.fetchState())!.purchaseOrders).toHaveLength(4);
   });
@@ -305,7 +304,7 @@ describe('발주대기와 발주 취소', () => {
     const api = await freshApi();
     // PO-002를 지연시키고 대체 발주를 낸다
     await api.registerDisruption({ partCode: 'P004', supplierName: '태성모터스', reason: '납품 지연', delayDays: 7, employeeNo: '0000' });
-    const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진우기공', qty: 560, action: '유지', employeeNo: '0000' });
+    const alt = await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진우기공', qty: 100, action: '유지', employeeNo: '0000' });
     const state = (await api.fetchState())!;
     expect(isCancellable(state.purchaseOrders.find((p) => p.id === 'PO-002')!, state.settings.baseDate)).toBe(false);
     expect(isCancellable(state.purchaseOrders.find((p) => p.id === alt.id)!, state.settings.baseDate)).toBe(false);
@@ -408,7 +407,7 @@ describe('업체별 발주 한도 (일주일 50개)', () => {
     // 한빛오토텍에는 초기 발주 PO-001 400개가 있지만 한도는 비어 있다
     expect(supplierLimitOf(state.purchaseOrders, '한빛오토텍', '2026-10-05').used).toBe(0);
     await api.registerDisruption({ partCode: 'P007', supplierName: '한빛오토텍', reason: '납품 지연', delayDays: 5, employeeNo: '0000' });
-    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 100, action: '유지', employeeNo: '0000' });
+    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 50, action: '유지', employeeNo: '0000' });
     expect(supplierLimitOf((await api.fetchState())!.purchaseOrders, '진성오토텍', '2026-10-05').used).toBe(0);
   });
 });

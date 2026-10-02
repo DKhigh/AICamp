@@ -1,5 +1,5 @@
 // Excel(data/ppc_data.xlsx) → src/data/reference.json, employees.json  (DESIGN.md §4.2)
-// data/ppc_data.xlsx는 '자동차부품_생산관리_가상데이터_업체별단가추가' 워크북의 사본이다. 다른 Excel 파일은 쓰지 않는다.
+// data/ppc_data.xlsx는 '자동차부품_생산관리_현실단가_최종수정' 워크북의 사본이다. 다른 Excel 파일은 쓰지 않는다.
 // 실행: npm run data
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -33,9 +33,14 @@ const kgByPart = new Map(
   rows('제품별_자재').map((r) => [text(r['제품코드']), num(r['제품 1개당 필요량'], '제품 1개당 필요량')]),
 );
 
+// 부품 기준단가(원/개)와 자재 기준 단가(원/kg)
+const basePriceByPart = new Map(rows('제품별_기준단가').map((r) => [text(r['제품코드']), num(r['기준단가(원/개)'], '기준단가(원/개)')]));
+const basePerKgByMaterial = new Map(rows('자재').map((r) => [text(r['자재명']), num(r['단가(원/kg)'], '자재 단가(원/kg)')]));
+
 const parts = rows('생산제품').map((r) => {
   const code = text(r['제품코드']);
   if (!kgByPart.has(code)) throw new Error(`제품별_자재 시트에 ${code}가 없습니다`);
+  if (!basePriceByPart.has(code)) throw new Error(`제품별_기준단가 시트에 ${code}가 없습니다`);
   return {
     code,
     name: text(r['생산제품']),
@@ -43,6 +48,7 @@ const parts = rows('생산제품').map((r) => {
     materialName: text(r['주요자재']),
     defaultSupplier: text(r['기본 공급업체']),
     kgPerUnit: kgByPart.get(code),
+    basePrice: basePriceByPart.get(code),
   };
 });
 
@@ -71,7 +77,9 @@ const materials = rows('자재').map((r) => ({
   defaultSupplier: text(r['기본 공급업체']),
   leadDays: int(r['기본 납기(일)'], '자재 기본 납기(일)'),
   altAvgLeadDays: num(r['대체업체 평균 납기(일)'], '대체업체 평균 납기(일)'),
+  pricePerKg: basePerKgByMaterial.get(text(r['자재명'])) ?? null,
 }));
+for (const m of materials) if (m.pricePerKg === null) throw new Error(`자재 기준 단가가 없습니다: ${m.name}`);
 
 // §4.2-7: 변환 결과 확인
 const expected = { parts: 30, suppliers: 48, materials: 7 };

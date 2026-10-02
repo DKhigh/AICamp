@@ -1,10 +1,10 @@
-// 발주 금액과 수량에 따른 납품 지연 (Excel '업체별_자재단가', '지연시간' 시트)
+// 발주 금액과 수량에 따른 납품 지연 (Excel '제품별_기준단가', '업체별_자재단가', '지연시간' 시트)
 import { CAPACITY_WINDOW_DAYS, SUPPLIER_LIMIT_DAYS } from './constants';
 import { diffDays } from './date';
 import { num } from './format';
 import { baseCodeOf } from './partcode';
 import { isLimitExempt } from './planning';
-import { partOf, reference } from './reference';
+import { materialOf, partOf, reference } from './reference';
 import type { ISODate, Part, PurchaseOrder, Supplier } from './types';
 
 // ── 금액 ──────────────────────────────────────────────────────────────────
@@ -14,10 +14,21 @@ export function pricePerKgOf(part: Part, supplierName: string): number | null {
   return reference.prices.find((p) => p.supplierName === supplierName && p.materialName === part.materialName)?.pricePerKg ?? null;
 }
 
-/** 부품 1개 값(원) = 자재 단가(원/kg) × 부품 1개당 소재 필요량(kg) */
+/** 그 부품 주요자재의 기준 단가(원/kg). Excel '자재' 시트 */
+export function basePricePerKgOf(part: Part): number | null {
+  return materialOf(part.materialName)?.pricePerKg ?? null;
+}
+
+/**
+ * 부품 1개 값(원) = 부품 기준단가(원/개) × (그 업체의 자재 단가 ÷ 자재 기준 단가). 100원 단위로 맞춘다.
+ * 기준단가는 Excel '제품별_기준단가'의 현실 단가이고, 업체마다 자재를 싸게·비싸게 파는 만큼 값이 달라진다.
+ * 그 자재를 팔지 않는 업체는 null.
+ */
 export function unitPriceOf(part: Part, supplierName: string): number | null {
   const perKg = pricePerKgOf(part, supplierName);
-  return perKg === null ? null : Math.round(perKg * part.kgPerUnit);
+  const basePerKg = basePricePerKgOf(part);
+  if (perKg === null || basePerKg === null || basePerKg <= 0) return null;
+  return Math.round((part.basePrice * perKg) / basePerKg / 100) * 100;
 }
 
 export function orderAmount(part: Part, supplierName: string, qty: number): number | null {

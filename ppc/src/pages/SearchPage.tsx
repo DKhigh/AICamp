@@ -61,6 +61,11 @@ export function SearchPage({ state }: { state: AppState }) {
                       <td className="px-2 py-2.5 text-slate-900">
                         <SupplierLink name={o.supplier.name} /> <span className="font-mono text-[11px] text-slate-400">{o.supplier.code}</span>
                         {o.isDefault && <span className="ml-1.5 text-[11px] font-semibold text-accent">기본 업체</span>}
+                        {o.supplier.status !== '정상' && (
+                          <span className="ml-1.5">
+                            <Badge tone={o.supplier.status === '주의' ? 'orange' : 'green'}>{o.supplier.status}</Badge>
+                          </span>
+                        )}
                         {o.disrupted && (
                           <span className="ml-1.5">
                             <Badge tone="red">차질 진행 중</Badge>
@@ -89,7 +94,7 @@ export function SearchPage({ state }: { state: AppState }) {
           </div>
         )}
         <p className="border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500">
-          가격 = 업체의 자재 단가(원/kg) × 부품 1개당 소재 필요량(kg). 기본 납기에는 발주 수량에 따른 지연이 더해집니다(발주 창에서 확인). 이번 주
+          가격 = 부품 기준단가(원/개) × (업체의 자재 단가 ÷ 자재 기준 단가). 기본 납기에는 발주 수량에 따른 지연이 더해집니다(발주 창에서 확인). 이번 주
           발주 가능 = 업체당 주간 한도와 남은 월 공급 능력 가운데 작은 쪽.
         </p>
       </Card>

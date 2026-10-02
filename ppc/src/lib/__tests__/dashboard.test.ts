@@ -43,13 +43,13 @@ describe('초기 대시보드', () => {
     expect(model.parts.filter((p) => p.isBottleneck).map((p) => p.part.name)).toEqual(['엔진']);
   });
 
-  it('입고 예정 표: PO-001 → PO-003 → PO-002 (새 Excel에는 위험 등급 업체가 없어 지연 위험 배지는 없다)', () => {
+  it('입고 예정 표: PO-001 → PO-003 → PO-002 (위험 등급 업체가 없어 지연 위험 배지는 없다)', () => {
     expect(model.poRows.map((r) => [r.po.id, formatMD(r.po.expectedArrival), ddayLabel(r.dday), r.atRisk])).toEqual([
       ['PO-001', '10/7', 'D-2', false],
       ['PO-003', '10/8', 'D-3', false],
       ['PO-002', '10/9', 'D-4', false],
     ]);
-    expect(model.poRows[0].onTimeRate).toBe(93);
+    expect(model.poRows[0].onTimeRate).toBe(97); // 한빛오토텍
     // 시연 초기 발주는 모두 기준일 이전에 넣은 것이라 발주대기가 아니다
     expect(model.poRows.map((r) => r.displayStatus)).toEqual(['입고대기', '입고대기', '입고대기']);
   });

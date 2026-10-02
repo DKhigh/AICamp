@@ -6,7 +6,8 @@
       "category": "제동장치 부품",
       "materialName": "주철 소재",
       "defaultSupplier": "태성모터스",
-      "kgPerUnit": 1.8
+      "kgPerUnit": 9,
+      "basePrice": 180000
     },
     {
       "code": "P002",
@@ -14,7 +15,8 @@
       "category": "제동장치 부품",
       "materialName": "알루미늄 소재",
       "defaultSupplier": "한빛오토텍",
-      "kgPerUnit": 2.2
+      "kgPerUnit": 8,
+      "basePrice": 220000
     },
     {
       "code": "P003",
@@ -22,7 +24,8 @@
       "category": "제동장치 부품",
       "materialName": "단조강 소재",
       "defaultSupplier": "세진정밀",
-      "kgPerUnit": 2
+      "kgPerUnit": 11,
+      "basePrice": 300000
     },
     {
       "code": "P004",
@@ -30,7 +33,8 @@
       "category": "현가장치 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "태성모터스",
-      "kgPerUnit": 3
+      "kgPerUnit": 18,
+      "basePrice": 380000
     },
     {
       "code": "P005",
@@ -38,7 +42,8 @@
       "category": "현가장치 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "동아기공",
-      "kgPerUnit": 1.8
+      "kgPerUnit": 16,
+      "basePrice": 320000
     },
     {
       "code": "P006",
@@ -46,7 +51,8 @@
       "category": "엔진·배기 부품",
       "materialName": "고무 소재",
       "defaultSupplier": "유진소재",
-      "kgPerUnit": 1.2
+      "kgPerUnit": 125,
+      "basePrice": 3500000
     },
     {
       "code": "P007",
@@ -54,7 +60,8 @@
       "category": "엔진·배기 부품",
       "materialName": "알루미늄 소재",
       "defaultSupplier": "한빛오토텍",
-      "kgPerUnit": 1.5
+      "kgPerUnit": 110,
+      "basePrice": 4200000
     },
     {
       "code": "P008",
@@ -62,7 +69,8 @@
       "category": "동력전달 부품",
       "materialName": "알루미늄 소재",
       "defaultSupplier": "한빛오토텍",
-      "kgPerUnit": 8
+      "kgPerUnit": 85,
+      "basePrice": 2800000
     },
     {
       "code": "P009",
@@ -70,7 +78,8 @@
       "category": "엔진·배기 부품",
       "materialName": "알루미늄 소재",
       "defaultSupplier": "대성메탈",
-      "kgPerUnit": 2.5
+      "kgPerUnit": 115,
+      "basePrice": 3800000
     },
     {
       "code": "P010",
@@ -78,7 +87,8 @@
       "category": "현가·조향 부품",
       "materialName": "합금강 소재",
       "defaultSupplier": "세진정밀",
-      "kgPerUnit": 2.2
+      "kgPerUnit": 14,
+      "basePrice": 420000
     },
     {
       "code": "P011",
@@ -86,7 +96,8 @@
       "category": "현가·조향 부품",
       "materialName": "합금강 소재",
       "defaultSupplier": "세진정밀",
-      "kgPerUnit": 1.1
+      "kgPerUnit": 12,
+      "basePrice": 320000
     },
     {
       "code": "P012",
@@ -94,7 +105,8 @@
       "category": "차체 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "동아기공",
-      "kgPerUnit": 1
+      "kgPerUnit": 22,
+      "basePrice": 220000
     },
     {
       "code": "P013",
@@ -102,7 +114,8 @@
       "category": "전동화 부품",
       "materialName": "알루미늄 소재",
       "defaultSupplier": "대성메탈",
-      "kgPerUnit": 4
+      "kgPerUnit": 32,
+      "basePrice": 1600000
     },
     {
       "code": "P014",
@@ -110,7 +123,8 @@
       "category": "전동화 부품",
       "materialName": "알루미늄 소재",
       "defaultSupplier": "한빛오토텍",
-      "kgPerUnit": 3.5
+      "kgPerUnit": 28,
+      "basePrice": 1400000
     },
     {
       "code": "P015",
@@ -118,7 +132,8 @@
       "category": "차체 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "태성모터스",
-      "kgPerUnit": 0.8
+      "kgPerUnit": 18,
+      "basePrice": 180000
     },
     {
       "code": "P016",
@@ -126,7 +141,8 @@
       "category": "차체 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "동아기공",
-      "kgPerUnit": 0.7
+      "kgPerUnit": 16,
+      "basePrice": 150000
     },
     {
       "code": "P017",
@@ -134,7 +150,8 @@
       "category": "차체 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "태성모터스",
-      "kgPerUnit": 6
+      "kgPerUnit": 30,
+      "basePrice": 550000
     },
     {
       "code": "P018",
@@ -142,7 +159,8 @@
       "category": "차체 부품",
       "materialName": "스테인리스 소재",
       "defaultSupplier": "신우스틸",
-      "kgPerUnit": 0.9
+      "kgPerUnit": 20,
+      "basePrice": 320000
     },
     {
       "code": "P019",
@@ -150,7 +168,8 @@
       "category": "차체 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "동아기공",
-      "kgPerUnit": 1
+      "kgPerUnit": 22,
+      "basePrice": 240000
     },
     {
       "code": "P020",
@@ -158,7 +177,8 @@
       "category": "엔진·배기 부품",
       "materialName": "스테인리스 소재",
       "defaultSupplier": "신우스틸",
-      "kgPerUnit": 3
+      "kgPerUnit": 120,
+      "basePrice": 4800000
     },
     {
       "code": "P021",
@@ -166,7 +186,8 @@
       "category": "엔진·배기 부품",
       "materialName": "주철 소재",
       "defaultSupplier": "태성모터스",
-      "kgPerUnit": 2.5
+      "kgPerUnit": 135,
+      "basePrice": 3600000
     },
     {
       "code": "P022",
@@ -174,7 +195,8 @@
       "category": "엔진·배기 부품",
       "materialName": "알루미늄 소재",
       "defaultSupplier": "대성메탈",
-      "kgPerUnit": 1.3
+      "kgPerUnit": 115,
+      "basePrice": 4300000
     },
     {
       "code": "P023",
@@ -182,7 +204,8 @@
       "category": "엔진·배기 부품",
       "materialName": "합금강 소재",
       "defaultSupplier": "세진정밀",
-      "kgPerUnit": 0.8
+      "kgPerUnit": 125,
+      "basePrice": 4000000
     },
     {
       "code": "P024",
@@ -190,7 +213,8 @@
       "category": "동력전달 부품",
       "materialName": "주철 소재",
       "defaultSupplier": "태성모터스",
-      "kgPerUnit": 4
+      "kgPerUnit": 90,
+      "basePrice": 2400000
     },
     {
       "code": "P025",
@@ -198,7 +222,8 @@
       "category": "동력전달 부품",
       "materialName": "알루미늄 소재",
       "defaultSupplier": "한빛오토텍",
-      "kgPerUnit": 5
+      "kgPerUnit": 82,
+      "basePrice": 3000000
     },
     {
       "code": "P026",
@@ -206,7 +231,8 @@
       "category": "동력전달 부품",
       "materialName": "합금강 소재",
       "defaultSupplier": "세진정밀",
-      "kgPerUnit": 4.5
+      "kgPerUnit": 88,
+      "basePrice": 2700000
     },
     {
       "code": "P027",
@@ -214,7 +240,8 @@
       "category": "현가장치 부품",
       "materialName": "합금강 소재",
       "defaultSupplier": "동아기공",
-      "kgPerUnit": 1
+      "kgPerUnit": 19,
+      "basePrice": 360000
     },
     {
       "code": "P028",
@@ -222,7 +249,8 @@
       "category": "현가장치 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "태성모터스",
-      "kgPerUnit": 1.4
+      "kgPerUnit": 21,
+      "basePrice": 420000
     },
     {
       "code": "P029",
@@ -230,7 +258,8 @@
       "category": "제동장치 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "동아기공",
-      "kgPerUnit": 1.2
+      "kgPerUnit": 10,
+      "basePrice": 200000
     },
     {
       "code": "P030",
@@ -238,7 +267,8 @@
       "category": "제동장치 부품",
       "materialName": "철강 소재",
       "defaultSupplier": "태성모터스",
-      "kgPerUnit": 1
+      "kgPerUnit": 9,
+      "basePrice": 230000
     }
   ],
   "suppliers": [
@@ -252,8 +282,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 2800,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 3500,
+      "onTimeRate": 91,
       "phone": "055-2137-1083"
     },
     {
@@ -265,9 +295,9 @@
       ],
       "leadDays": 5,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 3231,
-      "onTimeRate": 93,
+      "status": "우수",
+      "monthlyCapacityKg": 4900,
+      "onTimeRate": 97,
       "phone": "055-2174-1166"
     },
     {
@@ -280,8 +310,8 @@
       "leadDays": 6,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 3662,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 4800,
+      "onTimeRate": 95,
       "phone": "055-2211-1249"
     },
     {
@@ -293,9 +323,9 @@
       ],
       "leadDays": 7,
       "altLeadDays": 6,
-      "status": "정상",
-      "monthlyCapacityKg": 4093,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 5700,
+      "onTimeRate": 90,
       "phone": "055-2248-1332"
     },
     {
@@ -308,8 +338,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 4524,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 4300,
+      "onTimeRate": 94,
       "phone": "055-2285-1415"
     },
     {
@@ -321,8 +351,8 @@
       "leadDays": 5,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 4955,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 4300,
+      "onTimeRate": 96,
       "phone": "055-2322-1498"
     },
     {
@@ -334,9 +364,9 @@
       ],
       "leadDays": 6,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 5386,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 5400,
+      "onTimeRate": 89,
       "phone": "055-2359-1581"
     },
     {
@@ -349,8 +379,8 @@
       "leadDays": 7,
       "altLeadDays": 6,
       "status": "정상",
-      "monthlyCapacityKg": 2817,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 4400,
+      "onTimeRate": 92,
       "phone": "055-2396-1664"
     },
     {
@@ -363,8 +393,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 3248,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5900,
+      "onTimeRate": 95,
       "phone": "055-2433-1747"
     },
     {
@@ -376,9 +406,9 @@
       ],
       "leadDays": 5,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 3679,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 5800,
+      "onTimeRate": 90,
       "phone": "055-2470-1830"
     },
     {
@@ -390,9 +420,9 @@
       ],
       "leadDays": 6,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 4110,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 2700,
+      "onTimeRate": 86,
       "phone": "055-2507-1913"
     },
     {
@@ -405,8 +435,8 @@
       "leadDays": 7,
       "altLeadDays": 6,
       "status": "정상",
-      "monthlyCapacityKg": 4541,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 3300,
+      "onTimeRate": 92,
       "phone": "055-2544-1996"
     },
     {
@@ -419,8 +449,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 4972,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 4700,
+      "onTimeRate": 91,
       "phone": "055-2581-2079"
     },
     {
@@ -432,9 +462,9 @@
       ],
       "leadDays": 5,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 5403,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 2900,
+      "onTimeRate": 90,
       "phone": "055-2618-2162"
     },
     {
@@ -447,8 +477,8 @@
       "leadDays": 6,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 2834,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5500,
+      "onTimeRate": 91,
       "phone": "055-2655-2245"
     },
     {
@@ -461,8 +491,8 @@
       "leadDays": 7,
       "altLeadDays": 6,
       "status": "정상",
-      "monthlyCapacityKg": 3265,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 4200,
+      "onTimeRate": 95,
       "phone": "055-2692-2328"
     },
     {
@@ -475,8 +505,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 3696,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5600,
+      "onTimeRate": 94,
       "phone": "055-2729-2411"
     },
     {
@@ -489,8 +519,8 @@
       "leadDays": 5,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 4127,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5700,
+      "onTimeRate": 92,
       "phone": "055-2766-2494"
     },
     {
@@ -503,8 +533,8 @@
       "leadDays": 6,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 4558,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5100,
+      "onTimeRate": 95,
       "phone": "055-2103-2577"
     },
     {
@@ -517,8 +547,8 @@
       "leadDays": 7,
       "altLeadDays": 6,
       "status": "정상",
-      "monthlyCapacityKg": 4989,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5000,
+      "onTimeRate": 91,
       "phone": "055-2140-2660"
     },
     {
@@ -531,8 +561,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 5420,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 2900,
+      "onTimeRate": 92,
       "phone": "055-2177-2743"
     },
     {
@@ -545,8 +575,8 @@
       "leadDays": 5,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 2851,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5600,
+      "onTimeRate": 92,
       "phone": "055-2214-2826"
     },
     {
@@ -559,8 +589,8 @@
       "leadDays": 6,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 3282,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 2600,
+      "onTimeRate": 94,
       "phone": "055-2251-2909"
     },
     {
@@ -573,7 +603,7 @@
       "leadDays": 7,
       "altLeadDays": 6,
       "status": "정상",
-      "monthlyCapacityKg": 3713,
+      "monthlyCapacityKg": 3500,
       "onTimeRate": 93,
       "phone": "055-2288-2992"
     },
@@ -587,8 +617,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 4144,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 2800,
+      "onTimeRate": 95,
       "phone": "055-2325-3075"
     },
     {
@@ -601,8 +631,8 @@
       "leadDays": 5,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 4575,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 6200,
+      "onTimeRate": 94,
       "phone": "055-2362-3158"
     },
     {
@@ -614,9 +644,9 @@
       ],
       "leadDays": 6,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 5006,
-      "onTimeRate": 93,
+      "status": "우수",
+      "monthlyCapacityKg": 3800,
+      "onTimeRate": 97,
       "phone": "055-2399-3241"
     },
     {
@@ -628,9 +658,9 @@
       ],
       "leadDays": 7,
       "altLeadDays": 6,
-      "status": "정상",
-      "monthlyCapacityKg": 5437,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 4100,
+      "onTimeRate": 89,
       "phone": "055-2436-3324"
     },
     {
@@ -643,7 +673,7 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 2868,
+      "monthlyCapacityKg": 4700,
       "onTimeRate": 93,
       "phone": "055-2473-3407"
     },
@@ -656,9 +686,9 @@
       ],
       "leadDays": 5,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 3299,
-      "onTimeRate": 93,
+      "status": "우수",
+      "monthlyCapacityKg": 4400,
+      "onTimeRate": 97,
       "phone": "055-2510-3490"
     },
     {
@@ -671,8 +701,8 @@
       "leadDays": 6,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 3730,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5400,
+      "onTimeRate": 95,
       "phone": "055-2547-3573"
     },
     {
@@ -685,8 +715,8 @@
       "leadDays": 7,
       "altLeadDays": 6,
       "status": "정상",
-      "monthlyCapacityKg": 4161,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5300,
+      "onTimeRate": 91,
       "phone": "055-2584-3656"
     },
     {
@@ -699,8 +729,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 4592,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 3000,
+      "onTimeRate": 96,
       "phone": "055-2621-3739"
     },
     {
@@ -713,8 +743,8 @@
       "leadDays": 5,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 5023,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 3000,
+      "onTimeRate": 91,
       "phone": "055-2658-3822"
     },
     {
@@ -726,9 +756,9 @@
       ],
       "leadDays": 6,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 5454,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 3400,
+      "onTimeRate": 90,
       "phone": "055-2695-3905"
     },
     {
@@ -740,9 +770,9 @@
       ],
       "leadDays": 7,
       "altLeadDays": 6,
-      "status": "정상",
-      "monthlyCapacityKg": 2885,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 6000,
+      "onTimeRate": 89,
       "phone": "055-2732-3988"
     },
     {
@@ -754,9 +784,9 @@
       ],
       "leadDays": 4,
       "altLeadDays": 2,
-      "status": "정상",
-      "monthlyCapacityKg": 3316,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 3400,
+      "onTimeRate": 89,
       "phone": "055-2769-4071"
     },
     {
@@ -769,8 +799,8 @@
       "leadDays": 5,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 3747,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 2900,
+      "onTimeRate": 92,
       "phone": "055-2106-4154"
     },
     {
@@ -782,9 +812,9 @@
       ],
       "leadDays": 6,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 4178,
-      "onTimeRate": 93,
+      "status": "우수",
+      "monthlyCapacityKg": 3100,
+      "onTimeRate": 97,
       "phone": "055-2143-4237"
     },
     {
@@ -797,8 +827,8 @@
       "leadDays": 7,
       "altLeadDays": 6,
       "status": "정상",
-      "monthlyCapacityKg": 4609,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 3500,
+      "onTimeRate": 96,
       "phone": "055-2180-4320"
     },
     {
@@ -811,8 +841,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 5040,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 3200,
+      "onTimeRate": 95,
       "phone": "055-2217-4403"
     },
     {
@@ -825,8 +855,8 @@
       "leadDays": 5,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 5471,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5100,
+      "onTimeRate": 94,
       "phone": "055-2254-4486"
     },
     {
@@ -839,8 +869,8 @@
       "leadDays": 6,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 2902,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 4400,
+      "onTimeRate": 96,
       "phone": "055-2291-4569"
     },
     {
@@ -852,9 +882,9 @@
       ],
       "leadDays": 7,
       "altLeadDays": 6,
-      "status": "정상",
-      "monthlyCapacityKg": 3333,
-      "onTimeRate": 93,
+      "status": "주의",
+      "monthlyCapacityKg": 5000,
+      "onTimeRate": 89,
       "phone": "055-2328-4652"
     },
     {
@@ -867,8 +897,8 @@
       "leadDays": 4,
       "altLeadDays": 2,
       "status": "정상",
-      "monthlyCapacityKg": 3764,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 3600,
+      "onTimeRate": 96,
       "phone": "055-2365-4735"
     },
     {
@@ -880,9 +910,9 @@
       ],
       "leadDays": 5,
       "altLeadDays": 4,
-      "status": "정상",
-      "monthlyCapacityKg": 4195,
-      "onTimeRate": 93,
+      "status": "우수",
+      "monthlyCapacityKg": 3700,
+      "onTimeRate": 97,
       "phone": "055-2402-4818"
     },
     {
@@ -895,8 +925,8 @@
       "leadDays": 6,
       "altLeadDays": 4,
       "status": "정상",
-      "monthlyCapacityKg": 4626,
-      "onTimeRate": 93,
+      "monthlyCapacityKg": 5100,
+      "onTimeRate": 95,
       "phone": "055-2439-4901"
     },
     {
@@ -909,7 +939,7 @@
       "leadDays": 7,
       "altLeadDays": 6,
       "status": "정상",
-      "monthlyCapacityKg": 5057,
+      "monthlyCapacityKg": 5000,
       "onTimeRate": 93,
       "phone": "055-2476-4984"
     }
@@ -920,8 +950,9 @@
       "name": "주철 소재",
       "unit": "kg",
       "defaultSupplier": "태성모터스",
-      "leadDays": 3,
-      "altAvgLeadDays": 3.8
+      "leadDays": 4,
+      "altAvgLeadDays": 2.6,
+      "pricePerKg": 1250
     },
     {
       "code": "M002",
@@ -929,39 +960,44 @@
       "unit": "kg",
       "defaultSupplier": "한빛오토텍",
       "leadDays": 5,
-      "altAvgLeadDays": 4.3
+      "altAvgLeadDays": 4.8,
+      "pricePerKg": 3850
     },
     {
       "code": "M003",
       "name": "단조강 소재",
       "unit": "kg",
       "defaultSupplier": "세진정밀",
-      "leadDays": 7,
-      "altAvgLeadDays": 4.4
+      "leadDays": 6,
+      "altAvgLeadDays": 4.8,
+      "pricePerKg": 3150
     },
     {
       "code": "M004",
       "name": "철강 소재",
       "unit": "kg",
       "defaultSupplier": "태성모터스",
-      "leadDays": 5,
-      "altAvgLeadDays": 3.7
+      "leadDays": 4,
+      "altAvgLeadDays": 2.8,
+      "pricePerKg": 1450
     },
     {
       "code": "M005",
       "name": "고무 소재",
       "unit": "kg",
       "defaultSupplier": "유진소재",
-      "leadDays": 6,
-      "altAvgLeadDays": 3.1
+      "leadDays": 4,
+      "altAvgLeadDays": 2.6,
+      "pricePerKg": 4200
     },
     {
       "code": "M006",
       "name": "합금강 소재",
       "unit": "kg",
       "defaultSupplier": "세진정밀",
-      "leadDays": 7,
-      "altAvgLeadDays": 4.5
+      "leadDays": 6,
+      "altAvgLeadDays": 4.8,
+      "pricePerKg": 2650
     },
     {
       "code": "M007",
@@ -969,7 +1005,8 @@
       "unit": "kg",
       "defaultSupplier": "신우스틸",
       "leadDays": 6,
-      "altAvgLeadDays": 4.5
+      "altAvgLeadDays": 4.2,
+      "pricePerKg": 4100
     }
   ],
   "prices": [

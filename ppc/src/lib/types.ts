@@ -9,6 +9,8 @@ export interface Part {
   materialName: string;
   defaultSupplier: string;
   kgPerUnit: number;
+  /** 부품 기준단가 (원/개). Excel '제품별_기준단가' */
+  basePrice: number;
   /** 색상별 변형(차체)일 때만: 기본 부품 코드와 색상 코드 */
   baseCode?: string;
   colorCode?: string;
@@ -32,6 +34,8 @@ export interface Material {
   defaultSupplier: string;
   leadDays: number;
   altAvgLeadDays: number;
+  /** 자재 기준 단가 (원/kg). 업체별 단가와 견주는 기준 */
+  pricePerKg: number;
 }
 /** 차질 발생 창의 '시연 예시' 버튼 (시연 데이터 demo_state.json. Excel에서 오지 않는다) */
 export interface DisruptionExample {

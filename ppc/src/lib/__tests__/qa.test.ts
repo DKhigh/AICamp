@@ -70,40 +70,40 @@ describe('BUG-003 · BUG-009 공급 능력 (월 단위, 이미 받은 물량을 
     const api = await freshApi();
     const state = (await api.fetchState())!;
     // 시연 초기의 정기 계약 물량은 세지 않는다
-    expect(supplierCapacityOf(state.purchaseOrders, supplierOf('한빛오토텍')!, BASE)).toMatchObject({ monthlyKg: 3231, usedKg: 0, remainingKg: 3231 });
-    // 대성메탈에 배터리 50개(× 4kg) 발주 → 200kg 사용
+    expect(supplierCapacityOf(state.purchaseOrders, supplierOf('한빛오토텍')!, BASE)).toMatchObject({ monthlyKg: 4900, usedKg: 0, remainingKg: 4900 });
+    // 대성메탈에 배터리 50개(× 32kg) 발주 → 1,600kg 사용
     await api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 50, employeeNo: '0000' });
     const after = (await api.fetchState())!;
-    expect(supplierCapacityOf(after.purchaseOrders, supplierOf('대성메탈')!, BASE)).toMatchObject({ monthlyKg: 4955, usedKg: 200, remainingKg: 4755 });
+    expect(supplierCapacityOf(after.purchaseOrders, supplierOf('대성메탈')!, BASE)).toMatchObject({ monthlyKg: 4300, usedKg: 1600, remainingKg: 2700 });
     // 한 달(30일)이 지나면 다시 채워진다
-    expect(supplierCapacityOf(after.purchaseOrders, supplierOf('대성메탈')!, '2026-11-03').usedKg).toBe(200);
+    expect(supplierCapacityOf(after.purchaseOrders, supplierOf('대성메탈')!, '2026-11-03').usedKg).toBe(1600);
     expect(supplierCapacityOf(after.purchaseOrders, supplierOf('대성메탈')!, '2026-11-04').usedKg).toBe(0);
   });
 
   it('공급 능력을 넘는 대체 발주는 확정할 수 없다', async () => {
     const api = await freshApi();
     await engineDelay(api);
-    // 진성오토텍 월 3,696kg ÷ 1.5kg = 2,464개까지
+    // 진성오토텍 월 5,600kg ÷ 엔진 1개 110kg = 50개까지
     await expect(
-      api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 2465, action: '유지', employeeNo: '0000' }),
-    ).rejects.toThrow('진성오토텍의 남은 공급 능력 3,696kg을 넘습니다. 필요량 3,698kg · 이 업체에서 받을 수 있는 수량은 최대 2,464개입니다.');
+      api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 51, action: '유지', employeeNo: '0000' }),
+    ).rejects.toThrow('진성오토텍의 남은 공급 능력 5,600kg을 넘습니다. 필요량 5,610kg · 이 업체에서 받을 수 있는 수량은 최대 50개입니다.');
     const state = (await api.fetchState())!;
     expect(state.purchaseOrders).toHaveLength(3);
     expect(state.disruptions[0].status).toBe('발생');
-    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 2464, action: '유지', employeeNo: '0000' });
+    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 50, action: '유지', employeeNo: '0000' });
   });
 
   it('이미 받은 물량이 있으면 추천에서 남은 능력으로 판단한다', async () => {
     const api = await freshApi();
     await engineDelay(api);
-    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 2400, action: '유지', employeeNo: '0000' });
+    await api.confirmAlternative({ disruptionId: 'D-001', supplierName: '진성오토텍', qty: 40, action: '유지', employeeNo: '0000' });
     const state = (await api.fetchState())!;
     const usedKg = Object.fromEntries(reference.suppliers.map((s) => [s.name, supplierCapacityOf(state.purchaseOrders, s, BASE).usedKg]));
-    const rec = recommendSuppliers({ part: partOf('P007'), excludeSupplierName: '한빛오토텍', suppliers: reference.suppliers, baseDate: BASE, qty: 100, usedKg });
+    const rec = recommendSuppliers({ part: partOf('P007'), excludeSupplierName: '한빛오토텍', suppliers: reference.suppliers, baseDate: BASE, qty: 20, usedKg });
     const jinseong = rec.ranked.find((c) => c.name === '진성오토텍')!;
-    expect(jinseong).toMatchObject({ usedKg: 3600, remainingKg: 96, capacityOk: false, maxQty: 64 });
+    expect(jinseong).toMatchObject({ usedKg: 4400, remainingKg: 1200, capacityOk: false, maxQty: 10 });
     expect(rec.ranked[rec.ranked.length - 1].name).toBe('진성오토텍'); // 공급할 수 없는 업체는 맨 뒤
-    expect(capacityError(supplierCapacityOf(state.purchaseOrders, supplierOf('진성오토텍')!, BASE), '진성오토텍', partOf('P007'), 100)).toContain('최대 64개');
+    expect(capacityError(supplierCapacityOf(state.purchaseOrders, supplierOf('진성오토텍')!, BASE), '진성오토텍', partOf('P007'), 20)).toContain('최대 10개');
   });
 });
 
@@ -197,20 +197,19 @@ describe('BUG-007 대체 추천 수량은 재고를 뺀 부족분', () => {
 });
 
 describe('대체 수량이 50개를 넘으면 여러 업체에 나눠 발주', () => {
-  const ranked = recommendSuppliers({ part: partOf('P007'), excludeSupplierName: '한빛오토텍', suppliers: reference.suppliers, baseDate: BASE, qty: 50 }).ranked;
+  const ranked = recommendSuppliers({ part: partOf('P007'), excludeSupplierName: '한빛오토텍', suppliers: reference.suppliers, baseDate: BASE, qty: 1 }).ranked;
+  const names = (qty: number, first: string | null = null) => splitPlan(ranked, qty, first, SUPPLIER_ORDER_LIMIT).allocations.map((a) => [a.supplier.name, a.qty]);
 
-  it('1순위에 50개, 다음 순위에 나머지', () => {
-    const plan = splitPlan(ranked, 60, null, SUPPLIER_ORDER_LIMIT);
-    expect(plan.allocations.map((a) => [a.supplier.name, a.qty])).toEqual([['에이스메탈', 50], ['진성오토텍', 10]]);
-    expect(plan.shortBy).toBe(0);
-    expect(splitPlan(ranked, 50, null, SUPPLIER_ORDER_LIMIT).allocations.map((a) => [a.supplier.name, a.qty])).toEqual([['에이스메탈', 50]]);
+  it('1순위에 50개, 다음 순위에 나머지. 남은 공급 능력이 50개보다 적은 업체에는 그만큼만', () => {
+    expect(names(60)).toEqual([['동진오토', 50], ['에이스메탈', 10]]);
+    expect(names(50)).toEqual([['동진오토', 50]]);
+    // 에이스메탈은 월 2,800kg ÷ 110kg = 25개까지
+    expect(names(80)).toEqual([['동진오토', 50], ['에이스메탈', 25], ['진성오토텍', 5]]);
     // 첫 업체를 직접 고르면 그 업체부터 채운다
-    expect(splitPlan(ranked, 80, '진성오토텍', SUPPLIER_ORDER_LIMIT).allocations.map((a) => [a.supplier.name, a.qty])).toEqual([
-      ['진성오토텍', 50],
-      ['에이스메탈', 30],
-    ]);
+    expect(names(80, '진성오토텍')).toEqual([['진성오토텍', 50], ['동진오토', 30]]);
     // 후보를 다 써도 모자라면 shortBy
-    expect(splitPlan(ranked, 14 * 50 + 5, null, SUPPLIER_ORDER_LIMIT).shortBy).toBe(5);
+    const max = ranked.reduce((sum, c) => sum + Math.min(SUPPLIER_ORDER_LIMIT, c.maxQty), 0);
+    expect(splitPlan(ranked, max + 5, null, SUPPLIER_ORDER_LIMIT).shortBy).toBe(5);
   });
 
   it('나눠서 확정하면 업체마다 대체 발주가 따로 생긴다', async () => {
@@ -218,25 +217,25 @@ describe('대체 수량이 50개를 넘으면 여러 업체에 나눠 발주', (
     await engineDelay(api, 5);
     await api.confirmAlternative({
       disruptionId: 'D-001',
-      supplierName: '에이스메탈',
+      supplierName: '동진오토',
       qty: 80,
       action: '유지',
       employeeNo: '0000',
       allocations: [
-        { supplierName: '에이스메탈', qty: 50 },
+        { supplierName: '동진오토', qty: 50 },
         { supplierName: '진성오토텍', qty: 30 },
       ],
     });
     const state = (await api.fetchState())!;
     expect(state.purchaseOrders.filter((p) => p.kind === '대체').map((p) => [p.id, p.supplierName, p.qty, p.expectedArrival, p.disruptionId])).toEqual([
-      ['PO-004', '에이스메탈', 50, '2026-10-07', 'D-001'],
+      ['PO-004', '동진오토', 50, '2026-10-07', 'D-001'],
       ['PO-005', '진성오토텍', 30, '2026-10-07', 'D-001'],
     ]);
-    expect(state.disruptions[0]).toMatchObject({ status: '대체발주', altSupplierName: '에이스메탈, 진성오토텍', altQty: 80, altPoId: 'PO-004' });
+    expect(state.disruptions[0]).toMatchObject({ status: '대체발주', altSupplierName: '동진오토, 진성오토텍', altQty: 80, altPoId: 'PO-004' });
     // 추천 수량 80개를 나눠 받으면 라인이 멈추지 않는다
     expect(baseScenarios(state).wait.lineStopDays).toBe(0);
     await expect(
-      api.confirmAlternative({ disruptionId: 'D-001', supplierName: 'x', qty: 10, action: '유지', employeeNo: '0000', allocations: [{ supplierName: '동진오토', qty: 9 }] }),
+      api.confirmAlternative({ disruptionId: 'D-001', supplierName: 'x', qty: 10, action: '유지', employeeNo: '0000', allocations: [{ supplierName: '세광소재', qty: 9 }] }),
     ).rejects.toThrow('업체별 수량의 합이 대체 수량과 다릅니다');
   });
 });
@@ -460,12 +459,12 @@ describe('발주 검색', () => {
     expect(offers.every((o) => o.part.name === '엔진' && o.unitPrice !== null)).toBe(true);
     const prices = offers.map((o) => o.unitPrice!);
     expect(prices).toEqual([...prices].sort((a, b) => a - b));
-    expect(offers.find((o) => o.supplier.name === '한빛오토텍')).toMatchObject({ unitPrice: 5835, leadDays: 5, altLeadDays: 4, onTimeRate: 93, grade: '보통', isDefault: true });
+    expect(offers.find((o) => o.supplier.name === '한빛오토텍')).toMatchObject({ unitPrice: 4243600, leadDays: 5, altLeadDays: 4, onTimeRate: 97, grade: '우수', isDefault: true });
   });
 
   it('업체명·소재·여러 낱말로 찾을 수 있고, 차체는 한 줄로 묶는다', () => {
     expect(searchOffers(state, '대성메탈').map((o) => o.part.name).sort()).toEqual(['배터리', '엔진']);
-    expect(searchOffers(state, '배터리 대성메탈').map((o) => [o.part.name, o.supplier.name, o.unitPrice])).toEqual([['배터리', '대성메탈', 14640]]);
+    expect(searchOffers(state, '배터리 대성메탈').map((o) => [o.part.name, o.supplier.name, o.unitPrice])).toEqual([['배터리', '대성메탈', 1521000]]);
     const body = searchOffers(state, '차체');
     expect(new Set(body.map((o) => o.part.code))).toEqual(new Set(['P012']));
     expect(body[0].orderPartCode).toBe('P012-C01');
