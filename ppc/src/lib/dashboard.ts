@@ -79,6 +79,15 @@ export interface DashboardModel {
     todayInput: number;
     dailyCapacity: number;
     activeDisruptions: number;
+    /** 진행 중 차질을 대응 상태로 나눈 건수 */
+    disruptionCounts: {
+      /** 아직 결정하지 않은 차질 (상태 '발생') */
+      pending: number;
+      /** 대체 발주로 대응 중 (상태 '대체발주') */
+      responding: number;
+      /** 대응하지 않기로 한 차질 (상태 '기다리기') */
+      waiting: number;
+    };
   };
   poRows: PoRow[];
   scenarios: BaseScenarios;
@@ -183,6 +192,11 @@ export function dashboardModel(state: AppState): DashboardModel {
       todayInput: Math.min(settings.dailyCapacity, buildableNow),
       dailyCapacity: settings.dailyCapacity,
       activeDisruptions: activeDisruptions.length,
+      disruptionCounts: {
+        pending: activeDisruptions.filter((d) => d.status === '발생').length,
+        responding: activeDisruptions.filter((d) => d.status === '대체발주').length,
+        waiting: activeDisruptions.filter((d) => d.status === '기다리기').length,
+      },
     },
     poRows: sortByArrival(openPos(purchaseOrders)).map((po) => poRowOf(po, settings.baseDate)),
     scenarios,

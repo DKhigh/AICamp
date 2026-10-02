@@ -86,6 +86,8 @@ export function ShipmentsPage({ state }: { state: AppState }) {
 
       {schedule.past.length > 0 && firstPast && latestPast && (
         <Card
+          // 휴대폰에서는 보여 주지 않는다 (아래 일자별 표에서 날짜를 누르면 된다)
+          className="hidden sm:block"
           title="출차 실적 날짜 선택"
           aside={
             <label className="flex items-center gap-2 text-xs text-slate-600">

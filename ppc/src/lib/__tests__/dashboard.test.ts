@@ -76,6 +76,7 @@ describe('사례2 등록 후 대시보드', () => {
     expect(engine.status).toBe('차질');
     expect(engine.activeDisruption?.id).toBe('D-001');
     expect(model.kpi.activeDisruptions).toBe(1);
+    expect(model.kpi.disruptionCounts).toEqual({ pending: 1, responding: 0, waiting: 0 });
     expect(model.activeDisruptions.map((d) => d.id)).toEqual(['D-001']);
   });
 

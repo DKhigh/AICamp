@@ -8,7 +8,7 @@ import { ForecastPanel } from '../components/dashboard/ForecastPanel';
 import { BodyCard, PartCard } from '../components/dashboard/PartCard';
 import { CustomerOrdersCard } from '../components/dashboard/CustomerOrdersCard';
 import { PoTable } from '../components/PoTable';
-import { Badge, Button, Card, ColorSwatch, GradeBadge, PART_STATUS_TONE } from '../components/ui';
+import { Badge, Button, Card, ColorSwatch, GradeBadge, PART_STATUS_TONE, DisruptionLink } from '../components/ui';
 import { cautionOf } from '../lib/cautions';
 import { LOW_COVERAGE_DAYS } from '../lib/constants';
 import { dashboardModel, type DashboardModel, type PartRow } from '../lib/dashboard';
@@ -45,14 +45,15 @@ function DisruptionBanner({ disruption }: { disruption: Disruption }) {
           </>
         )}
       </p>
-      <Link
-        to={`/disruptions/${disruption.id}`}
+      <DisruptionLink
+        hideWhenLoggedOut
+        id={disruption.id}
         className={`whitespace-nowrap rounded-md px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm ${
           responding ? 'bg-accent hover:bg-accent-hover' : 'bg-red-600 hover:bg-red-700'
         }`}
       >
         {responding ? '상세 보기 →' : '대응하기 →'}
-      </Link>
+      </DisruptionLink>
     </div>
   );
 }
@@ -170,8 +171,17 @@ function KpiRow({ kpi }: { kpi: DashboardModel['kpi'] }) {
         label="진행 중 차질"
         value={num(kpi.activeDisruptions)}
         unit="건"
-        tone={kpi.activeDisruptions > 0 ? 'danger' : 'default'}
-        sub={kpi.activeDisruptions > 0 ? '해결되지 않은 차질' : '차질 없음'}
+        // 미대응이 있을 때만 빨갛게: 전부 대응 중이면 급한 일이 아니다
+        tone={kpi.disruptionCounts.pending > 0 ? 'danger' : 'default'}
+        sub={
+          kpi.activeDisruptions > 0
+            ? [
+                `미대응 ${kpi.disruptionCounts.pending}건`,
+                `대응 중 ${kpi.disruptionCounts.responding}건`,
+                ...(kpi.disruptionCounts.waiting > 0 ? [`대응 안 함 ${kpi.disruptionCounts.waiting}건`] : []),
+              ].join(' · ')
+            : '차질 없음'
+        }
       />
     </div>
   );
@@ -253,12 +263,13 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
           발주
         </Button>
         {activeDisruption && (
-          <Link
-            to={`/disruptions/${activeDisruption.id}`}
+          <DisruptionLink
+            hideWhenLoggedOut
+            id={activeDisruption.id}
             className="inline-flex items-center rounded-md border border-red-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-red-600 hover:bg-red-50"
           >
             {activeDisruption.status === '대체발주' ? '차질 상세 →' : '대응하기 →'}
-          </Link>
+          </DisruptionLink>
         )}
       </div>
     </div>
@@ -335,19 +346,20 @@ export function Dashboard({ state }: { state: AppState }) {
         </div>
       </Card>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <Card title="입고 예정 발주" aside={
-            <span className="text-xs text-slate-500">
-              도착 예정일 순 · {model.poRows.length}건 · 발주 금액{' '}
-              <strong className="tabular text-slate-800">{won(model.poRows.reduce((sum, r) => sum + r.amount, 0))}</strong>
-            </span>
-          }>
-          <PoTable rows={model.poRows} />
-        </Card>
-        <ForecastPanel state={state} model={model} />
-      </div>
+      {/* 입고 예정 표는 칸이 많아(금액·상태·입고 처리) 한 줄을 다 쓴다: 옆으로 끌지 않아도 [입고 처리]까지 보인다 */}
+      <Card title="입고 예정 발주" aside={
+          <span className="text-xs text-slate-500">
+            도착 예정일 순 · {model.poRows.length}건 · 발주 금액{' '}
+            <strong className="tabular text-slate-800">{won(model.poRows.reduce((sum, r) => sum + r.amount, 0))}</strong>
+          </span>
+        }>
+        <PoTable rows={model.poRows} />
+      </Card>
 
-      <CustomerOrdersCard state={state} orders={model.scenarios.wait.orders} lateCount={model.scenarios.wait.lateOrders.length} />
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
+        <ForecastPanel state={state} model={model} />
+        <CustomerOrdersCard state={state} orders={model.scenarios.wait.orders} lateCount={model.scenarios.wait.lateOrders.length} />
+      </div>
     </div>
   );
 }

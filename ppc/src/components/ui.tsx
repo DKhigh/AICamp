@@ -1,5 +1,6 @@
 // 여러 화면이 함께 쓰는 작은 UI 조각. 색 규칙은 DESIGN.md §7.4를 따른다.
 import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import type { PartStatus } from '../lib/planning';
 import { useAppData } from '../state/AppData';
 import { colorOf } from '../lib/reference';
@@ -35,6 +36,34 @@ export const DISRUPTION_STATUS_TONE: Record<DisruptionStatus, Tone> = {
   대체발주: 'blue',
   해결: 'green',
 };
+
+/**
+ * 차질 대응 화면(/disruptions/:id)으로 가는 링크. 차질 대응 화면은 로그인한 사람만 볼 수 있으므로,
+ * 로그인하지 않았으면 링크 대신 글자만 보여 준다. hideWhenLoggedOut이면(버튼 모양일 때) 아예 보이지 않는다.
+ */
+export function DisruptionLink({
+  id,
+  className,
+  children,
+  hideWhenLoggedOut = false,
+  onClick,
+  ...rest
+}: {
+  id: string;
+  className?: string;
+  children: ReactNode;
+  hideWhenLoggedOut?: boolean;
+  onClick?: () => void;
+  'aria-label'?: string;
+}) {
+  const { session } = useAppData();
+  if (!session) return hideWhenLoggedOut ? null : <span className="font-mono font-semibold text-slate-700">{children}</span>;
+  return (
+    <Link to={`/disruptions/${id}`} className={className} onClick={onClick} {...rest}>
+      {children}
+    </Link>
+  );
+}
 
 /** 차질 상태의 화면 표기. DB에는 '기다리기'로 저장하고 화면에서는 '대응하지 않음'으로 보여 준다 */
 export function disruptionStatusLabel(status: DisruptionStatus): string {

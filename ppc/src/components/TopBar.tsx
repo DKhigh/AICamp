@@ -6,6 +6,7 @@ import { searchSuggestions } from '../lib/search';
 import { useAppData } from '../state/AppData';
 import { useUi } from '../state/Ui';
 import { EmployeeConfirmModal } from './EmployeeField';
+import { IcbmLogo } from './IcbmLogo';
 
 const HEADER_BUTTON =
   'inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-slate-200 transition-colors hover:bg-white/20 hover:text-white disabled:opacity-50';
@@ -62,12 +63,9 @@ export function TopBar() {
     <header className="top-0 z-40 border-b border-header-border bg-header text-white shadow-md lg:sticky">
       <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6">
         <div className="flex select-none items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white/10">
-            <svg viewBox="0 0 24 24" className="h-6 w-6 text-sky-400" fill="currentColor" aria-hidden>
-              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4.66l.12-.34h13.77l.11.34V17z" />
-              <circle cx="7.5" cy="14.5" r="1.5" />
-              <circle cx="16.5" cy="14.5" r="1.5" />
-            </svg>
+          {/* 로딩 화면과 같은 ICBM 로고. 남색 로고가 어두운 상단 바에서 보이도록 밝은 바탕 위에 둔다 */}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-studio">
+            <IcbmLogo className="h-9 w-9" />
           </div>
           <div>
             <p className="text-[17px] font-extrabold leading-tight tracking-wide">PPC 생산관리</p>

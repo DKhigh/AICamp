@@ -1,5 +1,4 @@
 // 업체 정보: 업체명을 누르면 연락처, 납품하는 부품과 가격, 납기 준수율, 발주 가능량을 보여 준다
-import { Link } from 'react-router-dom';
 import { CAPACITY_WINDOW_DAYS } from '../lib/constants';
 import { formatMD } from '../lib/date';
 import { num, won } from '../lib/format';
@@ -7,7 +6,7 @@ import { partOf } from '../lib/reference';
 import { supplierProfile } from '../lib/search';
 import type { AppState } from '../lib/types';
 import { useUi } from '../state/Ui';
-import { Badge, Button, GradeBadge, Modal } from './ui';
+import { Badge, Button, GradeBadge, Modal, DisruptionLink } from './ui';
 
 /** 누르면 업체 정보 창이 열리는 업체명 */
 export function SupplierLink({ name }: { name: string }) {
@@ -95,9 +94,9 @@ export function SupplierModal({ state, supplierName, onClose }: { state: AppStat
             {activeDisruptions.map((d, i) => (
               <span key={d.id}>
                 {i > 0 && ', '}
-                <Link to={`/disruptions/${d.id}`} onClick={onClose} className="font-bold underline">
+                <DisruptionLink id={d.id} onClick={onClose} className="font-bold underline">
                   {d.id}
-                </Link>{' '}
+                </DisruptionLink>{' '}
                 {partOf(d.partCode).name} {d.delayDays}일 지연
               </span>
             ))}

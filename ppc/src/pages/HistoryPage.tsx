@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmployeeConfirmModal } from '../components/EmployeeField';
 import { SupplierLink } from '../components/SupplierInfo';
-import { Badge, Button, Card, DISRUPTION_STATUS_TONE, disruptionStatusLabel, PO_STATUS_TONE } from '../components/ui';
+import { Badge, Button, Card, DISRUPTION_STATUS_TONE, disruptionStatusLabel, PO_STATUS_TONE, DisruptionLink } from '../components/ui';
 import { formatMD } from '../lib/date';
 import { num, timeLabel, won } from '../lib/format';
 import { poAmount, poOriginalAmount, totalSpent } from '../lib/ordering';
@@ -47,9 +47,9 @@ function LogTable({ logs }: { logs: ActivityLog[] }) {
               </td>
               <td className="whitespace-nowrap px-2 py-2.5 font-mono font-semibold text-slate-900">
                 {l.target.startsWith('D-') ? (
-                  <Link to={`/disruptions/${l.target}`} className="text-accent hover:underline">
+                  <DisruptionLink id={l.target} className="text-accent hover:underline">
                     {l.target}
-                  </Link>
+                  </DisruptionLink>
                 ) : (
                   l.target || '–'
                 )}
@@ -130,9 +130,9 @@ export function HistoryPage({ state }: { state: AppState }) {
                   return (
                     <tr key={d.id}>
                       <td className="py-2.5 pl-5 pr-2">
-                        <Link to={`/disruptions/${d.id}`} className="font-mono font-semibold text-accent hover:underline">
+                        <DisruptionLink id={d.id} className="font-mono font-semibold text-accent hover:underline">
                           {d.id}
-                        </Link>
+                        </DisruptionLink>
                       </td>
                       <td className="tabular px-2 py-2.5 text-slate-700">{formatMD(d.detectedDate)}</td>
                       <td className="px-2 py-2.5 font-semibold text-slate-900">
@@ -222,6 +222,19 @@ export function HistoryPage({ state }: { state: AppState }) {
                               발주 취소
                             </Button>
                           </span>
+                        ) : po.status === '지연' && po.disruptionId ? (
+                          // 지연된 발주는 그 원인인 차질을 대응해야 풀린다: 차질 대응 화면으로 바로 간다
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <Badge tone="red">지연</Badge>
+                            <DisruptionLink
+                              hideWhenLoggedOut
+                              id={po.disruptionId}
+                              className="inline-flex items-center whitespace-nowrap rounded-md bg-red-600 px-2.5 py-1 text-xs font-bold text-white shadow-sm hover:bg-red-700"
+                              aria-label={`${po.id} 차질 대응 (${po.disruptionId})`}
+                            >
+                              차질 대응 →
+                            </DisruptionLink>
+                          </span>
                         ) : (
                           <Badge tone={PO_STATUS_TONE[po.status]}>{po.status}</Badge>
                         )}
@@ -231,9 +244,9 @@ export function HistoryPage({ state }: { state: AppState }) {
                       </td>
                       <td className="px-2 py-2.5">
                         {po.disruptionId ? (
-                          <Link to={`/disruptions/${po.disruptionId}`} className="font-mono font-semibold text-accent hover:underline">
+                          <DisruptionLink id={po.disruptionId} className="font-mono font-semibold text-accent hover:underline">
                             {po.disruptionId}
-                          </Link>
+                          </DisruptionLink>
                         ) : (
                           <span className="text-slate-400">–</span>
                         )}

@@ -922,11 +922,29 @@ function ResolveModal({ state, disruption, onClose }: { state: AppState; disrupt
 
 export function DisruptionPage({ state }: { state: AppState }) {
   const { id } = useParams();
+  const { session, setLoginOpen } = useAppData();
   const [resolving, setResolving] = useState(false);
   const disruption = state.disruptions.find((d) => d.id === id);
 
   // 영향 분석은 차질이 해결되기 전의 '정상 계획 vs 기다리기'로 본다
   const scenarios = useMemo(() => baseScenarios(state), [state]);
+
+  // 차질 대응 화면은 로그인한 사람만 볼 수 있다 (주소로 직접 들어와도 내용을 보여 주지 않는다)
+  if (!session) {
+    return (
+      <Card>
+        <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
+          <p className="text-sm font-semibold text-slate-800">차질 대응 화면은 로그인한 뒤에 볼 수 있습니다.</p>
+          <Button variant="primary" onClick={() => setLoginOpen(true)}>
+            로그인
+          </Button>
+          <Link to="/" className="text-sm font-semibold text-accent hover:underline">
+            ← 대시보드로
+          </Link>
+        </div>
+      </Card>
+    );
+  }
 
   if (!disruption) {
     return (
@@ -1018,11 +1036,12 @@ export function DisruptionPage({ state }: { state: AppState }) {
         ) : (
           <ul className="divide-y divide-slate-100 text-[13px]">
             {history.map((l) => (
-              <li key={l.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-5 py-2.5">
-                <span className="tabular w-24 shrink-0 text-slate-500">{timeLabel(l.at)}</span>
-                <strong className="w-28 shrink-0 text-slate-900">{l.action}</strong>
-                <span className="min-w-0 flex-1 text-slate-700">{l.detail}</span>
-                <span className="text-slate-500">{l.actor}</span>
+              // 좁은 화면: 첫 줄에 시각·작업·사원, 둘째 줄에 내용 (내용 칸이 좁아져 글자가 세로로 늘어서지 않게)
+              <li key={l.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 sm:px-5">
+                <span className="tabular shrink-0 whitespace-nowrap text-slate-500 sm:w-24">{timeLabel(l.at)}</span>
+                <strong className="shrink-0 whitespace-nowrap text-slate-900 sm:w-28">{l.action}</strong>
+                <span className="order-last min-w-0 basis-full text-slate-700 sm:order-none sm:flex-1 sm:basis-0">{l.detail}</span>
+                <span className="ml-auto whitespace-nowrap text-slate-500 sm:ml-0">{l.actor}</span>
               </li>
             ))}
           </ul>
