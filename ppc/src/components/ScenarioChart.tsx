@@ -108,7 +108,9 @@ export function ScenarioChart({
             tick={{ fontSize: 11, fill: '#64748b' }}
             tickLine={false}
             axisLine={{ stroke: '#cbd5e1' }}
-            interval={1}
+            // 자리가 모자라면 눈금을 건너뛴다 (휴대폰 폭에서 날짜가 겹치지 않게)
+            interval="preserveStartEnd"
+            minTickGap={16}
             tickMargin={6}
           />
           <YAxis

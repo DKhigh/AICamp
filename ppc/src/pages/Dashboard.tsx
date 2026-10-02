@@ -116,18 +116,20 @@ function KpiCard({
 }) {
   const body = (
     <>
-      <p className="flex items-center justify-between gap-2 text-xs font-semibold text-slate-500">
+      <p className="flex items-start justify-between gap-2 text-xs font-semibold leading-snug text-slate-500">
         {label}
-        {to && <span className="whitespace-nowrap text-accent">{linkLabel} →</span>}
+        {/* 넓은 화면에서는 제목 옆에, 좁은 화면에서는 카드 아래에 둔다 */}
+        {to && <span className="hidden whitespace-nowrap text-accent sm:inline">{linkLabel} →</span>}
       </p>
       <p className="mt-1 flex items-baseline gap-1">
-        <span className={`text-3xl font-extrabold tracking-tight ${tone === 'danger' ? 'text-red-600' : 'text-slate-900'}`}>{value}</span>
+        <span className={`text-2xl font-extrabold tracking-tight sm:text-3xl ${tone === 'danger' ? 'text-red-600' : 'text-slate-900'}`}>{value}</span>
         <span className="text-sm font-semibold text-slate-500">{unit}</span>
       </p>
-      <p className="mt-0.5 h-4 text-xs text-slate-500">{sub}</p>
+      <p className="mt-0.5 min-h-4 text-xs leading-snug text-slate-500">{sub}</p>
+      {to && <p className="mt-1.5 whitespace-nowrap text-right text-xs font-semibold text-accent sm:hidden">{linkLabel} →</p>}
     </>
   );
-  const box = 'block rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-card';
+  const box = 'block rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-card sm:px-5 sm:py-4';
   return to ? (
     <Link to={to} className={`${box} transition-shadow hover:border-accent hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent`}>
       {body}
@@ -289,8 +291,8 @@ export function Dashboard({ state }: { state: AppState }) {
         title="부품 재고 (자동차 1대 기준)"
         aside={<p className="text-xs text-slate-500">차량의 부품을 선택하면 위치를 확대하고 재고·입고 현황을 보여 줍니다.</p>}
       >
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-          <div className="relative h-[380px] sm:h-[440px] lg:h-auto lg:min-h-[520px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-3 sm:p-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <div className="relative h-[340px] sm:h-[440px] lg:h-auto lg:min-h-[520px]">
             <Suspense fallback={<div className="absolute inset-0 animate-pulse rounded-lg bg-studio" aria-label="3D 뷰어를 불러오는 중" />}>
               <CarViewer
                 items={viewerItems}
@@ -308,7 +310,7 @@ export function Dashboard({ state }: { state: AppState }) {
               />
             </Suspense>
           </div>
-          <div className="grid grid-cols-2 content-start gap-3">
+          <div className="grid grid-cols-2 content-start gap-2 sm:gap-3">
             {/* 한 칸짜리 부품 카드를 먼저 놓고, 두 칸을 쓰는 색상별 차체 카드는 맨 아래에 둔다 */}
             {[...model.parts.filter((row) => !row.variants), ...model.parts.filter((row) => row.variants)].map((row) => {
               const common = {

@@ -610,6 +610,7 @@ export class Car3DVisualizer {
 
     this.cameraStart.copy(this.camera.position);
     this.cameraEnd.copy(preset.pos);
+    if (part === 'all') this.cameraEnd.sub(preset.target).multiplyScalar(this.fitScale()).add(preset.target);
     this.targetStart.copy(this.controls.target);
     this.targetEnd.copy(preset.target);
     this.transitionStart = performance.now();
@@ -639,6 +640,18 @@ export class Car3DVisualizer {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
+    // 폭이 바뀌면 전체 보기의 거리를 다시 맞춘다 (세로로 긴 휴대폰 화면에서는 더 멀리서 봐야 차가 다 들어온다)
+    if (this.focus === 'all' && !this.isTransitioning) {
+      const offset = this.camera.position.clone().sub(this.controls.target);
+      offset.setLength(CAMERA_PRESETS.all.pos.distanceTo(CAMERA_PRESETS.all.target) * this.fitScale());
+      this.camera.position.copy(this.controls.target).add(offset);
+    }
+  }
+
+  /** 전체 보기에서 차가 가로로 놓여도 잘리지 않게 하는 거리 배율: 화면이 좁을수록 멀어진다 */
+  private fitScale(): number {
+    const aspect = this.camera.aspect || 1;
+    return Math.min(2.2, Math.max(1, 1.3 / aspect));
   }
 
   private updateHotspots() {
@@ -659,8 +672,36 @@ export class Car3DVisualizer {
       const x = (p.x * 0.5 + 0.5) * width;
       const y = (-p.y * 0.5 + 0.5) * height;
       el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      this.placePill(el, x, y, width, height);
       el.style.opacity = '1';
       el.style.visibility = 'visible';
+    }
+  }
+
+  /**
+   * 부품 배지(알약)를 기준점에서 정해진 만큼 띄우되, 뷰어 밖으로 나가면 안쪽으로 당긴다.
+   * 좁은 화면에서는 띄우는 거리도 줄인다. 기준점과 배지를 잇는 선도 같이 맞춘다.
+   */
+  private placePill(el: HTMLElement, x: number, y: number, width: number, height: number) {
+    const pill = el.querySelector<HTMLElement>('.car-hotspot-pill');
+    if (!pill) return;
+    const shrink = width < 480 ? 0.7 : 1;
+    const dx = Number(el.dataset.dx ?? 0) * shrink;
+    const dy = Number(el.dataset.dy ?? 0) * shrink;
+    const halfW = pill.offsetWidth / 2;
+    const halfH = pill.offsetHeight / 2;
+    const margin = 6;
+    // 위쪽은 보기 모드 버튼 줄(약 44px)을 피한다
+    const cx = Math.min(Math.max(x + dx, halfW + margin), Math.max(halfW + margin, width - halfW - margin));
+    const cy = Math.min(Math.max(y + dy, halfH + 48), Math.max(halfH + 48, height - halfH - margin));
+    const px = cx - x;
+    const py = cy - y;
+    pill.style.left = `${px.toFixed(1)}px`;
+    pill.style.top = `${py.toFixed(1)}px`;
+    const line = el.querySelector<HTMLElement>('.car-hotspot-line');
+    if (line) {
+      line.style.width = `${Math.hypot(px, py).toFixed(1)}px`;
+      line.style.transform = `rotate(${((Math.atan2(py, px) * 180) / Math.PI).toFixed(1)}deg)`;
     }
   }
 

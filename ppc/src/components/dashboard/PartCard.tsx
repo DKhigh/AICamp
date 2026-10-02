@@ -47,15 +47,15 @@ export function BodyCard({
           const color = colorOf(v.part.colorCode);
           return (
             <li key={v.part.code} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 text-xs">
-              <span className="flex w-24 items-center gap-1.5 font-semibold text-slate-900" title={color?.description}>
+              <span className="flex w-[4.5rem] items-center gap-1.5 font-semibold text-slate-900 sm:w-24" title={color?.description}>
                 <ColorSwatch code={v.part.colorCode} />
                 {color?.name ?? v.part.colorCode}
-                <span className="font-mono text-[10px] font-medium text-slate-400">{v.part.colorCode}</span>
+                <span className="hidden font-mono text-[10px] font-medium text-slate-400 sm:inline">{v.part.colorCode}</span>
               </span>
-              <span className="tabular w-20 text-slate-600">
+              <span className="tabular w-14 text-slate-600 sm:w-20">
                 <strong className={`text-sm ${v.linePart.onHand === 0 ? 'text-red-600' : 'text-slate-900'}`}>{num(v.linePart.onHand)}</strong>개
               </span>
-              <span className="tabular flex-1 whitespace-nowrap text-slate-500">
+              <span className="tabular min-w-0 flex-1 text-slate-500">
                 {v.nextPo && v.nextDday !== null ? (
                   <>
                     입고 <strong className={v.nextPo.status === '지연' ? 'text-red-600' : 'text-slate-700'}>{ddayLabel(v.nextDday)}</strong> · +
@@ -102,11 +102,11 @@ export function PartCard({
   return (
     <article
       onClick={onSelect}
-      className={`cursor-pointer rounded-lg bg-white p-3 transition-shadow hover:shadow-md ${
+      className={`min-w-0 cursor-pointer rounded-lg bg-white p-2.5 transition-shadow hover:shadow-md sm:p-3 ${
         row.isBottleneck ? 'border-2 border-slate-900' : 'border border-slate-200'
       } ${selected ? 'ring-2 ring-accent ring-offset-1' : ''}`}
     >
-      <header className="flex items-start justify-between gap-2">
+      <header className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
         <h3 className="text-sm font-bold leading-tight text-slate-900">
           {part.name} <span className="font-mono text-[11px] font-medium text-slate-400">{part.code}</span>
         </h3>
@@ -118,19 +118,19 @@ export function PartCard({
         </div>
       </header>
 
-      <p className="mt-2 flex flex-wrap items-baseline gap-x-1.5 whitespace-nowrap">
+      <p className="mt-2 flex flex-wrap items-baseline gap-x-1.5">
         <span className="text-xl font-extrabold tracking-tight text-slate-900">{num(linePart.onHand)}</span>
         <span className="text-xs text-slate-500">개 · ×{linePart.qtyPerCar}</span>
         <span className="ml-auto text-sm font-bold text-slate-900">→ {num(row.cars)}대</span>
       </p>
 
       {row.repairNeed > 0 && (
-        <p className="tabular mt-0.5 whitespace-nowrap text-[11px] text-slate-500" title="수리 중인 차량에 쓸 부품은 생산에 쓰지 않고 남겨 둡니다">
+        <p className="tabular mt-0.5 text-[11px] leading-snug text-slate-500" title="수리 중인 차량에 쓸 부품은 생산에 쓰지 않고 남겨 둡니다">
           수리용 <strong className="text-slate-700">{num(row.repairNeed)}개</strong> 제외 · 생산용 <strong className="text-slate-700">{num(row.available)}개</strong>
         </p>
       )}
 
-      <p className="mt-1 flex flex-wrap items-center justify-between gap-x-2 whitespace-nowrap text-xs text-slate-500">
+      <p className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-slate-500">
         <span>
           재고{' '}
           <strong className={row.status === '주의' ? 'text-amber-700' : 'text-slate-700'}>{row.coverage.toFixed(1)}일</strong>

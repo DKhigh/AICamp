@@ -133,6 +133,9 @@ export function CarViewer({
             <div
               key={item.key}
               className="car-hotspot"
+              // 배지를 기준점에서 띄울 거리. Car3DVisualizer가 화면 밖으로 나가지 않게 조정한다
+              data-dx={dx}
+              data-dy={dy}
               ref={(el) => {
                 hotspotRefs.current[item.key] = el;
               }}
@@ -154,7 +157,7 @@ export function CarViewer({
                 <span className="car-hotspot-icon">
                   <CarPartIcon part={item.key} />
                 </span>
-                <span className="text-[13px] font-bold tracking-tight text-slate-900">{item.name}</span>
+                <span className="text-[12px] font-bold tracking-tight text-slate-900 sm:text-[13px]">{item.name}</span>
                 {item.isBottleneck && (
                   <span className="rounded bg-slate-900 px-1 py-px text-[10px] font-bold text-white">병목</span>
                 )}
