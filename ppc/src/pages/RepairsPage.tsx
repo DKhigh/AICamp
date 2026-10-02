@@ -28,7 +28,7 @@ export function RepairsPage({ state }: { state: AppState }) {
         </Link>
         <h1 className="text-lg font-extrabold tracking-tight text-slate-900">수리 차량</h1>
         <p className="text-xs text-slate-500">입고되어 수리 중인 차량 {repairCars.length}대 · 수리에 쓸 부품은 재고에서 따로 잡아 두고 생산에는 쓰지 않습니다</p>
-        <Button variant="primary" className="ml-auto" onClick={() => openOrder()}>
+        <Button auth variant="primary" className="ml-auto" onClick={() => openOrder()}>
           + 발주
         </Button>
       </div>
@@ -127,7 +127,7 @@ export function RepairsPage({ state }: { state: AppState }) {
                             {next && ` · 다음 입고 ${formatMD(next.expectedArrival)} +${num(next.qty)}개`}
                           </p>
                         </div>
-                        <Button size="sm" onClick={() => openOrder(use.partCode)}>
+                        <Button auth size="sm" onClick={() => openOrder(use.partCode)}>
                           발주
                         </Button>
                       </li>
@@ -170,7 +170,7 @@ export function RepairsPage({ state }: { state: AppState }) {
                       {n.enough ? <Badge tone="green">수리용 확보</Badge> : <Badge tone="red">{num(n.needed - n.onHand)}개 부족</Badge>}
                     </td>
                     <td className="py-2.5 pl-2 pr-5 text-right">
-                      <Button size="sm" onClick={() => openOrder(n.partCode)}>
+                      <Button auth size="sm" onClick={() => openOrder(n.partCode)}>
                         발주
                       </Button>
                     </td>

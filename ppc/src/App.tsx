@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import { DisruptionModal } from './components/DisruptionModal';
 import { EmployeeConfirmModal, LoginModal } from './components/EmployeeField';
 import { OrderModal } from './components/OrderModal';
+import { SupplierModal } from './components/SupplierInfo';
 import { TopBar } from './components/TopBar';
 import { Button, Card, Spinner } from './components/ui';
 import { EMPTY_DB_MESSAGE } from './lib/api';
@@ -40,7 +41,7 @@ function Toasts() {
 
 /** 아직 화면에 보여 줄 데이터가 없을 때 (첫 읽기 중 / 실패 / 빈 DB) */
 function NoData() {
-  const { phase, loadError, refresh, save, notify, api } = useAppData();
+  const { phase, loadError, refresh, save, notify, api, session } = useAppData();
   const [seedOpen, setSeedOpen] = useState(false);
 
   async function seed(employeeNo: string): Promise<boolean> {
@@ -79,7 +80,8 @@ function NoData() {
         {phase === 'empty' && (
           <>
             <p className="text-sm text-slate-700">{EMPTY_DB_MESSAGE}</p>
-            <Button variant="primary" onClick={() => setSeedOpen(true)}>
+            {!session && <p className="text-xs text-slate-500">상단의 [로그인] 후에 시연 데이터를 넣을 수 있습니다.</p>}
+            <Button auth variant="primary" onClick={() => setSeedOpen(true)}>
               시연 데이터 넣기
             </Button>
           </>
@@ -93,10 +95,12 @@ function Shell() {
   const { state, loadError, phase, loginOpen } = useAppData();
   const [orderModal, setOrderModal] = useState<{ partCode?: string; supplierName?: string } | null>(null);
   const [disruptionModal, setDisruptionModal] = useState(false);
+  const [supplierModal, setSupplierModal] = useState<string | null>(null);
 
   const openOrder = useCallback((partCode?: string, supplierName?: string) => setOrderModal({ partCode, supplierName }), []);
   const openDisruption = useCallback(() => setDisruptionModal(true), []);
-  const ui = useMemo<UiValue>(() => ({ openOrder, openDisruption }), [openOrder, openDisruption]);
+  const openSupplier = useCallback((supplierName: string) => setSupplierModal(supplierName), []);
+  const ui = useMemo<UiValue>(() => ({ openOrder, openDisruption, openSupplier }), [openOrder, openDisruption, openSupplier]);
   const stale = useMemo(() => (state ? staleDataReasons(state) : []), [state]);
 
   return (
@@ -144,6 +148,7 @@ function Shell() {
           />
         </Routes>
       </main>
+      {state && supplierModal && <SupplierModal state={state} supplierName={supplierModal} onClose={() => setSupplierModal(null)} />}
       {state && orderModal && (
         <OrderModal state={state} initialPartCode={orderModal.partCode} initialSupplierName={orderModal.supplierName} onClose={() => setOrderModal(null)} />
       )}

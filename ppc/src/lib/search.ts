@@ -1,9 +1,9 @@
 // 발주 검색: 어떤 부품을 어느 업체에서 얼마에, 며칠 만에, 납기 준수율 몇 %로 살 수 있는지 찾는다. 순수 함수.
-import { maxQtyByCapacity, supplierCapacityOf, unitPriceOf } from './ordering';
-import { partGroups, supplierLimitOf } from './planning';
+import { maxQtyByCapacity, supplierCapacityOf, unitPriceOf, type SupplierCapacity } from './ordering';
+import { openPos, partGroups, sortByArrival, supplierLimitOf, type SupplierLimit } from './planning';
 import { disruptedSupplierNames, gradeOf, suppliersFor } from './recommend';
-import { partOf, reference } from './reference';
-import type { AppState, Part, RateGrade, Supplier } from './types';
+import { partOf, reference, supplierOf } from './reference';
+import type { AppState, Disruption, Part, PurchaseOrder, RateGrade, Supplier } from './types';
 
 export interface Offer {
   /** 부품 (색상별 차체는 '차체' 한 줄로 묶는다) */
@@ -26,6 +26,37 @@ export interface Offer {
   maxQty: number;
   /** 진행 중인 차질이 있는 업체 */
   disrupted: boolean;
+}
+
+export interface SupplierProfile {
+  supplier: Supplier;
+  grade: RateGrade;
+  /** 이 업체에서 살 수 있는 라인 부품 (가격이 싼 순이 아니라 라인 순) */
+  offers: Offer[];
+  /** 월 공급가능량과 최근 한 달 발주량 (kg) */
+  capacity: SupplierCapacity;
+  /** 이번 주 일반 발주 한도 */
+  limit: SupplierLimit;
+  /** 해결되지 않은 차질 */
+  activeDisruptions: Disruption[];
+  /** 이 업체에 넣어 둔 미입고 발주 */
+  openOrders: PurchaseOrder[];
+}
+
+/** 업체 한 곳의 정보: 연락처, 납품하는 부품과 가격, 준수율, 발주 가능량 */
+export function supplierProfile(state: AppState, supplierName: string): SupplierProfile | null {
+  const supplier = supplierOf(supplierName);
+  if (!supplier) return null;
+  const baseDate = state.settings.baseDate;
+  return {
+    supplier,
+    grade: gradeOf(supplier.onTimeRate),
+    offers: searchOffers(state, '').filter((o) => o.supplier.name === supplier.name),
+    capacity: supplierCapacityOf(state.purchaseOrders, supplier, baseDate),
+    limit: supplierLimitOf(state.purchaseOrders, supplier.name, baseDate),
+    activeDisruptions: state.disruptions.filter((d) => d.status !== '해결' && d.supplierName === supplier.name),
+    openOrders: sortByArrival(openPos(state.purchaseOrders).filter((po) => po.supplierName === supplier.name)),
+  };
 }
 
 /** 검색창 자동완성 후보: 라인 부품 이름 → 그 부품을 파는 업체 이름 → 소재 이름 (중복 없이) */

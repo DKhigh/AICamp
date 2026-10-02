@@ -22,6 +22,8 @@ export interface Supplier {
   status: string;
   monthlyCapacityKg: number;
   onTimeRate: number;
+  /** 담당자 연락처 */
+  phone?: string;
 }
 export interface Material {
   code: string;

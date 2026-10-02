@@ -18,6 +18,19 @@ export function TopBar() {
   const [query, setQuery] = useState('');
   // 검색 자동완성 후보: 라인 부품 이름, 그 부품을 파는 업체, 소재
   const suggestions = useMemo(() => (state ? searchSuggestions(state) : []), [state?.lineParts]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  /** 화살표 키로 고른 줄 (-1: 고르지 않음) */
+  const [active, setActive] = useState(-1);
+  const typed = query.trim().toLowerCase();
+  // 입력한 글자가 들어 있는 후보. 이미 그 낱말을 다 쳤으면 목록을 닫는다
+  const matches = typed === '' ? [] : suggestions.filter((word) => word.toLowerCase().includes(typed) && word.toLowerCase() !== typed).slice(0, 8);
+
+  function search(word: string) {
+    setQuery(word);
+    setSuggestOpen(false);
+    setActive(-1);
+    navigate(`/search?q=${encodeURIComponent(word.trim())}`);
+  }
 
   /** 사원번호를 확인한 뒤 초기화한다 */
   async function reset(employeeNo: string): Promise<boolean> {
@@ -83,10 +96,10 @@ export function TopBar() {
         {/* 발주 검색: 어떤 부품을 어느 업체에서 얼마에, 며칠 만에, 준수율 몇 %로 살 수 있는지 */}
         <form
           role="search"
-          className="flex min-w-[180px] flex-1 items-center sm:max-w-xs"
+          className="relative flex min-w-[180px] flex-1 items-center sm:max-w-xs"
           onSubmit={(e) => {
             e.preventDefault();
-            navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+            search(matches[active] ?? query);
           }}
         >
           <input
@@ -94,38 +107,77 @@ export function TopBar() {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              // 자동완성 목록에서 고르면 바로 검색한다
-              if (suggestions.includes(e.target.value)) navigate(`/search?q=${encodeURIComponent(e.target.value)}`);
+              setSuggestOpen(true);
+              setActive(-1);
+            }}
+            onFocus={() => setSuggestOpen(true)}
+            // 목록을 누를 시간을 주고 닫는다
+            onBlur={() => window.setTimeout(() => setSuggestOpen(false), 150)}
+            onKeyDown={(e) => {
+              // 한글을 조합하는 중의 키 입력(Enter 포함)은 조합을 끝내는 데 쓰이므로 건드리지 않는다
+              if (e.nativeEvent.isComposing || matches.length === 0) return;
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setActive((i) => (i + 1) % matches.length);
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setActive((i) => (i <= 0 ? matches.length - 1 : i - 1));
+              } else if (e.key === 'Escape') {
+                setSuggestOpen(false);
+              }
             }}
             placeholder="부품·업체 검색 (예: 엔진, 대성메탈)"
             aria-label="발주 가능한 부품·업체 검색"
-            list="search-suggestions"
+            aria-autocomplete="list"
+            aria-expanded={suggestOpen && matches.length > 0}
             autoComplete="off"
             className="w-full rounded-l-md border border-white/15 bg-white/10 px-3 py-1.5 text-[13px] text-white outline-none placeholder:text-slate-400 focus:border-sky-400 focus:bg-white/15"
           />
-          {/* 자동완성: '대성'을 치면 대성메탈·대성정밀이 뜬다 */}
-          <datalist id="search-suggestions">
-            {suggestions.map((word) => (
-              <option key={word} value={word} />
-            ))}
-          </datalist>
+          {/*
+            자동완성: '대성'을 치면 대성메탈·대성정밀이 뜬다.
+            브라우저 기본 목록(datalist)은 한글 조합이 끝나야 갱신돼서, 입력값이 바뀔 때마다 직접 그린다.
+          */}
+          {suggestOpen && matches.length > 0 && (
+            <ul role="listbox" aria-label="검색어 자동완성" className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-md border border-slate-200 bg-white py-1 shadow-popup">
+              {matches.map((word, i) => (
+                <li key={word} role="option" aria-selected={i === active}>
+                  <button
+                    type="button"
+                    // blur보다 먼저 처리되도록 mousedown에서 고른다
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      search(word);
+                    }}
+                    className={`block w-full px-3 py-1.5 text-left text-[13px] ${i === active ? 'bg-accent-light font-semibold text-accent' : 'text-slate-800 hover:bg-slate-50'}`}
+                  >
+                    {word}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <button type="submit" className="whitespace-nowrap rounded-r-md border border-l-0 border-white/15 bg-white/15 px-3 py-1.5 text-[13px] font-semibold text-slate-100 hover:bg-white/25">
             검색
           </button>
         </form>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <button type="button" className={HEADER_BUTTON} onClick={() => openOrder()} disabled={!state}>
-            + 발주
-          </button>
-          <button
-            type="button"
-            onClick={openDisruption}
-            disabled={!state}
-            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md bg-red-600 px-3 py-1.5 text-[13px] font-bold text-white shadow hover:bg-red-500 disabled:opacity-50"
-          >
-            ⚠ 차질 발생
-          </button>
+          {/* 로그인해야 할 수 있는 작업은 로그인했을 때만 보인다 */}
+          {session && (
+            <>
+              <button type="button" className={HEADER_BUTTON} onClick={() => openOrder()} disabled={!state}>
+                + 발주
+              </button>
+              <button
+                type="button"
+                onClick={openDisruption}
+                disabled={!state}
+                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md bg-red-600 px-3 py-1.5 text-[13px] font-bold text-white shadow hover:bg-red-500 disabled:opacity-50"
+              >
+                ⚠ 차질 발생
+              </button>
+            </>
+          )}
           {session ? (
             <button type="button" className={HEADER_BUTTON} onClick={logout} title={`${session.name} · ${session.dept} — 누르면 로그아웃합니다`}>
               <span className="text-emerald-300">●</span> {session.name} · 로그아웃
@@ -135,9 +187,11 @@ export function TopBar() {
               로그인
             </button>
           )}
-          <button type="button" className={HEADER_BUTTON} onClick={() => setResetOpen(true)}>
-            데이터 초기화
-          </button>
+          {session && (
+            <button type="button" className={HEADER_BUTTON} onClick={() => setResetOpen(true)}>
+              데이터 초기화
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 text-[13px]">

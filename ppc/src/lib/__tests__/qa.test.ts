@@ -1,6 +1,6 @@
 // QA 보고서(PPC_QA_테스트보고서.md)에서 고친 항목과 그 뒤에 추가한 기능
 import { describe, expect, it } from 'vitest';
-import { baseScenarios, previewNewOrder } from '../actions';
+import { baseScenarios, previewNewOrder, previewNewOrders } from '../actions';
 import { BUSY_ID_MESSAGE, createApi, qtyError } from '../api';
 import { SUPPLIER_ORDER_LIMIT } from '../constants';
 import { dashboardModel, staleDataReasons } from '../dashboard';
@@ -385,6 +385,55 @@ describe('활동 기록 (BUG-005 · 006 · 008 · 018 · 021)', () => {
     await api.createPurchaseOrder({ partCode: 'P013', supplierName: '대성메탈', qty: 5, employeeNo: '0000' });
     const state = (await api.fetchState())!;
     expect([state.logReady, state.logs.length, state.purchaseOrders.length]).toEqual([false, 0, 4]);
+  });
+});
+
+describe('여러 색을 한 번에 납기 추가', () => {
+  it('색상마다 주문이 하나씩 생기고 기록도 한 줄씩 남는다', async () => {
+    const api = await freshApi();
+    const orders = await api.addCustomerOrders({
+      customer: ' 한울모빌리티 ',
+      dueDate: '2026-10-25',
+      items: [
+        { colorCode: 'C01', qty: 10 },
+        { colorCode: 'C02', qty: 10 },
+      ],
+      employeeNo: 'ICBM-26012',
+    });
+    expect(orders).toEqual([
+      { id: 'CO-004', customer: '한울모빌리티', qty: 10, dueDate: '2026-10-25', colorCode: 'C01' },
+      { id: 'CO-005', customer: '한울모빌리티', qty: 10, dueDate: '2026-10-25', colorCode: 'C02' },
+    ]);
+    const state = (await api.fetchState())!;
+    expect(state.customerOrders).toHaveLength(5);
+    expect(state.logs.filter((l) => l.target === 'CO-004' || l.target === 'CO-005').map((l) => l.detail).sort()).toEqual([
+      '한울모빌리티 10대 · 블랙 · 납기 10/25',
+      '한울모빌리티 10대 · 화이트 · 납기 10/25',
+    ]);
+    // 납기 현황: 색상별로 한 줄씩, 각자 그 색 차체로 만든다
+    const { wait } = baseScenarios(state);
+    expect(wait.orders.filter((o) => o.customer === '한울모빌리티').map((o) => [o.id, o.colorCode, o.qty, o.doneDate])).toEqual([
+      ['CO-004', 'C01', 10, '2026-10-18'],
+      ['CO-005', 'C02', 10, '2026-10-18'],
+    ]);
+  });
+
+  it('입력이 틀리면 하나도 넣지 않는다', async () => {
+    const api = await freshApi();
+    const ok = { customer: 'A', dueDate: '2026-10-25', employeeNo: '0000' };
+    await expect(api.addCustomerOrders({ ...ok, items: [] })).rejects.toThrow('색상별 수량을 하나 이상');
+    await expect(api.addCustomerOrders({ ...ok, items: [{ colorCode: 'C01', qty: 10 }, { colorCode: 'C02', qty: 0 }] })).rejects.toThrow('수량은 1 이상');
+    await expect(api.addCustomerOrders({ ...ok, items: [{ colorCode: 'C01', qty: 1 }, { colorCode: 'C01', qty: 2 }] })).rejects.toThrow('같은 색상이 두 번');
+    await expect(api.addCustomerOrders({ ...ok, items: [{ colorCode: 'C99', qty: 1 }] })).rejects.toThrow('차량 색상을 찾을 수 없습니다');
+    expect((await api.fetchState())!.customerOrders).toHaveLength(3);
+  });
+
+  it('미리보기: 색마다 따로 납기를 본다 (레드는 차체가 60개뿐)', () => {
+    const preview = previewNewOrders(demoState(), [
+      { qty: 10, dueDate: '2026-10-25', colorCode: 'C01' },
+      { qty: 100, dueDate: '2026-10-25', colorCode: 'C03' },
+    ]);
+    expect(preview.mines.map((m) => [m.colorCode, m.doneDate === null])).toEqual([['C01', false], ['C03', true]]);
   });
 });
 

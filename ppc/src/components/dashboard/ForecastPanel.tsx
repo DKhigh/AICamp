@@ -4,7 +4,7 @@ import type { DashboardModel } from '../../lib/dashboard';
 import { dailyCapacityError, leadTimeError } from '../../lib/api';
 import { MAX_DAILY_CAPACITY, MAX_LEAD_TIME_DAYS } from '../../lib/constants';
 import { formatMD } from '../../lib/date';
-import { num } from '../../lib/format';
+import { dashPartName, num } from '../../lib/format';
 import { partOf } from '../../lib/reference';
 import type { AppState } from '../../lib/types';
 import { useAppData } from '../../state/AppData';
@@ -63,6 +63,7 @@ function SettingsEditor({ state }: { state: AppState }) {
 }
 
 export function ForecastPanel({ state, model }: { state: AppState; model: DashboardModel }) {
+  const { session } = useAppData();
   const [showTable, setShowTable] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const { settings, customerOrders } = state;
@@ -86,14 +87,14 @@ export function ForecastPanel({ state, model }: { state: AppState; model: Dashbo
             일일 투입 <strong className="text-slate-800">{settings.dailyCapacity}대</strong> · 리드타임{' '}
             <strong className="text-slate-800">{settings.leadTimeDays}일</strong>
           </span>
-          <Button size="sm" variant="ghost" onClick={() => setShowSettings((v) => !v)} aria-expanded={showSettings}>
+          <Button auth size="sm" variant="ghost" onClick={() => setShowSettings((v) => !v)} aria-expanded={showSettings}>
             설정 {showSettings ? '▲' : '▼'}
           </Button>
         </div>
       }
     >
       <div className="space-y-3 px-5 py-4">
-        {showSettings && (
+        {showSettings && session && (
           // 설정이 바뀌면(다른 사람이 바꾼 경우 포함) 입력칸을 새 값으로 다시 채운다
           <SettingsEditor key={`${settings.dailyCapacity}-${settings.leadTimeDays}`} state={state} />
         )}
@@ -151,7 +152,7 @@ export function ForecastPanel({ state, model }: { state: AppState; model: Dashbo
                           {day && day.kind !== '정상' && (
                             <>
                               <Badge tone={day.kind === '정지' ? 'red' : 'orange'}>{day.kind}</Badge>{' '}
-                              {day.bottleneck && `${partOf(day.bottleneck).name} 부족`}
+                              {day.bottleneck && `${dashPartName(partOf(day.bottleneck).name)} 부족`}
                             </>
                           )}
                           {!day && <span className="text-slate-400">투입 기간 종료</span>}

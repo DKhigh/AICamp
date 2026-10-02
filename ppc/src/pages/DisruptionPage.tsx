@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EmployeeConfirmModal } from '../components/EmployeeField';
 import { OrderStatus } from '../components/OrdersTable';
+import { SupplierLink } from '../components/SupplierInfo';
 import { CHART_COLORS, ScenarioChart, type ChartRow, type ChartSeries } from '../components/ScenarioChart';
 import { Badge, Button, Card, DISRUPTION_STATUS_TONE, disruptionStatusLabel, Field, GradeBadge, INPUT_CLASS, parseIntStrict } from '../components/ui';
 import { altScenario, baseScenarios, resolvablePos } from '../lib/actions';
@@ -188,7 +189,7 @@ function CandidateRow({
         </label>
       </td>
       <td className="px-2 py-2 font-semibold text-slate-900">
-        {c.name} <span className="font-mono text-[11px] font-medium text-slate-400">{c.code}</span>
+        <SupplierLink name={c.name} /> <span className="font-mono text-[11px] font-medium text-slate-400">{c.code}</span>
       </td>
       <td className="tabular px-2 py-2 text-slate-900">{c.altLeadDays}일</td>
       <td className="tabular px-2 py-2 font-semibold text-slate-900">{formatMD(c.arrival)}</td>
@@ -234,7 +235,7 @@ function CandidateRow({
 
 /** 결정 입력과 비교 (상태가 '발생' 또는 '기다리기'일 때) */
 function DecisionSection({ state, disruption, part }: { state: AppState; disruption: Disruption; part: Part }) {
-  const { save, notify } = useAppData();
+  const { save, notify, session } = useAppData();
   const navigate = useNavigate();
   const { settings } = state;
   const delayedPos = delayedPosOf(state.purchaseOrders, disruption.id);
@@ -725,11 +726,13 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
           </details>
 
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4">
-            <p className="mr-auto text-xs text-slate-500">결정은 로그인한 사원 이름으로 이력에 남습니다.</p>
-            <Button onClick={() => setConfirming('wait')} disabled={disruption.status === '기다리기'}>
+            <p className="mr-auto text-xs text-slate-500">
+              {session ? '결정은 로그인한 사원 이름으로 이력에 남습니다.' : '로그인하면 여기서 대응을 결정할 수 있습니다. 지금은 예상 결과만 볼 수 있습니다.'}
+            </p>
+            <Button auth onClick={() => setConfirming('wait')} disabled={disruption.status === '기다리기'}>
               {disruption.status === '기다리기' ? '대응하지 않음으로 결정됨' : '대응하지 않음'}
             </Button>
-            <Button variant="primary" onClick={() => setConfirming('alt')} disabled={!alt}>
+            <Button auth variant="primary" onClick={() => setConfirming('alt')} disabled={!alt}>
               대체 발주 확정
             </Button>
           </div>
@@ -907,7 +910,7 @@ export function DisruptionPage({ state }: { state: AppState }) {
         <h1 className="text-lg font-extrabold tracking-tight text-slate-900">차질 {disruption.id}</h1>
         <Badge tone={DISRUPTION_STATUS_TONE[disruption.status]}>상태: {disruptionStatusLabel(disruption.status)}</Badge>
         {disruption.status !== '해결' && (
-          <Button size="sm" className="ml-auto" onClick={() => setResolving(true)}>
+          <Button auth size="sm" className="ml-auto" onClick={() => setResolving(true)}>
             해결 완료
           </Button>
         )}

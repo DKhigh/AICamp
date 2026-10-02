@@ -1,6 +1,7 @@
 // 발주 검색 `/search?q=`: 어떤 부품을 어느 업체에서 얼마에, 며칠 만에, 준수율 몇 %로 발주할 수 있는지
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { SupplierLink } from '../components/SupplierInfo';
 import { Badge, Button, Card, GradeBadge } from '../components/ui';
 import { num, won } from '../lib/format';
 import { searchOffers } from '../lib/search';
@@ -58,7 +59,7 @@ export function SearchPage({ state }: { state: AppState }) {
                         <span className="ml-2 text-xs text-slate-500">{o.part.materialName}</span>
                       </td>
                       <td className="px-2 py-2.5 text-slate-900">
-                        {o.supplier.name} <span className="font-mono text-[11px] text-slate-400">{o.supplier.code}</span>
+                        <SupplierLink name={o.supplier.name} /> <span className="font-mono text-[11px] text-slate-400">{o.supplier.code}</span>
                         {o.isDefault && <span className="ml-1.5 text-[11px] font-semibold text-accent">기본 업체</span>}
                         {o.disrupted && (
                           <span className="ml-1.5">
@@ -76,7 +77,7 @@ export function SearchPage({ state }: { state: AppState }) {
                         {num(orderable)}개
                       </td>
                       <td className="py-2.5 pl-2 pr-5 text-right">
-                        <Button size="sm" onClick={() => openOrder(o.orderPartCode, o.supplier.name)} disabled={o.unitPrice === null} aria-label={`${o.part.name} ${o.supplier.name} 발주`}>
+                        <Button auth size="sm" onClick={() => openOrder(o.orderPartCode, o.supplier.name)} disabled={o.unitPrice === null} aria-label={`${o.part.name} ${o.supplier.name} 발주`}>
                           발주
                         </Button>
                       </td>

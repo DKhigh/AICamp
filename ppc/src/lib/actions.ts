@@ -304,28 +304,42 @@ export interface OrderPreview {
   periodTotal: number;
 }
 
-/** 납기를 추가하기 전에 그 주문이 납기를 맞출 수 있는지, 다른 주문을 밀어내는지 미리 계산한다 */
-export function previewNewOrder(state: AppState, draft: { qty: number; dueDate: ISODate; colorCode?: string | null }): OrderPreview {
+export interface OrderDraft {
+  qty: number;
+  dueDate: ISODate;
+  colorCode?: string | null;
+}
+
+/**
+ * 납기를 추가하기 전에 그 주문들이 납기를 맞출 수 있는지, 다른 주문을 밀어내는지 미리 계산한다.
+ * 한 고객이 여러 색을 한꺼번에 주문하면 색상마다 주문이 하나씩 생기므로 여러 건을 함께 넣어 본다.
+ * mines는 drafts와 같은 순서다.
+ */
+export function previewNewOrders(state: AppState, drafts: OrderDraft[]): Omit<OrderPreview, 'mine'> & { mines: OrderForecast[] } {
   const { wait } = baseScenarios(state);
   const cumulative = wait.sim.cumulative;
   // 실제로 받을 번호를 쓴다: 납기가 같은 주문끼리는 번호 순으로 배정되기 때문이다
-  const draftId = nextId(
-    'CO-',
-    state.customerOrders.map((o) => o.id),
-  );
+  const ids: string[] = [];
+  for (let i = 0; i < drafts.length; i++) ids.push(nextId('CO-', [...state.customerOrders.map((o) => o.id), ...ids]));
   const after = evaluateScenario(
     state.settings,
     productionParts(state.lineParts),
-    [...state.customerOrders, { id: draftId, customer: '', qty: draft.qty, dueDate: draft.dueDate, colorCode: draft.colorCode ?? null }],
+    [...state.customerOrders, ...drafts.map((d, i) => ({ id: ids[i], customer: '', qty: d.qty, dueDate: d.dueDate, colorCode: d.colorCode ?? null }))],
     arrivalsFromPos(state.purchaseOrders, 'expected'),
   ).orders;
   const lateBefore = new Set(wait.orders.filter(isLate).map((o) => o.id));
   const last = cumulative[cumulative.length - 1];
   return {
-    mine: after.find((o) => o.id === draftId)!,
-    newlyLate: after.filter((o) => o.id !== draftId && isLate(o) && !lateBefore.has(o.id)),
+    mines: ids.map((id) => after.find((o) => o.id === id)!),
+    newlyLate: after.filter((o) => !ids.includes(o.id) && isLate(o) && !lateBefore.has(o.id)),
     earliestDone: addDays(state.settings.baseDate, state.settings.leadTimeDays),
     periodEnd: last?.date ?? state.settings.baseDate,
     periodTotal: last?.cum ?? 0,
   };
+}
+
+/** 주문 한 건을 미리 본다 */
+export function previewNewOrder(state: AppState, draft: OrderDraft): OrderPreview {
+  const { mines, ...rest } = previewNewOrders(state, [draft]);
+  return { mine: mines[0], ...rest };
 }

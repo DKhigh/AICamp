@@ -1,6 +1,6 @@
 // F1-1 부품 재고 카드
 import type { PartRow } from '../../lib/dashboard';
-import { ddayLabel, num } from '../../lib/format';
+import { dashPartName, ddayLabel, num } from '../../lib/format';
 import { colorOf } from '../../lib/reference';
 import { Badge, Button, ColorSwatch, PART_STATUS_TONE } from '../ui';
 
@@ -29,7 +29,7 @@ export function BodyCard({
     >
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-bold leading-tight text-slate-900">
-          {row.part.name} <span className="font-mono text-[11px] font-medium text-slate-400">{row.part.code}</span>
+          {dashPartName(row.part.name)}
           <span className="ml-2 text-xs font-medium text-slate-500">색상별 {variants.length}종</span>
         </h3>
         <div className="flex items-center gap-1.5">
@@ -69,12 +69,13 @@ export function BodyCard({
               </span>
               {v.status !== '정상' && v.status !== '주의' && <Badge tone={PART_STATUS_TONE[v.status]}>{v.status}</Badge>}
               <Button
+                auth
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   onOrder(v.part.code);
                 }}
-                aria-label={`${v.part.name} 발주`}
+                aria-label={`${dashPartName(v.part.name)} 발주`}
               >
                 발주
               </Button>
@@ -147,6 +148,7 @@ export function PartCard({
       </p>
 
       <Button
+        auth
         size="sm"
         className="mt-2.5 w-full"
         onClick={(e) => {

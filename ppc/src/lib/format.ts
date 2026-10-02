@@ -11,6 +11,14 @@ export function withParticle(word: string, withFinal: string, withoutFinal: stri
   return word + (hasFinal ? withFinal : withoutFinal);
 }
 
+/**
+ * 메인 대시보드에서 쓰는 부품 이름: '차체'를 '외판'으로 부른다 ('차체(화이트)' → '외판(화이트)').
+ * Excel의 부품명과 다른 화면(발주 창, 이력 등)의 표기는 그대로 '차체'다.
+ */
+export function dashPartName(name: string): string {
+  return name.replace(/^차체/, '외판');
+}
+
 /** D-day 표기 (§5 F1-3) */
 export function ddayLabel(dday: number): string {
   if (dday > 0) return `D-${dday}`;

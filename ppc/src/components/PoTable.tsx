@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import type { PoRow } from '../lib/dashboard';
 import { formatMD } from '../lib/date';
-import { ddayLabel, num, won } from '../lib/format';
+import { dashPartName, ddayLabel, num, won } from '../lib/format';
 import { useAppData } from '../state/AppData';
 import { EmployeeConfirmModal } from './EmployeeField';
+import { SupplierLink } from './SupplierInfo';
 import { Badge, Button, PO_STATUS_TONE } from './ui';
 
 export function PoTable({ rows }: { rows: PoRow[] }) {
@@ -60,8 +61,10 @@ export function PoTable({ rows }: { rows: PoRow[] }) {
             return (
               <tr key={po.id} className={po.status === '지연' ? 'bg-red-50/40' : ''}>
                 <td className="py-2.5 pl-5 pr-2 font-mono font-semibold text-slate-900">{po.id}</td>
-                <td className="px-2 py-2.5 font-semibold text-slate-900">{part.name}</td>
-                <td className="px-2 py-2.5 text-slate-700">{po.supplierName}</td>
+                <td className="px-2 py-2.5 font-semibold text-slate-900">{dashPartName(part.name)}</td>
+                <td className="px-2 py-2.5 text-slate-700">
+                  <SupplierLink name={po.supplierName} />
+                </td>
                 <td className="tabular whitespace-nowrap px-2 py-2.5 text-right text-slate-900">
                   {num(po.qty)}
                   {reduced && <span className="text-[11px] text-slate-500"> (원래 {num(po.originalQty)})</span>}
@@ -99,7 +102,7 @@ export function PoTable({ rows }: { rows: PoRow[] }) {
                   <Badge tone={po.kind === '대체' ? 'blue' : 'gray'}>{po.kind}</Badge>
                 </td>
                 <td className="py-2.5 pl-2 pr-5 text-right">
-                  <Button size="sm" onClick={() => setTarget(row)}>
+                  <Button auth size="sm" onClick={() => setTarget(row)}>
                     입고 처리
                   </Button>
                 </td>

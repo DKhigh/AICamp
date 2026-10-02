@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmployeeConfirmModal } from '../components/EmployeeField';
+import { SupplierLink } from '../components/SupplierInfo';
 import { Badge, Button, Card, DISRUPTION_STATUS_TONE, disruptionStatusLabel, PO_STATUS_TONE } from '../components/ui';
 import { formatMD } from '../lib/date';
 import { num, timeLabel, won } from '../lib/format';
@@ -137,7 +138,9 @@ export function HistoryPage({ state }: { state: AppState }) {
                       <td className="px-2 py-2.5 font-semibold text-slate-900">
                         {part.name} <span className="font-mono text-[11px] font-medium text-slate-400">{part.code}</span>
                       </td>
-                      <td className="px-2 py-2.5 text-slate-700">{d.supplierName}</td>
+                      <td className="px-2 py-2.5 text-slate-700">
+                        <SupplierLink name={d.supplierName} />
+                      </td>
                       <td className="px-2 py-2.5 text-slate-700">{d.reason}</td>
                       <td className="tabular px-2 py-2.5 text-right text-slate-900">{d.delayDays}일</td>
                       <td className="px-2 py-2.5">
@@ -188,7 +191,9 @@ export function HistoryPage({ state }: { state: AppState }) {
                     <tr key={po.id} className={po.status === '취소' ? 'text-slate-400' : ''}>
                       <td className="py-2.5 pl-5 pr-2 font-mono font-semibold text-slate-900">{po.id}</td>
                       <td className="px-2 py-2.5 font-semibold text-slate-900">{part.name}</td>
-                      <td className="px-2 py-2.5 text-slate-700">{po.supplierName}</td>
+                      <td className="px-2 py-2.5 text-slate-700">
+                        <SupplierLink name={po.supplierName} />
+                      </td>
                       <td className="tabular whitespace-nowrap px-2 py-2.5 text-right text-slate-900">
                         {num(po.qty)}
                         {po.qty !== po.originalQty && <span className="text-[11px] text-slate-500"> (원래 {num(po.originalQty)})</span>}
@@ -213,7 +218,7 @@ export function HistoryPage({ state }: { state: AppState }) {
                             <Badge tone="orange" title="발주한 당일까지 취소할 수 있습니다">
                               발주대기
                             </Badge>
-                            <Button size="sm" onClick={() => setCancelTarget(po)}>
+                            <Button auth size="sm" onClick={() => setCancelTarget(po)}>
                               발주 취소
                             </Button>
                           </span>

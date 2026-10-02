@@ -60,6 +60,7 @@ const suppliers = rows('공급업체').map((r) => ({
   status: text(r['상태']),
   monthlyCapacityKg: num(r['월 공급가능량(kg)'], '월 공급가능량(kg)'),
   onTimeRate: num(r['납기 준수율(%)'], '납기 준수율(%)'),
+  phone: text(r['담당자 연락처']),
 }));
 
 // §4.1: 현재재고(kg)는 쓰지 않는다. §4.2-4: 납기 기준은 공급업체 시트

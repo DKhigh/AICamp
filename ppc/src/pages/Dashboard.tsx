@@ -12,7 +12,7 @@ import { Badge, Button, Card, ColorSwatch, GradeBadge, PART_STATUS_TONE } from '
 import { cautionOf } from '../lib/cautions';
 import { LOW_COVERAGE_DAYS } from '../lib/constants';
 import { dashboardModel, type DashboardModel, type PartRow } from '../lib/dashboard';
-import { ddayLabel, num, won } from '../lib/format';
+import { dashPartName, ddayLabel, num, won } from '../lib/format';
 import { gradeOf } from '../lib/recommend';
 import { colorOf, partOf, supplierOf } from '../lib/reference';
 import { repairCars } from '../lib/repairs';
@@ -35,12 +35,12 @@ function DisruptionBanner({ disruption }: { disruption: Disruption }) {
       <p className={`text-sm font-semibold ${responding ? 'text-blue-800' : 'text-red-900'}`}>
         {responding ? (
           <>
-            대응 중: {part.name}({part.code}) · {disruption.supplierName} {disruption.delayDays}일 지연 → {disruption.altSupplierName}에
+            대응 중: {dashPartName(part.name)}({part.code}) · {disruption.supplierName} {disruption.delayDays}일 지연 → {disruption.altSupplierName}에
             대체 발주 {num(disruption.altQty ?? 0)}개 ({disruption.altPoId}) · 원래 발주 {disruption.originalPoAction}
           </>
         ) : (
           <>
-            ⚠ 진행 중 차질: {part.name}({part.code}) · {disruption.supplierName} · {disruption.delayDays}일 지연
+            ⚠ 진행 중 차질: {dashPartName(part.name)}({part.code}) · {disruption.supplierName} · {disruption.delayDays}일 지연
             {disruption.status === '기다리기' && ' (대응하지 않음으로 결정)'}
           </>
         )}
@@ -75,18 +75,19 @@ function LowStockBanner({ rows, dailyCapacity, onOrder }: { rows: PartRow[]; dai
         {low.map(({ row, need }) => (
           <li key={row.part.code} className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="min-w-0 flex-1">
-              <strong>{row.part.name}</strong> 생산용 {num(row.available)}개 ({row.coverage.toFixed(1)}일분) · 필요 {num(need)}개 ·{' '}
+              <strong>{dashPartName(row.part.name)}</strong> 생산용 {num(row.available)}개 ({row.coverage.toFixed(1)}일분) · 필요 {num(need)}개 ·{' '}
               <strong>{num(need - row.available)}개 부족</strong>
               {row.nextPo && row.nextDday !== null ? ` · 다음 입고 ${ddayLabel(row.nextDday)} +${num(row.nextPo.qty)}개` : ' · 입고 예정 없음'}
             </span>
             {/* 색상별 차체는 재고가 가장 적은 색의 발주 창을 연다 (창 안에서 다른 색으로 바꿀 수 있다) */}
             <Button
+              auth
               size="sm"
               variant="primary"
               onClick={() => onOrder(row.variants ? [...row.variants].sort((a, b) => a.available - b.available)[0].part.code : row.part.code)}
-              aria-label={`${row.part.name} 재고 부족 발주`}
+              aria-label={`${dashPartName(row.part.name)} 재고 부족 발주`}
             >
-              {row.part.name} 발주
+              {dashPartName(row.part.name)} 발주
             </Button>
           </li>
         ))}
@@ -143,13 +144,13 @@ function KpiRow({ kpi }: { kpi: DashboardModel['kpi'] }) {
         label="현재 재고로 생산 가능"
         value={num(kpi.buildableNow)}
         unit="대"
-        sub={kpi.bottleneckNow ? `병목: ${kpi.bottleneckNow.name} · 수리용 재고 제외` : undefined}
+        sub={kpi.bottleneckNow ? `병목: ${dashPartName(kpi.bottleneckNow.name)} · 수리용 재고 제외` : undefined}
       />
       <KpiCard
         label="입고 예정 포함 생산 가능"
         value={num(kpi.buildableIncoming)}
         unit="대"
-        sub={kpi.bottleneckIncoming ? `병목: ${kpi.bottleneckIncoming.name}` : undefined}
+        sub={kpi.bottleneckIncoming ? `병목: ${dashPartName(kpi.bottleneckIncoming.name)}` : undefined}
         to="/shipments"
         linkLabel="출차 일정"
       />
@@ -183,7 +184,9 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-base font-bold tracking-tight text-slate-900">
-            {part.name} <span className="font-mono text-xs font-medium text-slate-400">{part.code}</span>
+            {dashPartName(part.name)}
+            {/* 색상별로 나뉜 외판은 묶음이라 부품 코드를 붙이지 않는다 */}
+            {!row.variants && <span className="font-mono text-xs font-medium text-slate-400"> {part.code}</span>}
           </h3>
           {caution && (
             <button
@@ -202,7 +205,7 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
         </div>
         {caution && showCaution && (
           <p role="note" className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] leading-relaxed text-amber-900">
-            <strong>{part.name} 주의사항</strong> — {caution}
+            <strong>{dashPartName(part.name)} 주의사항</strong> — {caution}
           </p>
         )}
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
@@ -240,7 +243,7 @@ function PartDetail({ row, onOrder }: { row: PartRow; onOrder: () => void }) {
         )}
       </div>
       <div className="flex shrink-0 gap-2">
-        <Button variant="primary" onClick={onOrder}>
+        <Button auth variant="primary" onClick={onOrder}>
           발주
         </Button>
         {activeDisruption && (
@@ -265,7 +268,7 @@ export function Dashboard({ state }: { state: AppState }) {
   const focusKey = focusRow ? (CAR_PART_BY_CODE[focusRow.part.code] ?? null) : null;
   const viewerItems: CarViewerItem[] = model.parts.flatMap((row) => {
     const key = CAR_PART_BY_CODE[row.part.code];
-    return key ? [{ key, name: row.part.name, status: row.status, isBottleneck: row.isBottleneck }] : [];
+    return key ? [{ key, name: dashPartName(row.part.name), status: row.status, isBottleneck: row.isBottleneck }] : [];
   });
   const codeOfKey = (key: CarPartKey | null) =>
     key ? (model.parts.find((p) => CAR_PART_BY_CODE[p.part.code] === key)?.part.code ?? null) : null;

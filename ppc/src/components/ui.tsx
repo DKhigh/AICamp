@@ -1,6 +1,7 @@
 // 여러 화면이 함께 쓰는 작은 UI 조각. 색 규칙은 DESIGN.md §7.4를 따른다.
 import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { PartStatus } from '../lib/planning';
+import { useAppData } from '../state/AppData';
 import { colorOf } from '../lib/reference';
 import type { DisruptionStatus, PoStatus, RateGrade } from '../lib/types';
 
@@ -85,11 +86,20 @@ export function Button({
   variant = 'secondary',
   size = 'md',
   busy = false,
+  auth = false,
   className = '',
   children,
   disabled,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: 'sm' | 'md'; busy?: boolean }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: 'sm' | 'md';
+  busy?: boolean;
+  /** 로그인해야 할 수 있는 작업(발주, 취소, 입고 등)의 버튼: 로그인하지 않았으면 보이지 않는다 */
+  auth?: boolean;
+}) {
+  const { session } = useAppData();
+  if (auth && !session) return null;
   return (
     <button
       type="button"
