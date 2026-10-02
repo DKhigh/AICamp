@@ -2,8 +2,8 @@
 // 수리에 쓸 부품은 재고에서 따로 잡아 둔다: 생산 가능 대수와 생산 예측은 그만큼을 뺀 재고로 계산한다.
 import repairJson from '../data/repair_cars.json';
 import { addDays, diffDays } from './date';
-import { DEMO_BASE_DATE } from './reference';
-import type { ISODate, LinePart } from './types';
+import { DEMO_BASE_DATE, reference } from './reference';
+import type { ISODate, LinePart, Mechanic } from './types';
 
 export interface RepairPartUse {
   partCode: string;
@@ -21,9 +21,17 @@ export interface RepairCar {
   symptom: string;
   /** 수리에 소모하는 부품 */
   parts: RepairPartUse[];
+  /** 담당 정비사 (Excel '정비사' 시트의 정비사 ID) */
+  mechanicId: string;
+  /** 수리를 맡긴 고객이 남긴 요청사항 */
+  customerRequest: string;
 }
 
 export const repairCars = repairJson as RepairCar[];
+
+export function mechanicOf(id: string | null | undefined): Mechanic | undefined {
+  return reference.mechanics.find((m) => m.id === id);
+}
 
 /** 입고일을 기준일(오늘)에 맞춰 옮긴 목록. JSON의 날짜는 설계서 기준일(10/5)을 기준으로 적혀 있다 */
 export function repairCarsAt(baseDate: ISODate): RepairCar[] {

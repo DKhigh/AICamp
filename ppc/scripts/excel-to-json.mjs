@@ -139,10 +139,22 @@ const qtyDelays = rows('지연시간').map((r) => ({
     .sort((a, b) => a.minQty - b.minQty),
 }));
 
+// 정비사: 수리 차량 담당자 (연락처, 담당 부품)
+const mechanics = rows('정비사').map((r) => ({
+  id: text(r['정비사 ID']),
+  name: text(r['이름']),
+  rank: text(r['직급']),
+  career: text(r['경력']),
+  phone: text(r['연락처']),
+  mainPart: text(r['주 담당 부품']),
+  subPart: text(r['부 담당 부품']),
+}));
+if (new Set(mechanics.map((m) => m.id)).size !== mechanics.length) throw new Error('정비사 ID가 겹칩니다');
+
 const out = resolve(root, 'src/data/reference.json');
-writeFileSync(out, JSON.stringify({ parts, suppliers, materials, prices, colors, cautions, qtyDelays }, null, 2) + '\n');
+writeFileSync(out, JSON.stringify({ parts, suppliers, materials, prices, colors, cautions, qtyDelays, mechanics }, null, 2) + '\n');
 console.log(
-  `reference.json 생성: parts ${actual.parts} · suppliers ${actual.suppliers} · materials ${actual.materials} · prices ${prices.length} · colors ${colors.length} · cautions ${cautions.length} · qtyDelays ${qtyDelays.length}`,
+  `reference.json 생성: parts ${actual.parts} · suppliers ${actual.suppliers} · materials ${actual.materials} · prices ${prices.length} · colors ${colors.length} · cautions ${cautions.length} · qtyDelays ${qtyDelays.length} · mechanics ${mechanics.length}`,
 );
 
 // 발주권한자 → src/data/employees.json. '발주 권한'이 Y인 사원만 넣는다.

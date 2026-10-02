@@ -65,6 +65,17 @@ export interface QtyDelay {
   partName: string;
   tiers: { minQty: number; days: number; label: string }[];
 }
+/** 정비사 (Excel '정비사' 시트) */
+export interface Mechanic {
+  id: string;
+  name: string;
+  rank: string;
+  career: string;
+  phone: string;
+  /** 주로 맡는 부품과 그다음으로 맡는 부품 (부품 이름) */
+  mainPart: string;
+  subPart: string;
+}
 export interface Reference {
   parts: Part[];
   suppliers: Supplier[];
@@ -73,6 +84,7 @@ export interface Reference {
   colors: CarColor[];
   cautions: PartCaution[];
   qtyDelays: QtyDelay[];
+  mechanics: Mechanic[];
 }
 
 // DB

@@ -4,14 +4,15 @@ import { Link } from 'react-router-dom';
 import type { CarPartKey } from '../components/car/Car3DVisualizer';
 import { CAR_PART_BY_CODE, CarPartIcon } from '../components/car/carParts';
 import type { CarViewerItem } from '../components/car/CarViewer';
-import { Badge, Button, Card, ColorSwatch, type Tone } from '../components/ui';
+import { Badge, Button, Card, ColorSwatch, Modal, type Tone } from '../components/ui';
 import { formatMD } from '../lib/date';
 import { num } from '../lib/format';
 import { baseCodeOf } from '../lib/partcode';
 import { nextArrivalOf } from '../lib/planning';
 import { colorOf, partOf } from '../lib/reference';
-import { repairCarsAt, repairCarViews, repairPartNeeds } from '../lib/repairs';
-import type { AppState } from '../lib/types';
+import { cautionOf } from '../lib/cautions';
+import { mechanicOf, repairCarsAt, repairCarViews, repairPartNeeds } from '../lib/repairs';
+import type { AppState, Mechanic } from '../lib/types';
 import { useUi } from '../state/Ui';
 
 // three.js는 용량이 커서 3D 뷰어만 따로 불러온다
@@ -33,7 +34,70 @@ function PartIcons({ codes }: { codes: string[] }) {
   );
 }
 
+/** 누르면 정비사 정보 창이 열리는 이름 */
+function MechanicName({ mechanic, onOpen }: { mechanic: Mechanic | undefined; onOpen: (m: Mechanic) => void }) {
+  if (!mechanic) return <span className="text-slate-400">미배정</span>;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen(mechanic);
+      }}
+      title="정비사 정보 보기"
+      className="font-semibold text-slate-900 underline decoration-slate-300 decoration-dotted underline-offset-2 hover:text-accent hover:decoration-accent"
+    >
+      {mechanic.name}
+    </button>
+  );
+}
+
+function MechanicModal({ mechanic, cars, onClose }: { mechanic: Mechanic; cars: { serial: string; faultArea: string; status: string }[]; onClose: () => void }) {
+  const info: [string, React.ReactNode][] = [
+    [
+      '연락처',
+      <a key="p" href={`tel:${mechanic.phone}`} className="tabular font-bold text-accent hover:underline">
+        {mechanic.phone}
+      </a>,
+    ],
+    ['직급', mechanic.rank],
+    ['경력', mechanic.career.replace(/^경력\s*/, '')],
+    ['주 담당 부품', mechanic.mainPart],
+    ['부 담당 부품', mechanic.subPart],
+    ['정비사 ID', <span key="i" className="font-mono">{mechanic.id}</span>],
+  ];
+  return (
+    <Modal title={`정비사 ${mechanic.name}`} onClose={onClose} footer={<Button onClick={onClose}>닫기</Button>}>
+      <div className="space-y-4">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
+          {info.map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-[11px] font-semibold text-slate-500">{label}</dt>
+              <dd className="mt-0.5 text-slate-900">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div>
+          <p className="mb-1 text-xs font-semibold text-slate-600">지금 맡고 있는 수리 차량 {cars.length}대</p>
+          {cars.length === 0 ? (
+            <p className="rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-500">맡고 있는 차량이 없습니다.</p>
+          ) : (
+            <ul className="space-y-1 text-[13px] text-slate-700">
+              {cars.map((c) => (
+                <li key={c.serial}>
+                  <strong className="font-mono text-slate-900">{c.serial}</strong> · {c.faultArea} · {c.status}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function RepairsPage({ state }: { state: AppState }) {
+  const [mechanicOpen, setMechanicOpen] = useState<Mechanic | null>(null);
   const { openOrder } = useUi();
   const [picked, setPicked] = useState<string | null>(null);
   const repairCars = repairCarViews(repairCarsAt(state.settings.baseDate), state.lineParts);
@@ -50,6 +114,9 @@ export function RepairsPage({ state }: { state: AppState }) {
 
   return (
     <div className="space-y-4">
+      {mechanicOpen && (
+        <MechanicModal mechanic={mechanicOpen} cars={repairCars.filter((c) => c.mechanicId === mechanicOpen.id)} onClose={() => setMechanicOpen(null)} />
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <Link to="/" className="text-sm font-semibold text-accent hover:underline">
           ← 대시보드
@@ -71,6 +138,7 @@ export function RepairsPage({ state }: { state: AppState }) {
                 <th className="px-2 py-2">입고일</th>
                 <th className="px-2 py-2">고장 난 곳</th>
                 <th className="px-2 py-2">증상</th>
+                <th className="px-2 py-2">담당 정비사</th>
                 <th className="px-2 py-2">상태</th>
                 <th className="py-2 pl-2 pr-5 text-right">소모 부품</th>
               </tr>
@@ -105,8 +173,11 @@ export function RepairsPage({ state }: { state: AppState }) {
                         {car.faultArea}
                       </span>
                     </td>
-                    <td className="max-w-[360px] truncate px-2 py-2.5 text-slate-600" title={car.symptom}>
+                    <td className="max-w-[300px] truncate px-2 py-2.5 text-slate-600" title={car.symptom}>
                       {car.symptom}
+                    </td>
+                    <td className="px-2 py-2.5">
+                      <MechanicName mechanic={mechanicOf(car.mechanicId)} onOpen={setMechanicOpen} />
                     </td>
                     <td className="px-2 py-2.5">
                       <Badge tone={STATUS_TONE[car.status] ?? 'gray'}>{car.status}</Badge>
@@ -156,8 +227,15 @@ export function RepairsPage({ state }: { state: AppState }) {
                 </p>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-slate-700">{selected.symptom}</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  <ColorSwatch code={selected.colorCode} size={10} /> {colorOf(selected.colorCode)?.name} · 입고일 {formatMD(selected.receivedDate)}
+                  <ColorSwatch code={selected.colorCode} size={10} /> {colorOf(selected.colorCode)?.name} · 입고일 {formatMD(selected.receivedDate)} · 담당 정비사{' '}
+                  <MechanicName mechanic={mechanicOf(selected.mechanicId)} onOpen={setMechanicOpen} />
+                  {mechanicOf(selected.mechanicId) && ` (${mechanicOf(selected.mechanicId)!.rank})`}
                 </p>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <p className="text-[11px] font-semibold text-slate-500">고객 요청사항</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-slate-800">“{selected.customerRequest}”</p>
               </div>
 
               <div>
@@ -193,6 +271,12 @@ export function RepairsPage({ state }: { state: AppState }) {
                             )}
                             {next && ` · 다음 입고 ${formatMD(next.expectedArrival)} +${num(next.qty)}개`}
                           </p>
+                          {/* 이 부품을 다룰 때 조심할 점 (Excel '주의사항') */}
+                          {cautionOf(partOf(baseCodeOf(use.partCode)).name) && (
+                            <p role="note" className="mt-1.5 rounded-md border border-amber-300 bg-amber-100 px-2.5 py-1.5 text-xs leading-relaxed text-amber-900">
+                              <strong>⚠ 수리 시 주의</strong> — {cautionOf(partOf(baseCodeOf(use.partCode)).name)}
+                            </p>
+                          )}
                         </div>
                         <Button
                           auth

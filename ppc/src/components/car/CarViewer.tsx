@@ -208,7 +208,7 @@ export function CarViewer({
 
       {focus && detail && (
         <div
-          className="pop-in absolute inset-x-3 bottom-3 z-30 rounded-xl border border-slate-200/85 bg-white/95 p-4 shadow-popup backdrop-blur"
+          className="pop-in absolute inset-x-3 bottom-3 z-30 rounded-xl border border-slate-200/85 bg-white/60 p-4 shadow-popup backdrop-blur-[2px] sm:bg-white/95 sm:backdrop-blur"
           onDoubleClick={(e) => e.stopPropagation()}
         >
           {detail}
