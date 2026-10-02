@@ -24,7 +24,7 @@ import { UiContext, type UiValue } from './state/Ui';
 function Toasts() {
   const { toasts, dismissToast } = useAppData();
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-16 z-[60] flex flex-col items-center gap-2 px-4" aria-live="polite">
+    <div className="pointer-events-none fixed inset-x-0 top-16 z-[60] lg:top-28 flex flex-col items-center gap-2 px-4" aria-live="polite">
       {toasts.map((t) => (
         <button
           key={t.id}
