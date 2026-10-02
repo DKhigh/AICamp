@@ -65,7 +65,7 @@ function OutcomeCard({
   normalEndStock,
 }: {
   title: string;
-  tone: 'red' | 'blue';
+  tone: 'red' | 'blue' | 'gray';
   outcome: ScenarioOutcome;
   orderTotal: number;
   partName: string;
@@ -86,9 +86,13 @@ function OutcomeCard({
     ],
   ];
   return (
-    <div className={`rounded-xl border-2 p-4 ${tone === 'red' ? 'border-red-200 bg-red-50/40' : 'border-blue-200 bg-blue-50/40'}`}>
+    <div
+      className={`rounded-xl border-2 p-4 ${
+        tone === 'red' ? 'border-red-200 bg-red-50/40' : tone === 'blue' ? 'border-blue-200 bg-blue-50/40' : 'border-slate-200 bg-slate-50/60'
+      }`}
+    >
       <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-        <span className={`h-2.5 w-2.5 rounded-full ${tone === 'red' ? 'bg-red-600' : 'bg-accent'}`} />
+        <span className={`h-2.5 w-2.5 rounded-full ${tone === 'red' ? 'bg-red-600' : tone === 'blue' ? 'bg-accent' : 'bg-slate-400'}`} />
         {title}
       </h3>
       <dl className="mt-3 space-y-1.5 text-[13px]">
@@ -688,7 +692,8 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
           <div className="grid gap-3 md:grid-cols-2">
             <OutcomeCard
               title="대응하지 않음 (원래 발주를 기다림)"
-              tone="red"
+              // 재고로 버틸 수 있는 차질이면 기다려도 문제가 없으므로 빨갛게 강조하지 않는다
+              tone={noAltNeeded ? 'gray' : 'red'}
               outcome={wait}
               orderTotal={orderTotal}
               partName={part.name}
@@ -963,6 +968,8 @@ export function DisruptionPage({ state }: { state: AppState }) {
   const material = materialOf(part.materialName);
   const linked = state.purchaseOrders.filter((po) => po.disruptionId === disruption.id && po.kind === '일반');
   const open = disruption.status === '발생' || disruption.status === '기다리기';
+  // 재고와 다른 입고 예정분으로 지연 기간을 버틸 수 있으면 대응이 필요 없다 → 빨갛게 강조하지 않는다
+  const calm = open && coverQty(state.settings, productionParts(state.lineParts), state.purchaseOrders, disruption.id) === 0;
   // 이 차질에 한 일들 (등록, 지연 연장, 결정, 해결) — 오래된 것부터
   const history = state.logs.filter((l) => l.target === disruption.id).reverse();
 
@@ -974,7 +981,8 @@ export function DisruptionPage({ state }: { state: AppState }) {
           ← 대시보드
         </Link>
         <h1 className="text-lg font-extrabold tracking-tight text-slate-900">차질 {disruption.id}</h1>
-        <Badge tone={DISRUPTION_STATUS_TONE[disruption.status]}>상태: {disruptionStatusLabel(disruption.status)}</Badge>
+        <Badge tone={calm ? 'gray' : DISRUPTION_STATUS_TONE[disruption.status]}>상태: {disruptionStatusLabel(disruption.status)}</Badge>
+        {calm && <Badge tone="green">대응 불필요 · 재고로 버틸 수 있음</Badge>}
         {disruption.status !== '해결' && (
           <Button auth size="sm" className="ml-auto" onClick={() => setResolving(true)}>
             해결 완료
@@ -1005,12 +1013,15 @@ export function DisruptionPage({ state }: { state: AppState }) {
           {open && (
             <p
               className={`rounded-lg border px-4 py-3 text-sm font-semibold leading-relaxed ${
-                scenarios.wait.lineStopDays === 0 && scenarios.wait.lateOrders.length === 0
+                calm || (scenarios.wait.lineStopDays === 0 && scenarios.wait.lateOrders.length === 0)
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   : 'border-red-200 bg-red-50 text-red-700'
               }`}
             >
-              {impactMessage(scenarios.wait)}
+              {/* 아래 예측은 진행 중인 차질 전체를 합친 결과라, 이 차질이 원인이 아니면 이 차질 기준으로 알려 준다 */}
+              {calm && (scenarios.wait.lineStopDays > 0 || scenarios.wait.lateOrders.length > 0)
+                ? '이 차질은 현재 재고와 다른 입고 예정분으로 지연 기간을 버틸 수 있어 대응이 필요 없습니다.'
+                : impactMessage(scenarios.wait)}
             </p>
           )}
           {material && (

@@ -91,6 +91,18 @@ export function TopBar() {
           </NavLink>
         </nav>
 
+        {/* 처음 온 사람을 위한 사용법 안내 */}
+        <NavLink
+          to="/tutorial"
+          className={({ isActive }) =>
+            `whitespace-nowrap rounded-full border px-3 py-1.5 text-[13px] font-bold transition-colors ${
+              isActive ? 'border-amber-300 bg-amber-300 text-slate-900' : 'border-amber-300/70 text-amber-200 hover:bg-amber-300/15'
+            }`
+          }
+        >
+          ? 튜토리얼
+        </NavLink>
+
         {/* 발주 검색: 어떤 부품을 어느 업체에서 얼마에, 며칠 만에, 준수율 몇 %로 살 수 있는지 */}
         <form
           role="search"

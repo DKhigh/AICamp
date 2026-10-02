@@ -17,6 +17,7 @@ import { HistoryPage } from './pages/HistoryPage';
 import { QrPage } from './pages/QrPage';
 import { RepairsPage } from './pages/RepairsPage';
 import { ShipmentsPage } from './pages/ShipmentsPage';
+import { TutorialPage } from './pages/TutorialPage';
 import { AppDataProvider, useAppData } from './state/AppData';
 import { UiContext, type UiValue } from './state/Ui';
 
@@ -132,6 +133,7 @@ function Shell() {
         <Routes>
           {/* QR 페이지는 DB 데이터가 필요 없으므로, 데이터를 못 읽었을 때도 띄울 수 있게 따로 둔다 */}
           <Route path="/qr" element={<QrPage />} />
+          <Route path="/tutorial" element={<TutorialPage />} />
           <Route
             path="*"
             element={

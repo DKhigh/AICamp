@@ -76,8 +76,22 @@ describe('사례2 등록 후 대시보드', () => {
     expect(engine.status).toBe('차질');
     expect(engine.activeDisruption?.id).toBe('D-001');
     expect(model.kpi.activeDisruptions).toBe(1);
-    expect(model.kpi.disruptionCounts).toEqual({ pending: 1, responding: 0, waiting: 0 });
+    expect(model.kpi.disruptionCounts).toEqual({ pending: 1, calm: 0, responding: 0, waiting: 0 });
+    expect(model.calmDisruptionIds).toEqual([]);
     expect(model.activeDisruptions.map((d) => d.id)).toEqual(['D-001']);
+  });
+
+  it('재고로 버틸 수 있는 차질은 대응 불필요로 따로 센다', () => {
+    // 조향: 재고 5일분, 입고가 하루 늦어져도 모자라지 않는다
+    const po = state.purchaseOrders.find((p) => p.partCode === 'P010' && p.status === '입고대기')!;
+    const calm = withDisruption(
+      state,
+      buildDisruption({ state, part: partOf('P010'), supplierName: po.supplierName, reason: '납품 지연', delayDays: 1, createdBy: null }),
+    );
+    const m = dashboardModel(calm);
+    expect(m.kpi.activeDisruptions).toBe(1);
+    expect(m.kpi.disruptionCounts).toEqual({ pending: 0, calm: 1, responding: 0, waiting: 0 });
+    expect(m.calmDisruptionIds).toEqual(['D-001']);
   });
 
   it('PO-001은 지연 +5일로 맨 뒤로 가고, 지연 위험 배지는 사라진다', () => {

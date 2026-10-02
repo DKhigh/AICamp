@@ -7,6 +7,7 @@ import {
   carsFromGroup,
   carsFromPart,
   coverageDays,
+  coverQty,
   cumAt,
   displayStatusOf,
   groupCoverageDays,
@@ -81,8 +82,10 @@ export interface DashboardModel {
     activeDisruptions: number;
     /** 진행 중 차질을 대응 상태로 나눈 건수 */
     disruptionCounts: {
-      /** 아직 결정하지 않은 차질 (상태 '발생') */
+      /** 아직 결정하지 않았고 대응이 필요한 차질 (상태 '발생', 지연 때문에 모자라는 수량이 있음) */
       pending: number;
+      /** 아직 결정하지 않았지만 재고로 버틸 수 있어 대응이 필요 없는 차질 */
+      calm: number;
       /** 대체 발주로 대응 중 (상태 '대체발주') */
       responding: number;
       /** 대응하지 않기로 한 차질 (상태 '기다리기') */
@@ -93,6 +96,8 @@ export interface DashboardModel {
   scenarios: BaseScenarios;
   forecastPoints: ForecastPoint[];
   activeDisruptions: Disruption[];
+  /** 진행 중이지만 대응이 필요 없는 차질의 번호: 재고와 다른 입고 예정분으로 지연 기간을 버틸 수 있다 (빨갛게 강조하지 않는다) */
+  calmDisruptionIds: string[];
 }
 
 export function poRowOf(po: PurchaseOrder, baseDate: ISODate): PoRow {
@@ -123,6 +128,10 @@ export function dashboardModel(state: AppState): DashboardModel {
   const bottleneckIncoming = bottleneckOf(lineParts, incoming);
   const buildableNow = buildable(lineParts, onHand);
   const activeDisruptions = disruptions.filter((d) => d.status !== '해결');
+  const calmDisruptionIds = activeDisruptions
+    .filter((d) => d.status !== '대체발주' && coverQty(settings, lineParts, purchaseOrders, d.id) === 0)
+    .map((d) => d.id);
+  const isCalm = (d: Disruption) => calmDisruptionIds.includes(d.id);
 
   /** prod: 생산용 재고 기준의 부품 행 */
   const rowOf = (prod: LinePart, groupCoverage?: number): PartRow => {
@@ -193,7 +202,8 @@ export function dashboardModel(state: AppState): DashboardModel {
       dailyCapacity: settings.dailyCapacity,
       activeDisruptions: activeDisruptions.length,
       disruptionCounts: {
-        pending: activeDisruptions.filter((d) => d.status === '발생').length,
+        pending: activeDisruptions.filter((d) => d.status === '발생' && !isCalm(d)).length,
+        calm: activeDisruptions.filter((d) => d.status === '발생' && isCalm(d)).length,
         responding: activeDisruptions.filter((d) => d.status === '대체발주').length,
         waiting: activeDisruptions.filter((d) => d.status === '기다리기').length,
       },
@@ -202,6 +212,7 @@ export function dashboardModel(state: AppState): DashboardModel {
     scenarios,
     forecastPoints,
     activeDisruptions,
+    calmDisruptionIds,
   };
 }
 

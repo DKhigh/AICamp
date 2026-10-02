@@ -1,5 +1,5 @@
 // 3D 차량 뷰어: 부품 핫스팟을 누르면 그 부품으로 줌인한다 (car-manager의 3D 스튜디오를 대시보드에 넣은 것)
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import blueprintUrl from '../../assets/sedan_blueprint.png';
 import type { PartStatus } from '../../lib/planning';
 import { Car3DVisualizer, type CarPartKey, type StatusLevel, type ViewMode } from './Car3DVisualizer';
@@ -41,6 +41,28 @@ export function CarViewer({
   const [failed, setFailed] = useState(false);
   const [mode, setMode] = useState<ViewMode>(initialMode);
   const [autoRotate, setAutoRotate] = useState(false);
+  /** 부품 배지를 끌어 옮긴 적이 있다 → [버튼 위치 초기화]를 보여 준다 */
+  const [pillsMoved, setPillsMoved] = useState(false);
+  // 끌고 있는 배지: 누른 지점과 배지 중심의 차이를 기억해 두고, 조금이라도 움직이면 끌기로 본다
+  const dragRef = useRef<{ key: CarPartKey; startX: number; startY: number; offsetX: number; offsetY: number; moved: boolean } | null>(null);
+  /** 끌기를 끝낸 직후의 click은 부품 선택으로 치지 않는다 */
+  const justDragged = useRef(false);
+
+  function pointerInViewer(e: ReactPointerEvent) {
+    const rect = canvasHostRef.current?.getBoundingClientRect();
+    return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
+  }
+
+  function endDrag(key: CarPartKey) {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag?.moved) return;
+    vizRef.current?.dropPill(key);
+    setPillsMoved(true);
+    justDragged.current = true;
+    // click이 오지 않는 경우(터치 취소 등)에도 다음 클릭이 막히지 않게 한다
+    window.setTimeout(() => (justDragged.current = false), 0);
+  }
 
   useEffect(() => {
     const container = canvasHostRef.current;
@@ -145,6 +167,22 @@ export function CarViewer({
         </div>
       )}
 
+      {pillsMoved && !focus && (
+        <button
+          type="button"
+          onClick={() => {
+            vizRef.current?.resetPills();
+            setPillsMoved(false);
+          }}
+          onDoubleClick={(e) => e.stopPropagation()}
+          title="끌어서 옮긴 부품 버튼을 원래 자리로 되돌립니다"
+          // 좁은 화면에서는 아래쪽 안내문과 겹치지 않게 색상 버튼 줄의 오른쪽에 둔다
+          className="absolute right-3 top-[52px] z-30 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm backdrop-blur hover:text-accent sm:bottom-3 sm:top-auto"
+        >
+          ⟲ 버튼 위치 초기화
+        </button>
+      )}
+
       {focus ? (
         <button
           type="button"
@@ -185,7 +223,36 @@ export function CarViewer({
                 style={{ left: dx, top: dy }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (justDragged.current) return;
                   onFocus(active ? null : item.key);
+                }}
+                // 끌어서 원하는 자리에 둘 수 있다. 놓은 자리에 고정되고, 다른 배지는 겹치지 않게 비킨다
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  const center = vizRef.current?.pillCenter(item.key);
+                  if (!center) return;
+                  const at = pointerInViewer(e);
+                  dragRef.current = { key: item.key, startX: at.x, startY: at.y, offsetX: at.x - center.x, offsetY: at.y - center.y, moved: false };
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                }}
+                onPointerMove={(e) => {
+                  const drag = dragRef.current;
+                  if (!drag || drag.key !== item.key) return;
+                  const at = pointerInViewer(e);
+                  if (!drag.moved && Math.hypot(at.x - drag.startX, at.y - drag.startY) < 6) return;
+                  if (!drag.moved) {
+                    drag.moved = true;
+                    e.currentTarget.classList.add('is-dragging');
+                  }
+                  vizRef.current?.dragPill(item.key, at.x - drag.offsetX, at.y - drag.offsetY);
+                }}
+                onPointerUp={(e) => {
+                  e.currentTarget.classList.remove('is-dragging');
+                  endDrag(item.key);
+                }}
+                onPointerCancel={(e) => {
+                  e.currentTarget.classList.remove('is-dragging');
+                  endDrag(item.key);
                 }}
                 onDoubleClick={(e) => e.stopPropagation()}
                 aria-pressed={active}

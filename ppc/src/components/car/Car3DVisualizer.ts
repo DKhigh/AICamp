@@ -84,6 +84,26 @@ export interface Car3DOptions {
   getHotspot: (key: CarPartKey) => HTMLElement | null;
 }
 
+/** 배지가 목표 위치를 따라가는 빠르기 (프레임마다 남은 거리의 이만큼) */
+const PILL_EASE = 0.2;
+
+interface PillBox {
+  key: CarPartKey;
+  el: HTMLElement;
+  pill: HTMLElement;
+  /** 기준점(부품 위치)의 화면 좌표 */
+  x: number;
+  y: number;
+  halfW: number;
+  halfH: number;
+  /** 배지 중심을 놓을 자리 */
+  cx: number;
+  cy: number;
+  /** 겹쳐도 비키지 않는다 (사용자가 옮겨 둔 배지) */
+  fixed: boolean;
+  dragging: boolean;
+}
+
 export class Car3DVisualizer {
   private container: HTMLElement;
   private canvas: HTMLCanvasElement;
@@ -131,6 +151,12 @@ export class Car3DVisualizer {
   private transitionStart = 0;
   private readonly transitionMs = 1200;
   private projected = new THREE.Vector3();
+
+  /** 부품 배지 중심의 현재 위치 (뷰어 px). 목표 위치를 매 프레임 조금씩 따라간다 */
+  private pillCurrent: Partial<Record<CarPartKey, { x: number; y: number }>> = {};
+  /** 사용자가 끌어다 놓은 자리 (뷰어 크기에 대한 비율) */
+  private pillPinned: Partial<Record<CarPartKey, { fx: number; fy: number }>> = {};
+  private pillDrag: { key: CarPartKey; x: number; y: number } | null = null;
 
   constructor(options: Car3DOptions) {
     this.container = options.container;
@@ -703,6 +729,15 @@ export class Car3DVisualizer {
   private updateHotspots() {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
+    const margin = 6;
+    // 위쪽은 보기 모드 버튼 줄(약 44px)을 피한다. 좁은 화면에서는 그 아래에 색상 버튼 줄이 하나 더 있다
+    const top = width < 640 ? 88 : 48;
+    const shrink = width < 480 ? 0.85 : 1;
+    const clampX = (cx: number, halfW: number) => Math.min(Math.max(cx, halfW + margin), Math.max(halfW + margin, width - halfW - margin));
+    const clampY = (cy: number, halfH: number) => Math.min(Math.max(cy, halfH + top), Math.max(halfH + top, height - halfH - margin));
+
+    // 1) 보이는 배지마다 놓고 싶은 자리를 구한다: 사용자가 옮겨 둔 자리, 없으면 기준점에서 정해진 만큼 띄운 자리
+    const boxes: PillBox[] = [];
     for (const key of CAR_PART_KEYS) {
       const el = this.getHotspot(key);
       if (!el) continue;
@@ -710,46 +745,132 @@ export class Car3DVisualizer {
       const p = this.projected.copy(ANCHORS[key]).applyMatrix4(this.carRoot.matrixWorld).project(this.camera);
       // 카메라 뒤에 있거나, 다른 부품을 보고 있는 동안에는 숨긴다
       const hidden = p.z > 1 || (this.focus !== 'all' && this.focus !== key);
-      if (hidden) {
+      const pill = hidden ? null : el.querySelector<HTMLElement>('.car-hotspot-pill');
+      if (!pill) {
         el.style.opacity = '0';
         el.style.visibility = 'hidden';
+        // 다시 나타날 때는 미끄러져 오지 않고 제자리에서 나타난다
+        delete this.pillCurrent[key];
         continue;
       }
       const x = (p.x * 0.5 + 0.5) * width;
       const y = (-p.y * 0.5 + 0.5) * height;
-      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-      this.placePill(el, x, y, width, height);
-      el.style.opacity = '1';
-      el.style.visibility = 'visible';
+      const halfW = pill.offsetWidth / 2;
+      const halfH = pill.offsetHeight / 2;
+      const drag = this.pillDrag?.key === key ? this.pillDrag : null;
+      const pin = this.pillPinned[key];
+      const cx = drag ? drag.x : pin ? pin.fx * width : x + Number(el.dataset.dx ?? 0) * shrink;
+      const cy = drag ? drag.y : pin ? pin.fy * height : y + Number(el.dataset.dy ?? 0) * shrink;
+      boxes.push({ key, el, pill, x, y, halfW, halfH, cx: clampX(cx, halfW), cy: clampY(cy, halfH), fixed: !!drag || !!pin, dragging: !!drag });
+    }
+
+    // 2) 서로 겹치는 배지를 떼어 놓는다. 사용자가 옮겨 둔 배지는 그 자리에 두고 나머지가 비킨다
+    const gap = 6;
+    for (let pass = 0; pass < 8; pass++) {
+      let moved = false;
+      for (let i = 0; i < boxes.length; i++) {
+        for (let j = i + 1; j < boxes.length; j++) {
+          const a = boxes[i];
+          const b = boxes[j];
+          if (a.fixed && b.fixed) continue;
+          const overlapX = a.halfW + b.halfW + gap - Math.abs(b.cx - a.cx);
+          const overlapY = a.halfH + b.halfH + gap - Math.abs(b.cy - a.cy);
+          if (overlapX <= 0 || overlapY <= 0) continue;
+          moved = true;
+          if (a.fixed || b.fixed) {
+            // 한쪽이 고정이면 다른 쪽만 비킨다. 가장자리에 막혀 못 비키는 방향은 빼고, 가장 조금 움직이는 쪽으로
+            const pin = a.fixed ? a : b;
+            const free = a.fixed ? b : a;
+            const spanX = pin.halfW + free.halfW + gap;
+            const spanY = pin.halfH + free.halfH + gap;
+            const spots = [
+              { cx: free.cx, cy: pin.cy - spanY },
+              { cx: free.cx, cy: pin.cy + spanY },
+              { cx: pin.cx - spanX, cy: free.cy },
+              { cx: pin.cx + spanX, cy: free.cy },
+            ]
+              .map((s) => ({ cx: clampX(s.cx, free.halfW), cy: clampY(s.cy, free.halfH) }))
+              .filter((s) => Math.abs(s.cx - pin.cx) >= spanX - 0.5 || Math.abs(s.cy - pin.cy) >= spanY - 0.5)
+              .sort((s, t) => Math.hypot(s.cx - free.cx, s.cy - free.cy) - Math.hypot(t.cx - free.cx, t.cy - free.cy));
+            if (spots[0]) {
+              free.cx = spots[0].cx;
+              free.cy = spots[0].cy;
+            }
+            continue;
+          }
+          const shareA = 0.5;
+          // 덜 겹친 방향으로 민다 (배지는 가로로 길어서 보통 위아래로 갈라진다)
+          if (overlapY <= overlapX) {
+            const dir = b.cy >= a.cy ? 1 : -1;
+            a.cy -= dir * overlapY * shareA;
+            b.cy += dir * overlapY * (1 - shareA);
+          } else {
+            const dir = b.cx >= a.cx ? 1 : -1;
+            a.cx -= dir * overlapX * shareA;
+            b.cx += dir * overlapX * (1 - shareA);
+          }
+          for (const box of [a, b]) {
+            box.cx = clampX(box.cx, box.halfW);
+            box.cy = clampY(box.cy, box.halfH);
+          }
+        }
+      }
+      if (!moved) break;
+    }
+
+    // 3) 정한 자리로 부드럽게 옮긴다 (끌고 있는 배지는 손가락을 바로 따라간다)
+    for (const box of boxes) {
+      const current = this.pillCurrent[box.key];
+      let cx = box.cx;
+      let cy = box.cy;
+      if (current && !box.dragging) {
+        cx = current.x + (box.cx - current.x) * PILL_EASE;
+        cy = current.y + (box.cy - current.y) * PILL_EASE;
+        if (Math.abs(box.cx - cx) < 0.3) cx = box.cx;
+        if (Math.abs(box.cy - cy) < 0.3) cy = box.cy;
+      }
+      this.pillCurrent[box.key] = { x: cx, y: cy };
+
+      box.el.style.transform = `translate(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px)`;
+      const px = cx - box.x;
+      const py = cy - box.y;
+      box.pill.style.left = `${px.toFixed(1)}px`;
+      box.pill.style.top = `${py.toFixed(1)}px`;
+      const line = box.el.querySelector<HTMLElement>('.car-hotspot-line');
+      if (line) {
+        line.style.width = `${Math.hypot(px, py).toFixed(1)}px`;
+        line.style.transform = `rotate(${((Math.atan2(py, px) * 180) / Math.PI).toFixed(1)}deg)`;
+      }
+      box.el.style.opacity = '1';
+      box.el.style.visibility = 'visible';
     }
   }
 
-  /**
-   * 부품 배지(알약)를 기준점에서 정해진 만큼 띄우되, 뷰어 밖으로 나가면 안쪽으로 당긴다.
-   * 좁은 화면에서는 띄우는 거리도 줄인다. 기준점과 배지를 잇는 선도 같이 맞춘다.
-   */
-  private placePill(el: HTMLElement, x: number, y: number, width: number, height: number) {
-    const pill = el.querySelector<HTMLElement>('.car-hotspot-pill');
-    if (!pill) return;
-    const shrink = width < 480 ? 0.85 : 1;
-    const dx = Number(el.dataset.dx ?? 0) * shrink;
-    const dy = Number(el.dataset.dy ?? 0) * shrink;
-    const halfW = pill.offsetWidth / 2;
-    const halfH = pill.offsetHeight / 2;
-    const margin = 6;
-    // 위쪽은 보기 모드 버튼 줄(약 44px)을 피한다. 좁은 화면에서는 그 아래에 색상 버튼 줄이 하나 더 있다
-    const cx = Math.min(Math.max(x + dx, halfW + margin), Math.max(halfW + margin, width - halfW - margin));
-    const top = width < 640 ? 88 : 48;
-    const cy = Math.min(Math.max(y + dy, halfH + top), Math.max(halfH + top, height - halfH - margin));
-    const px = cx - x;
-    const py = cy - y;
-    pill.style.left = `${px.toFixed(1)}px`;
-    pill.style.top = `${py.toFixed(1)}px`;
-    const line = el.querySelector<HTMLElement>('.car-hotspot-line');
-    if (line) {
-      line.style.width = `${Math.hypot(px, py).toFixed(1)}px`;
-      line.style.transform = `rotate(${((Math.atan2(py, px) * 180) / Math.PI).toFixed(1)}deg)`;
-    }
+  // ── 부품 배지 옮기기 ────────────────────────────────────────────────────
+
+  /** 배지 중심의 현재 위치 (뷰어 왼쪽 위 기준 px). 화면에 없으면 null */
+  pillCenter(key: CarPartKey): { x: number; y: number } | null {
+    return this.pillCurrent[key] ?? null;
+  }
+
+  /** 배지를 끄는 동안: 배지 중심을 (x, y)에 둔다 */
+  dragPill(key: CarPartKey, x: number, y: number) {
+    this.pillDrag = { key, x, y };
+  }
+
+  /** 끌기를 끝낸다. 놓은 자리에 고정한다 (뷰어 크기가 바뀌어도 같은 비율의 자리) */
+  dropPill(key: CarPartKey) {
+    const at = this.pillCurrent[key];
+    const width = this.container.clientWidth;
+    const height = this.container.clientHeight;
+    if (at && width > 0 && height > 0) this.pillPinned[key] = { fx: at.x / width, fy: at.y / height };
+    this.pillDrag = null;
+  }
+
+  /** 옮겨 둔 배지를 모두 원래 자리로 돌린다 */
+  resetPills() {
+    this.pillPinned = {};
+    this.pillDrag = null;
   }
 
   private animate(now: number) {

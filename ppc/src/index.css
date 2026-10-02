@@ -119,6 +119,8 @@ input[type='password']::-ms-clear {
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
   cursor: pointer;
   user-select: none;
+  /* 배지를 끌어 옮길 수 있게, 배지 위에서 시작한 터치는 화면을 스크롤하지 않는다 */
+  touch-action: none;
   transform: translate(-50%, -50%);
   transition:
     transform 0.18s ease,
@@ -131,6 +133,14 @@ input[type='password']::-ms-clear {
   border-color: var(--color-accent);
   box-shadow: 0 8px 20px rgba(29, 78, 216, 0.22);
   outline: none;
+}
+/* 끌고 있는 배지 */
+.car-hotspot-pill.is-dragging {
+  cursor: grabbing;
+  z-index: 5;
+  transform: translate(-50%, -50%) scale(1.1);
+  border-color: var(--color-accent);
+  box-shadow: 0 12px 26px rgba(29, 78, 216, 0.3);
 }
 /* 휴대폰 폭: 배지를 작게 해서 차와 서로를 덜 가리게 한다 */
 @media (max-width: 480px) {

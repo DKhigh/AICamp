@@ -202,7 +202,8 @@ export function RepairsPage({ state }: { state: AppState }) {
         ) : (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
             {/* 대시보드와 같은 3D 모델. 이 차량에서 수리할 부품만 빨갛게 표시한다 */}
-            <div className="relative h-[360px] sm:h-[420px]">
+            {/* 넓은 화면에서는 오른쪽 내용(고장 난 곳이 여럿이면 길어진다) 높이만큼 늘려, 모델 아래가 비지 않게 한다 */}
+            <div className="relative h-[360px] sm:h-[420px] lg:h-auto lg:min-h-[420px]">
               <Suspense fallback={<div className="absolute inset-0 animate-pulse rounded-lg bg-studio" aria-label="3D 뷰어를 불러오는 중" />}>
                 <CarViewer
                   // 차량을 바꾸면 시점과 표시를 처음부터 다시 잡는다

@@ -22,9 +22,28 @@ import { useUi } from '../state/Ui';
 // three.js는 용량이 커서 3D 뷰어만 따로 불러온다 (숫자와 표가 먼저 뜬다)
 const CarViewer = lazy(() => import('../components/car/CarViewer').then((m) => ({ default: m.CarViewer })));
 
-function DisruptionBanner({ disruption }: { disruption: Disruption }) {
+function DisruptionBanner({ disruption, calm }: { disruption: Disruption; calm: boolean }) {
   const part = partOf(disruption.partCode);
   const responding = disruption.status === '대체발주';
+  // 재고로 지연 기간을 버틸 수 있는 차질: 급한 일이 아니므로 빨갛게 강조하지 않는다
+  if (calm) {
+    return (
+      <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+        <p className="text-sm font-semibold text-slate-700">
+          차질: {dashPartName(part.name)}({part.code}) · {disruption.supplierName} · {disruption.delayDays}일 지연
+          <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">대응 불필요</span>
+          <span className="ml-2 text-[13px] font-medium text-slate-500">재고와 다른 입고 예정분으로 버틸 수 있습니다</span>
+        </p>
+        <DisruptionLink
+          hideWhenLoggedOut
+          id={disruption.id}
+          className="whitespace-nowrap rounded-md border border-slate-300 bg-white px-3.5 py-1.5 text-[13px] font-bold text-slate-700 shadow-sm hover:bg-slate-100"
+        >
+          상세 보기 →
+        </DisruptionLink>
+      </div>
+    );
+  }
   return (
     <div
       role="alert"
@@ -171,12 +190,13 @@ function KpiRow({ kpi }: { kpi: DashboardModel['kpi'] }) {
         label="진행 중 차질"
         value={num(kpi.activeDisruptions)}
         unit="건"
-        // 미대응이 있을 때만 빨갛게: 전부 대응 중이면 급한 일이 아니다
+        // 대응이 필요한 미대응 차질이 있을 때만 빨갛게: 대응 중이거나 재고로 버틸 수 있으면 급한 일이 아니다
         tone={kpi.disruptionCounts.pending > 0 ? 'danger' : 'default'}
         sub={
           kpi.activeDisruptions > 0
             ? [
                 `미대응 ${kpi.disruptionCounts.pending}건`,
+                ...(kpi.disruptionCounts.calm > 0 ? [`대응 불필요 ${kpi.disruptionCounts.calm}건`] : []),
                 `대응 중 ${kpi.disruptionCounts.responding}건`,
                 ...(kpi.disruptionCounts.waiting > 0 ? [`대응 안 함 ${kpi.disruptionCounts.waiting}건`] : []),
               ].join(' · ')
@@ -295,7 +315,7 @@ export function Dashboard({ state }: { state: AppState }) {
   return (
     <div className="space-y-4">
       {model.activeDisruptions.map((d) => (
-        <DisruptionBanner key={d.id} disruption={d} />
+        <DisruptionBanner key={d.id} disruption={d} calm={model.calmDisruptionIds.includes(d.id)} />
       ))}
 
       <LowStockBanner rows={model.parts} dailyCapacity={state.settings.dailyCapacity} onOrder={openOrder} />
