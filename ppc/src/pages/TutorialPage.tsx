@@ -3,7 +3,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-const img = (name: string) => `${import.meta.env.BASE_URL}tutorial/${name}.png`;
+// 그림을 다시 찍으면 이 숫자를 올린다: 파일 이름이 같아서, 올리지 않으면 브라우저가 예전 그림을 계속 보여 준다
+const SHOT_VERSION = 2;
+const img = (name: string) => `${import.meta.env.BASE_URL}tutorial/${name}.png?v=${SHOT_VERSION}`;
 
 /** 상단 바의 버튼을 그대로 흉내 낸 그림 (누를 수는 없다) */
 function BarButton({ children, tone = 'default' }: { children: ReactNode; tone?: 'default' | 'nav' | 'danger' | 'light' | 'primary' }) {
@@ -149,9 +151,6 @@ export function TutorialPage() {
             items={[
               <>
                 <B>사원번호</B>를 넣으면 아래에 이름이 나타납니다. 번호는 가려져서 보이지 않습니다.
-              </>,
-              <>
-                체험용 번호는 <B>0000</B> (테스트 · 시연) 입니다.
               </>,
               <>
                 창 안의 <BarButton tone="primary">로그인</BarButton> 을 누르면 끝. 그 뒤로는 사원번호를 다시 묻지 않습니다.
