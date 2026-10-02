@@ -120,7 +120,8 @@ export function CarViewer({
       {/* 차량 색상 고르기: Excel '차량색상'의 색으로 도장을 바꿔 본다 */}
       {onColorChange && !focus && (
         <div
-          className="absolute right-3 top-3 z-30 flex items-center gap-1 rounded-md border border-slate-200 bg-white/90 px-1.5 py-1 shadow-sm backdrop-blur"
+          // 좁은 화면에서는 '360° 회전' 버튼과 겹치지 않게 보기 모드 줄 아래에 둔다
+          className="absolute left-3 top-[52px] z-30 flex items-center gap-1 rounded-md border border-slate-200 bg-white/90 px-1.5 py-1 shadow-sm backdrop-blur sm:left-auto sm:right-3 sm:top-3"
           role="group"
           aria-label="차량 색상"
           onDoubleClick={(e) => e.stopPropagation()}

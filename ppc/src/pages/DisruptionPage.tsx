@@ -5,7 +5,7 @@ import { EmployeeConfirmModal } from '../components/EmployeeField';
 import { OrderStatus } from '../components/OrdersTable';
 import { SupplierLink } from '../components/SupplierInfo';
 import { CHART_COLORS, ScenarioChart, type ChartRow, type ChartSeries } from '../components/ScenarioChart';
-import { Badge, Button, Card, DISRUPTION_STATUS_TONE, disruptionStatusLabel, Field, GradeBadge, INPUT_CLASS, parseIntStrict } from '../components/ui';
+import { Badge, Button, Card, DISRUPTION_STATUS_TONE, disruptionStatusLabel, Field, GradeBadge, INPUT_CLASS, Modal, parseIntStrict } from '../components/ui';
 import { altScenario, baseScenarios, resolvablePos } from '../lib/actions';
 import { qtyError } from '../lib/api';
 import { RISK_LATE_DAYS, SUPPLIER_ORDER_LIMIT } from '../lib/constants';
@@ -285,6 +285,9 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
   const [picks, setPicks] = useState<Record<string, string>>(() => recommendPicks(cover));
   const [showAll, setShowAll] = useState(false);
   const [confirming, setConfirming] = useState<'alt' | 'wait' | null>(null);
+  // 목표 수량이나 업체별 수량을 직접 고쳤는지. 고친 뒤에 원래 발주 처리 옵션을 바꾸면 수량이 추천값으로 바뀐다고 먼저 묻는다
+  const [edited, setEdited] = useState(false);
+  const [pendingAction, setPendingAction] = useState<OriginalPoAction | null>(null);
 
   const target = parseIntStrict(targetText);
   const targetProblem = targetText === '' ? null : qtyError(target);
@@ -362,8 +365,17 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
   const shortBy = action === '취소' && hasQty ? delayedQty - qty : 0;
   const firstShortDay = alt?.sim.days.find((d) => d.kind !== '정상' && d.bottleneck === part.code)?.date ?? null;
 
+  /** 옵션 버튼을 눌렀을 때: 직접 고친 수량이 있으면 바뀐다고 먼저 알린다 */
+  function requestAction(next: OriginalPoAction) {
+    if (next === action) return;
+    if (edited) setPendingAction(next);
+    else chooseAction(next);
+  }
+
   function chooseAction(next: OriginalPoAction) {
     setAction(next);
+    setEdited(false);
+    setPendingAction(null);
     // 옵션을 바꾸면 목표 수량과 업체별 수량을 그 옵션의 추천값으로 다시 채운다
     const recommended = recommendedQty(next, cover, delayedQty);
     setTargetText(recommended > 0 ? String(recommended) : '');
@@ -441,6 +453,25 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
           </p>
         </EmployeeConfirmModal>
       )}
+      {pendingAction && (
+        <Modal
+          title="원래 발주 처리 옵션 변경"
+          onClose={() => setPendingAction(null)}
+          footer={
+            <>
+              <Button onClick={() => setPendingAction(null)}>그대로 두기</Button>
+              <Button variant="primary" onClick={() => chooseAction(pendingAction)}>
+                바꾸고 추천값으로 채우기
+              </Button>
+            </>
+          }
+        >
+          <p className="text-[13px] leading-relaxed text-slate-700">
+            옵션을 <strong>{action}</strong>에서 <strong>{pendingAction}</strong>(으)로 바꾸면, 직접 넣은 목표 수량{targetText !== '' && ` ${targetText}개`}과 업체별 발주 수량(합계{' '}
+            {num(qty)}개)이 지워지고 <strong>{pendingAction}</strong> 옵션의 추천값({num(recommendedQty(pendingAction, cover, delayedQty))}개)으로 다시 채워집니다.
+          </p>
+        </Modal>
+      )}
       {confirming === 'wait' && (
         <EmployeeConfirmModal title="대응하지 않음" confirmLabel="대응하지 않음" onConfirm={chooseWait} onClose={() => setConfirming(null)}>
           이 차질에 대응하지 않습니다. 대체 발주 없이 원래 발주({delayedPos.map((po) => `${po.id} ${formatMD(po.expectedArrival)} 도착 예정`).join(', ') || '지연 중인 발주 없음'})를
@@ -476,14 +507,20 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                   step={1}
                   inputMode="numeric"
                   value={targetText}
-                  onChange={(e) => setTargetText(e.target.value)}
+                  onChange={(e) => {
+                    setTargetText(e.target.value);
+                    setEdited(true);
+                  }}
                   aria-label="대체 목표 수량"
                   placeholder={noAltNeeded ? '불필요' : ''}
                   className="tabular mx-1 w-24 rounded-md border border-slate-300 bg-white px-2 py-1 text-right text-sm outline-none focus:border-accent focus:ring-2 focus:ring-blue-100"
                 />
                 개
               </label>
-              <Button size="sm" variant="primary" onClick={() => setPicks(recommendPicks(target))} disabled={targetText === '' || !!targetProblem}>
+              <Button size="sm" variant="primary" onClick={() => {
+                  setPicks(recommendPicks(target));
+                  // 목표 수량은 직접 넣은 값 그대로이므로 '고친 수량 있음'은 유지한다
+                }} disabled={targetText === '' || !!targetProblem}>
                 추천 설정
               </Button>
               <span className="text-xs text-slate-600">
@@ -537,8 +574,14 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                       checked={c.name in picks}
                       qtyText={picks[c.name] ?? ''}
                       problem={rowProblem(c)}
-                      onToggle={() => toggle(c)}
-                      onQty={(text) => setPicks((prev) => ({ ...prev, [c.name]: text }))}
+                      onToggle={() => {
+                        toggle(c);
+                        setEdited(true);
+                      }}
+                      onQty={(text) => {
+                        setPicks((prev) => ({ ...prev, [c.name]: text }));
+                        setEdited(true);
+                      }}
                     />
                   ))}
                 </tbody>
@@ -584,6 +627,10 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                 : '지연 중인 발주 없음'}
               ) 처리
             </legend>
+            <p className={`mt-1.5 rounded-md px-3 py-1.5 text-xs leading-snug ${edited ? 'border border-amber-300 bg-amber-50 font-semibold text-amber-900' : 'bg-slate-50 text-slate-600'}`}>
+              ⚠ 옵션(유지·감량·취소)을 바꾸면 위에서 넣은 <strong>목표 수량과 업체별 발주 수량이 그 옵션의 추천값으로 다시 채워집니다.</strong>
+              {edited && ' 지금 직접 고친 수량이 있습니다. 옵션을 바꾸면 확인 창이 뜹니다.'}
+            </p>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               {ACTIONS.map((a) => (
                 <label
@@ -593,7 +640,7 @@ function DecisionSection({ state, disruption, part }: { state: AppState; disrupt
                   }`}
                 >
                   <span className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                    <input type="radio" name="original-po-action" checked={action === a} onChange={() => chooseAction(a)} className="h-4 w-4 accent-blue-700" />
+                    <input type="radio" name="original-po-action" checked={action === a} onChange={() => requestAction(a)} className="h-4 w-4 accent-blue-700" />
                     {a}
                     <span className="text-xs font-medium text-slate-500">추천 대체 {num(recommendedQty(a, cover, delayedQty))}개</span>
                   </span>

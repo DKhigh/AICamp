@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import { DisruptionModal } from './components/DisruptionModal';
 import { EmployeeConfirmModal, LoginModal } from './components/EmployeeField';
 import { OrderModal } from './components/OrderModal';
+import { SplashScreen } from './components/SplashScreen';
 import { SupplierModal } from './components/SupplierInfo';
 import { TopBar } from './components/TopBar';
 import { Button, Card, Spinner } from './components/ui';
@@ -106,6 +107,8 @@ function Shell() {
 
   return (
     <UiContext.Provider value={ui}>
+      {/* 휴대폰으로 처음 들어올 때만 보이는 로딩 화면. 첫 데이터 읽기가 끝나면 사라진다 */}
+      <SplashScreen ready={phase !== 'loading'} />
       <TopBar />
       <Toasts />
       <main className="mx-auto max-w-[1320px] px-4 py-4 sm:px-6">

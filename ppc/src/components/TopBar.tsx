@@ -22,8 +22,8 @@ export function TopBar() {
   /** 화살표 키로 고른 줄 (-1: 고르지 않음) */
   const [active, setActive] = useState(-1);
   const typed = query.trim().toLowerCase();
-  // 입력한 글자가 들어 있는 후보. 이미 그 낱말을 다 쳤으면 목록을 닫는다
-  const matches = typed === '' ? [] : suggestions.filter((word) => word.toLowerCase().includes(typed) && word.toLowerCase() !== typed).slice(0, 8);
+  // 입력한 글자가 들어 있는 후보. 낱말을 끝까지 다 쳐도(예: '대성메탈') 그 후보는 계속 보여 준다
+  const matches = typed === '' ? [] : suggestions.filter((word) => word.toLowerCase().includes(typed)).slice(0, 8);
 
   function search(word: string) {
     setQuery(word);

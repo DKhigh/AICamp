@@ -53,6 +53,9 @@ const ANCHORS: Record<CarPartKey, THREE.Vector3> = {
   battery: v(0.9, 0.55, 1.2),
 };
 
+/** 빨간 차체 위에서도 눈에 띄는 고장 표시 색 */
+const DANGER_ON_RED = 0xffe600;
+
 const STATUS_COLOR: Record<Exclude<StatusLevel, 'normal'>, number> = {
   danger: 0xef4444,
   info: 0x3b82f6,
@@ -88,6 +91,10 @@ export class Car3DVisualizer {
 
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
+  /** 고장·차질(danger) 부품을 칠하는 색. 빨간 차에서는 노랑으로 바뀐다 */
+  private dangerColor: number = STATUS_COLOR.danger;
+  /** 고장·차질 부품의 위치를 알리는 빛무리. 차체 색이나 각도와 상관없이 보이도록 다른 것에 가려지지 않게 그린다 */
+  private halos: Partial<Record<CarPartKey, THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>> = {};
   /** 겉 장식(그릴, 전후 램프, 몰딩, 손잡이, 미러). X-Ray 투시에서는 숨긴다 */
   private exterior = new THREE.Group();
   private renderer: THREE.WebGLRenderer;
@@ -588,6 +595,11 @@ export class Car3DVisualizer {
     this.bodyPaint.metalness = dark ? 0.55 : 0.25;
     this.bodyPaint.roughness = dark ? 0.28 : 0.32;
     this.bodyPaint.needsUpdate = true;
+    // 차가 빨간색 계열이면 빨간 고장·차질 표시가 차체 색에 묻힌다 → 그때만 밝은 노랑으로 표시한다
+    const hsl = this.bodyPaint.color.getHSL({ h: 0, s: 0, l: 0 });
+    const reddish = hsl.s > 0.45 && (hsl.h < 0.06 || hsl.h > 0.94);
+    this.dangerColor = reddish ? DANGER_ON_RED : STATUS_COLOR.danger;
+    this.setStatuses(this.statuses);
   }
 
   setAutoRotate(on: boolean) {
@@ -606,9 +618,33 @@ export class Car3DVisualizer {
         accent.material.emissive.setHex(0x000000);
         accent.material.emissiveIntensity = 1;
       } else {
-        accent.material.color.setHex(STATUS_COLOR[level]);
-        accent.material.emissive.setHex(STATUS_COLOR[level]);
+        const color = level === 'danger' ? this.dangerColor : STATUS_COLOR[level];
+        accent.material.color.setHex(color);
+        accent.material.emissive.setHex(color);
         accent.material.emissiveIntensity = level === 'warn' ? 0.35 : 0.6;
+      }
+    }
+    this.updateHalos();
+  }
+
+  /** 고장·차질(danger) 부품 자리에 빛무리를 켠다 */
+  private updateHalos() {
+    for (const key of CAR_PART_KEYS) {
+      const on = this.statuses[key] === 'danger';
+      let halo = this.halos[key];
+      if (on && !halo) {
+        halo = new THREE.Mesh(
+          new THREE.SphereGeometry(0.62, 24, 16),
+          new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.3, depthTest: false, depthWrite: false }),
+        );
+        halo.position.copy(ANCHORS[key]);
+        halo.renderOrder = 10;
+        this.carRoot.add(halo);
+        this.halos[key] = halo;
+      }
+      if (halo) {
+        halo.visible = on;
+        halo.material.color.setHex(this.dangerColor);
       }
     }
   }
@@ -701,9 +737,10 @@ export class Car3DVisualizer {
     const halfW = pill.offsetWidth / 2;
     const halfH = pill.offsetHeight / 2;
     const margin = 6;
-    // 위쪽은 보기 모드 버튼 줄(약 44px)을 피한다
+    // 위쪽은 보기 모드 버튼 줄(약 44px)을 피한다. 좁은 화면에서는 그 아래에 색상 버튼 줄이 하나 더 있다
     const cx = Math.min(Math.max(x + dx, halfW + margin), Math.max(halfW + margin, width - halfW - margin));
-    const cy = Math.min(Math.max(y + dy, halfH + 48), Math.max(halfH + 48, height - halfH - margin));
+    const top = width < 640 ? 88 : 48;
+    const cy = Math.min(Math.max(y + dy, halfH + top), Math.max(halfH + top, height - halfH - margin));
     const px = cx - x;
     const py = cy - y;
     pill.style.left = `${px.toFixed(1)}px`;
@@ -741,7 +778,12 @@ export class Car3DVisualizer {
     for (const key of CAR_PART_KEYS) {
       if (this.statuses[key] === 'danger') {
         const accent = this.accents[key];
-        if (accent) accent.material.emissiveIntensity = pulse;
+        if (accent) accent.material.emissiveIntensity = this.dangerColor === STATUS_COLOR.danger ? pulse : pulse * 1.6;
+        const halo = this.halos[key];
+        if (halo) {
+          halo.material.opacity = 0.14 + 0.2 * pulse;
+          halo.scale.setScalar(0.92 + 0.16 * pulse);
+        }
       }
     }
 

@@ -215,6 +215,48 @@ input[type='password']::-ms-clear {
   animation: pop-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ── 모바일 로딩 화면의 로고 ─────────────────────────────────────────────── */
+/* 팔이 긴 쪽으로 미끄러져 나갔다가 멈추고, 다시 들어와 멈춘다 (기계가 한 칸씩 움직이는 느낌) */
+.splash-arm {
+  animation: splash-slide 1.6s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+}
+@keyframes splash-slide {
+  0%,
+  12% {
+    transform: translate(0, 0);
+  }
+  30%,
+  52% {
+    transform: translate(var(--sx), var(--sy));
+  }
+  70%,
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.splash-core {
+  transform-origin: 100px 100px;
+  animation: splash-core 1.6s ease-in-out infinite;
+}
+@keyframes splash-core {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  40% {
+    opacity: 0.75;
+    transform: scale(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-arm,
+  .splash-core {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .status-dot.danger,
   .pop-in {
