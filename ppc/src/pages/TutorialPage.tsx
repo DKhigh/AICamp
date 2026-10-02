@@ -160,7 +160,7 @@ export function TutorialPage() {
           />
         </div>
         <Arrow />
-        <Shot name="topbar-in" alt="로그인한 뒤의 상단 바" caption="로그인하면 상단에 [+ 발주] [⚠ 차질 발생] [데이터 초기화] 버튼이 생깁니다" />
+        <Shot name="topbar-in" alt="로그인한 뒤의 상단 바" caption="로그인하면 윗줄 오른쪽이 내 이름으로 바뀌고, 아랫줄 오른쪽에 [+ 발주] [⚠ 차질 발생] [데이터 초기화] 버튼이 생깁니다" />
         <Notes
           items={[
             <>
