@@ -359,67 +359,85 @@ export class Car3DVisualizer {
   }
 
   private buildCabin() {
-    // 유리 온실: 앞유리 → 지붕 → 패스트백 뒷유리
-    const roofFront: [number, number] = [-0.45, 2.26];
-    const roofRear: [number, number] = [1.2, 2.28];
+    // 유리 온실: 앞유리 → 길게 뻗은 지붕 → 트렁크 끝까지 완만하게 내려가는 뒷유리 (대형 패스트백 세단의 비례)
+    // 특정 양산차를 그대로 옮기지 않는다: 창 나눔과 필러 모양은 이 모델만의 것이다
+    const roofFront: [number, number] = [-0.5, 2.24];
+    const roofRear: [number, number] = [1.55, 2.24];
+    const tail: [number, number] = [3.55, 1.4];
+    const outline = (shape: THREE.Shape) => {
+      shape.moveTo(-1.82, 1.3);
+      shape.lineTo(...roofFront);
+      shape.quadraticCurveTo(0.5, 2.38, ...roofRear);
+      shape.quadraticCurveTo(2.75, 2.0, ...tail);
+    };
     const glass = new THREE.Shape();
-    glass.moveTo(-1.82, 1.3);
-    glass.lineTo(...roofFront);
-    glass.quadraticCurveTo(0.4, 2.4, ...roofRear);
-    glass.quadraticCurveTo(2.3, 2.05, 3.15, 1.3);
+    outline(glass);
     this.extrude(glass, -CABIN_HALF, CABIN_HALF * 2, this.glass).castShadow = false;
 
-    // 옆면 프레임(A·B·C 필러와 루프 레일): 유리 윤곽에서 창문 두 개를 뚫은 판
+    // 옆면 프레임(A·B·C 필러와 루프 레일): 유리 윤곽에서 창문 세 개를 뚫은 판
     const frame = new THREE.Shape();
-    frame.moveTo(-1.82, 1.3);
-    frame.lineTo(...roofFront);
-    frame.quadraticCurveTo(0.4, 2.4, ...roofRear);
-    frame.quadraticCurveTo(2.3, 2.05, 3.15, 1.3);
+    outline(frame);
     const frontWindow = new THREE.Path();
     frontWindow.moveTo(-1.2, 1.56);
-    frontWindow.lineTo(-0.3, 2.13);
-    frontWindow.lineTo(0.33, 2.17);
-    frontWindow.lineTo(0.33, 1.57);
+    frontWindow.lineTo(-0.34, 2.11);
+    frontWindow.lineTo(0.36, 2.16);
+    frontWindow.lineTo(0.36, 1.57);
     const rearWindow = new THREE.Path();
-    rearWindow.moveTo(0.55, 1.57);
-    rearWindow.lineTo(0.55, 2.17);
-    rearWindow.lineTo(1.3, 2.13);
-    rearWindow.lineTo(2.2, 1.63);
-    frame.holes.push(frontWindow, rearWindow);
+    rearWindow.moveTo(0.56, 1.57);
+    rearWindow.lineTo(0.56, 2.16);
+    rearWindow.lineTo(1.5, 2.12);
+    rearWindow.lineTo(1.78, 1.6);
+    // 쿼터 글라스: 뒷문 뒤의 작은 사다리꼴 창
+    const quarterWindow = new THREE.Path();
+    quarterWindow.moveTo(1.98, 1.6);
+    quarterWindow.lineTo(1.72, 2.07);
+    quarterWindow.lineTo(2.1, 1.97);
+    quarterWindow.lineTo(2.62, 1.63);
+    frame.holes.push(frontWindow, rearWindow, quarterWindow);
     const plate = 0.05;
     this.extrude(frame, CABIN_HALF, plate, this.bodyPaint);
     this.extrude(frame, -CABIN_HALF - plate, plate, this.bodyPaint);
 
     // 지붕 패널
     const roof = new THREE.Shape();
-    roof.moveTo(-0.5, 2.22);
-    roof.quadraticCurveTo(0.4, 2.4, 1.25, 2.25);
-    roof.lineTo(1.25, 2.27);
-    roof.quadraticCurveTo(0.4, 2.45, -0.5, 2.24);
+    roof.moveTo(-0.55, 2.2);
+    roof.quadraticCurveTo(0.5, 2.38, 1.6, 2.21);
+    roof.lineTo(1.6, 2.23);
+    roof.quadraticCurveTo(0.5, 2.43, -0.55, 2.22);
     const roofHalf = CABIN_HALF + plate;
     this.extrude(roof, -roofHalf, roofHalf * 2, this.bodyPaint);
   }
 
   private buildExteriorDetails() {
-    const lightMat = new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: 0xbae6fd, emissiveIntensity: 0.8, roughness: 0.1 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: 0xbae6fd, emissiveIntensity: 0.9, roughness: 0.1 });
     const tailMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, emissive: 0xef4444, emissiveIntensity: 0.9 });
 
-    // 앞: 얇은 LED 헤드라이트, 그릴, 하단 흡기구
-    for (const z of [-1.12, 1.12]) this.box(this.carRoot, [0.3, 0.1, 0.9], lightMat, -4.2, 1.02, z);
-    this.box(this.carRoot, [0.08, 0.2, 1.2], this.darkTrim, -4.3, 0.98, 0);
-    this.box(this.carRoot, [0.08, 0.22, 2.6], this.darkTrim, -4.3, 0.62, 0);
+    // 앞: 좌우를 잇는 얇은 주간주행등 — 가운데가 끊긴 세 토막으로 나눠 이 모델만의 얼굴을 만든다
+    this.box(this.carRoot, [0.06, 0.035, 1.5], lightMat, -4.27, 1.1, 0);
+    for (const z of [-1.2, 1.2]) this.box(this.carRoot, [0.1, 0.05, 0.62], lightMat, -4.2, 1.09, z);
+    // 넓은 그릴: 무늬 그물 대신 가로 살 다섯 줄 (상표·로고는 넣지 않는다)
+    this.box(this.carRoot, [0.07, 0.5, 2.5], this.darkTrim, -4.31, 0.74, 0);
+    for (let i = 0; i < 5; i++) this.box(this.carRoot, [0.03, 0.022, 2.36 - i * 0.16], this.chrome, -4.35, 0.94 - i * 0.095, 0);
+    // 그릴 양옆의 세로형 헤드램프와 하단 립
+    for (const z of [-1.4, 1.4]) this.box(this.carRoot, [0.07, 0.3, 0.16], lightMat, -4.27, 0.78, z);
+    this.box(this.carRoot, [0.14, 0.05, 2.9], this.chrome, -4.24, 0.42, 0);
 
-    // 뒤: 좌우를 잇는 테일라이트 바, 하단 디퓨저
-    this.box(this.carRoot, [0.1, 0.09, 3.2], tailMat, 4.31, 1.27, 0);
-    this.box(this.carRoot, [0.08, 0.2, 2.6], this.darkTrim, 4.28, 0.58, 0);
+    // 뒤: 좌우를 잇는 테일라이트 바 + 양 끝에서 아래로 꺾이는 세로 램프, 하단 디퓨저와 크롬 띠
+    this.box(this.carRoot, [0.1, 0.05, 3.1], tailMat, 4.32, 1.3, 0);
+    for (const z of [-1.5, 1.5]) this.box(this.carRoot, [0.1, 0.24, 0.07], tailMat, 4.31, 1.16, z);
+    this.box(this.carRoot, [0.08, 0.22, 2.7], this.darkTrim, 4.28, 0.58, 0);
+    this.box(this.carRoot, [0.1, 0.035, 2.3], this.chrome, 4.29, 0.46, 0);
 
     for (const out of [1, -1]) {
       const z = out * BODY_HALF;
-      // 사이드 실 몰딩
+      // 사이드 실 몰딩과 그 위의 크롬 띠
       this.box(this.carRoot, [3.55, 0.1, 0.05], this.darkTrim, 0, SILL_Y + 0.07, z + out * 0.01);
-      // 도어 분할선과 손잡이
-      for (const x of [-1.6, 0.35, 1.7]) this.box(this.carRoot, [0.018, 0.8, 0.02], this.darkTrim, x, 0.98, z + out * 0.002);
-      for (const x of [-0.05, 1.3]) this.box(this.carRoot, [0.34, 0.05, 0.05], this.chrome, x, 1.3, z + out * 0.01);
+      this.box(this.carRoot, [3.3, 0.025, 0.05], this.chrome, 0, SILL_Y + 0.14, z + out * 0.012);
+      // 벨트라인(창문 아래)을 따라가는 크롬 선
+      this.box(this.carRoot, [4.3, 0.022, 0.03], this.chrome, 0.62, 1.5, z + out * 0.004);
+      // 도어 분할선과 문 안으로 숨은 손잡이
+      for (const x of [-1.6, 0.46, 1.9]) this.box(this.carRoot, [0.018, 0.8, 0.02], this.darkTrim, x, 0.98, z + out * 0.002);
+      for (const x of [0.06, 1.5]) this.box(this.carRoot, [0.3, 0.03, 0.02], this.chrome, x, 1.32, z + out * 0.004);
       // 사이드 미러
       this.box(this.carRoot, [0.1, 0.05, 0.3], this.darkTrim, -1.38, 1.5, out * (CABIN_HALF + 0.15));
       this.box(this.carRoot, [0.26, 0.16, 0.12], this.bodyPaint, -1.38, 1.56, out * (CABIN_HALF + 0.34));
@@ -522,11 +540,14 @@ export class Car3DVisualizer {
         );
         barrel.rotation.x = Math.PI / 2;
 
-        // 5-더블 스포크와 허브
+        // 살 열두 개가 한쪽으로 살짝 기운 바람개비 모양의 휠과 허브
         const face = out * (tireWidth / 2 - 0.03);
-        for (let s = 0; s < 5; s++) {
-          const spoke = this.box(wheel, [0.055, 0.8, 0.035], this.alloyRim, 0, 0, face);
-          spoke.rotation.z = (s * Math.PI) / 5;
+        for (let n = 0; n < 12; n++) {
+          const arm = this.add(wheel, new THREE.Group(), 0, 0, face);
+          arm.rotation.z = (n * Math.PI) / 6;
+          // 허브에서 림까지 가는 살. 바깥쪽이 회전 방향으로 기울어 있다
+          const blade = this.box(arm, [0.05, 0.31, 0.03], n % 2 === 0 ? this.alloyRim : this.darkTrim, out * 0.045, 0.24, 0);
+          blade.rotation.z = out * -0.3;
         }
         const hub = this.add(wheel, new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 20), this.darkTrim), 0, 0, face + out * 0.01);
         hub.rotation.x = Math.PI / 2;

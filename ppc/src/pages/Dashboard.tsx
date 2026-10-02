@@ -61,7 +61,7 @@ function DisruptionBanner({ disruption }: { disruption: Disruption }) {
  * 재고 부족 경고 (노란색, 차질 배너 아래). 필요 재고는 차를 LOW_COVERAGE_DAYS(5)일 동안 차질 없이 만들 수 있는 양이고,
  * 생산에 쓸 수 있는 재고(수리용 제외)가 그보다 적은 부품을 모아서 보여 준다. 색상별 차체는 다섯 색을 합쳐서 본다.
  */
-function LowStockBanner({ rows, dailyCapacity }: { rows: PartRow[]; dailyCapacity: number }) {
+function LowStockBanner({ rows, dailyCapacity, onOrder }: { rows: PartRow[]; dailyCapacity: number; onOrder: (partCode: string) => void }) {
   const low = rows
     .map((row) => ({ row, need: LOW_COVERAGE_DAYS * dailyCapacity * row.linePart.qtyPerCar }))
     .filter(({ row, need }) => row.available < need);
@@ -71,12 +71,23 @@ function LowStockBanner({ rows, dailyCapacity }: { rows: PartRow[]; dailyCapacit
       <p className="font-bold">
         ⚠ 재고 부족 주의: {low.length}개 부품의 재고가 {LOW_COVERAGE_DAYS}일 생산분보다 적습니다 (하루 {num(dailyCapacity)}대 기준)
       </p>
-      <ul className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-[13px]">
+      <ul className="mt-1.5 space-y-1.5 text-[13px]">
         {low.map(({ row, need }) => (
-          <li key={row.part.code}>
-            <strong>{row.part.name}</strong> 생산용 {num(row.available)}개 ({row.coverage.toFixed(1)}일분) · 필요 {num(need)}개 ·{' '}
-            <strong>{num(need - row.available)}개 부족</strong>
-            {row.nextPo && row.nextDday !== null ? ` · 다음 입고 ${ddayLabel(row.nextDday)} +${num(row.nextPo.qty)}개` : ' · 입고 예정 없음'}
+          <li key={row.part.code} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="min-w-0 flex-1">
+              <strong>{row.part.name}</strong> 생산용 {num(row.available)}개 ({row.coverage.toFixed(1)}일분) · 필요 {num(need)}개 ·{' '}
+              <strong>{num(need - row.available)}개 부족</strong>
+              {row.nextPo && row.nextDday !== null ? ` · 다음 입고 ${ddayLabel(row.nextDday)} +${num(row.nextPo.qty)}개` : ' · 입고 예정 없음'}
+            </span>
+            {/* 색상별 차체는 재고가 가장 적은 색의 발주 창을 연다 (창 안에서 다른 색으로 바꿀 수 있다) */}
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => onOrder(row.variants ? [...row.variants].sort((a, b) => a.available - b.available)[0].part.code : row.part.code)}
+              aria-label={`${row.part.name} 재고 부족 발주`}
+            >
+              {row.part.name} 발주
+            </Button>
           </li>
         ))}
       </ul>
@@ -265,7 +276,7 @@ export function Dashboard({ state }: { state: AppState }) {
         <DisruptionBanner key={d.id} disruption={d} />
       ))}
 
-      <LowStockBanner rows={model.parts} dailyCapacity={state.settings.dailyCapacity} />
+      <LowStockBanner rows={model.parts} dailyCapacity={state.settings.dailyCapacity} onOrder={openOrder} />
 
       <KpiRow kpi={model.kpi} />
 
